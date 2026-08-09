@@ -1,0 +1,23 @@
+node_modules
+.next
+out
+dist
+build
+coverage
+target
+.turbo
+
+pnpm-lock.yaml
+
+# Codigo gerado do OpenAPI - reescrito a cada build.
+packages/api-client/src/generated
+
+# O plano e documento de referencia, nao codigo-fonte. Reformata-lo produz
+# 1.600 linhas de ruido de alinhamento de tabela e polui o diff de qualquer
+# revisao futura do conteudo.
+docs/PLANO-COMPLETO.md
+
+# Wrapper do Maven: arquivos de terceiros, mantidos como distribuidos.
+apps/api/mvnw
+apps/api/mvnw.cmd
+apps/api/.mvn

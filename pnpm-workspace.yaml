@@ -8,3 +8,6 @@ allowBuilds:
   # sharp: binario nativo de processamento de imagem, usado pelo next/image
   # para servir AVIF/WebP e gerar o blurDataURL no build.
   sharp: true
+  # unrs-resolver: binario nativo do eslint-import-resolver-typescript, usado
+  # para resolver o alias @/ nas regras de fronteira do eslint-plugin-boundaries.
+  unrs-resolver: true
