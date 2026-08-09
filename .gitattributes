@@ -1,0 +1,22 @@
+# Normaliza tudo para LF no repositório. Sem isto, um commit feito no Windows
+# grava CRLF e quebra os hooks do Husky e os scripts de shell no CI (Ubuntu).
+* text=auto eol=lf
+
+# Arquivos que precisam de CRLF no Windows.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binários — nunca normalizar.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.jar binary
+
+# Arquivos gerados: colapsados no diff do GitHub.
+pnpm-lock.yaml linguist-generated=true

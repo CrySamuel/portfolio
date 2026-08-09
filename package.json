@@ -1,0 +1,23 @@
+{
+  "name": "portfolio",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Portfólio full-stack de Crystofer Demetino — Next.js 15 (web) + Java 21 / Spring Boot 3.4 (api)",
+  "author": "Crystofer Demetino <crystoferdemetino@gmail.com>",
+  "license": "MIT",
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.10.9"
+  }
+}

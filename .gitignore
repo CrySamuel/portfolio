@@ -1,0 +1,55 @@
+# --- Dependências ---
+node_modules/
+.pnpm-store/
+
+# --- Build: web ---
+.next/
+out/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# --- Build: api ---
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+
+# --- Ambiente e segredos ---
+.env
+.env.*
+!.env.example
+
+# --- Testes e relatórios ---
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+.lighthouseci/
+
+# --- Código gerado (nunca versionado) ---
+packages/api-client/src/generated/
+
+# --- Ferramentas locais ---
+.claude/settings.local.json
+
+# --- IDE ---
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.iml
+*.swp
+
+# --- Sistema operacional ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs ---
+*.log
+npm-debug.log*
+pnpm-debug.log*
