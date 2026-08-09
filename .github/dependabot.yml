@@ -24,7 +24,9 @@ updates:
       desenvolvimento:
         dependency-type: development
         update-types: [minor, patch]
-    # Major exige leitura de changelog e vem em PR separado, deliberadamente.
+    # Major nunca chega por PR automatica. Trocar de major e decisao de
+    # arquitetura - exige ler changelog, avaliar breaking changes e, quando for
+    # o caso, escrever um ADR. Bumps de major sao feitos a mao, quando decidido.
     ignore:
       - dependency-name: '*'
         update-types: [version-update:semver-major]
@@ -45,10 +47,17 @@ updates:
     groups:
       spring:
         patterns: ['org.springframework*']
+        update-types: [minor, patch]
       demais:
         patterns: ['*']
         exclude-patterns: ['org.springframework*']
         update-types: [minor, patch]
+    # Mesma regra do npm, e aqui ela e ainda mais importante: sem este bloco o
+    # Dependabot propoe Spring Boot 4.x como se fosse bump de rotina, desfazendo
+    # em uma PR agrupada a escolha registrada no commit que adotou a linha 3.5.
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
 
   # ---------------------------------------------------------------------------
   # As proprias actions do CI. Sao codigo de terceiro rodando com acesso ao
