@@ -1,0 +1,39 @@
+name: portfolio
+
+services:
+  postgres:
+    # Alpine reduz a imagem de ~430 MB para ~250 MB. A versao e fixada em 16
+    # de proposito: e a mesma de producao e a mesma que o Testcontainers sobe
+    # nos testes de integracao. Testar contra um banco diferente do que roda em
+    # producao e o erro que o Testcontainers existe para evitar.
+    image: postgres:16-alpine
+    container_name: portfolio-postgres
+    restart: unless-stopped
+
+    # Todos os valores tem default, entao `docker compose up` funciona sem
+    # nenhum arquivo .env. As variaveis existem para permitir sobrescrita.
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-portfolio}
+      POSTGRES_USER: ${POSTGRES_USER:-portfolio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-portfolio}
+      POSTGRES_INITDB_ARGS: '--encoding=UTF8'
+
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+    # Sem healthcheck, `docker compose up -d` retorna assim que o container
+    # inicia - nao quando o Postgres aceita conexao. A diferenca sao alguns
+    # segundos em que a aplicacao falha ao subir.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-portfolio} -d ${POSTGRES_DB:-portfolio}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres-data:
+    name: portfolio-postgres-data

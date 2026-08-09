@@ -18,6 +18,9 @@
     "test": "turbo run test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "db:up": "docker compose -f infra/docker/docker-compose.yml up -d --wait",
+    "db:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "db:reset": "docker compose -f infra/docker/docker-compose.yml down -v",
     "prepare": "husky"
   },
   "devDependencies": {

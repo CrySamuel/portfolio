@@ -15,7 +15,7 @@ real e pipeline de deploy real.
 ## Arquitetura
 
 ```
-Visitante ──HTTPS──▶ Web (Next.js 15)  ──HTTP──▶  API (Java 21 + Spring Boot 3.4)
+Visitante ──HTTPS──▶ Web (Next.js 15)  ──HTTP──▶  API (Java 21 + Spring Boot 3.5)
                      SSG + ISR + BFF                        │
                      Vercel / CDN                           ├──▶ PostgreSQL 16
                                                             ├──▶ GitHub API
@@ -76,7 +76,35 @@ abrir um único arquivo.
 pnpm install
 ```
 
-Os comandos de desenvolvimento das aplicações são adicionados nos commits seguintes do MVP 0.
+Sobe o Postgres local (os valores padrão já funcionam sem `.env`):
+
+```bash
+pnpm db:up
+```
+
+Web em `localhost:3000`:
+
+```bash
+pnpm --filter @portfolio/web dev
+```
+
+API em `localhost:8080`, com o perfil `local` ativado automaticamente:
+
+```bash
+cd apps/api && ./mvnw spring-boot:run
+```
+
+| Comando                 | O que faz                                    |
+| ----------------------- | -------------------------------------------- |
+| `pnpm db:up`            | Sobe o Postgres e espera ficar saudável      |
+| `pnpm db:down`          | Para o container, preservando os dados       |
+| `pnpm db:reset`         | Para o container e **apaga o volume**        |
+| `pnpm lint`             | ESLint em todos os pacotes                   |
+| `pnpm typecheck`        | `tsc --noEmit`                               |
+| `pnpm format`           | Prettier                                     |
+| `./mvnw spotless:apply` | Formata o código Java (dentro de `apps/api`) |
+
+Para variáveis de ambiente, copie [.env.example](.env.example) para `.env`.
 
 ## Documentação
 

@@ -1,6 +1,15 @@
 # Perfil de desenvolvimento. Ativado automaticamente por ./mvnw spring-boot:run
 # (configurado no spring-boot-maven-plugin), nunca pelo jar empacotado.
 
+spring:
+  # Aponta para o Postgres do docker-compose. Os defaults batem com os do
+  # compose, entao `pnpm db:up` seguido de `./mvnw spring-boot:run` funciona sem
+  # nenhum .env. O driver e as migracoes entram no commit 16.
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:portfolio}
+    username: ${POSTGRES_USER:portfolio}
+    password: ${POSTGRES_PASSWORD:portfolio}
+
 management:
   endpoints:
     web:
