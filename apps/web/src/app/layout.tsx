@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
+import { fontVariables } from '@/lib/fonts';
+
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -11,7 +13,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    // As variaveis de fonte entram no <html>, e nao no <body>: os tokens de
+    // tipografia sao resolvidos em :root, entao precisam estar visiveis no
+    // elemento raiz.
+    <html lang="pt-BR" className={fontVariables} suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );
