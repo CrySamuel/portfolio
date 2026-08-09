@@ -28,6 +28,9 @@
     <java.version>21</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    <spotless.version>3.9.0</spotless.version>
+    <google-java-format.version>1.36.1</google-java-format.version>
   </properties>
 
   <dependencies>
@@ -64,6 +67,46 @@
             <profile>local</profile>
           </profiles>
         </configuration>
+      </plugin>
+
+      <!--
+        Equivalente do Prettier no lado Java. A formatacao deixa de ser assunto
+        de revisao de PR e vira propriedade do build: 'check' esta ligado a fase
+        validate, entao qualquer ./mvnw verify falha antes de compilar se houver
+        arquivo fora do padrao. Para corrigir: ./mvnw spotless:apply
+      -->
+      <plugin>
+        <groupId>com.diffplug.spotless</groupId>
+        <artifactId>spotless-maven-plugin</artifactId>
+        <version>${spotless.version}</version>
+        <configuration>
+          <java>
+            <googleJavaFormat>
+              <version>${google-java-format.version}</version>
+              <style>GOOGLE</style>
+            </googleJavaFormat>
+            <removeUnusedImports/>
+            <!--
+              Ordem de import fixa. Sem ela, cada IDE agrupa de um jeito e o
+              diff enche de ruido que nao tem relacao com a mudanca.
+            -->
+            <importOrder>
+              <order>java,javax,jakarta,org,com,</order>
+            </importOrder>
+            <formatAnnotations/>
+            <trimTrailingWhitespace/>
+            <endWithNewline/>
+          </java>
+        </configuration>
+        <executions>
+          <execution>
+            <id>spotless-check</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
