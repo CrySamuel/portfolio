@@ -1,0 +1,47 @@
+@import 'tailwindcss';
+
+/*
+  Os design tokens (cor, tipografia, espacamento) entram no commit 10, em
+  packages/ui/src/styles/tokens.css. Este arquivo carrega o Tailwind e define
+  apenas as bases que valem para o documento inteiro.
+*/
+
+@layer base {
+  /*
+    Ancoras acionadas por link precisam de folga acima: a navbar e fixa e, sem
+    isto, o elemento focado fica coberto por ela - criterio 2.4.11 da WCAG 2.2.
+  */
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+    O anel de foco e substituido por um proprio no commit 10, nunca removido.
+    Ate la, vale o padrao do navegador.
+  */
+  :focus-visible {
+    outline-offset: 2px;
+  }
+}
+
+/*
+  Preferencia de movimento reduzido tratada globalmente (secao 7.6 do plano).
+  Vale para qualquer animacao futura, inclusive de bibliotecas de terceiros.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
