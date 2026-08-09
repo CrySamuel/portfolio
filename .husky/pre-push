@@ -1,0 +1,8 @@
+# Ultima barreira antes do codigo sair da maquina. E deliberadamente mais lento
+# que o pre-commit: aqui roda a suite, nao apenas o lint dos arquivos staged.
+#
+# O Maven e invocado pelo caminho do wrapper com -f, e nao via `pnpm --dir`:
+# apps/api e um projeto Java sem package.json, entao nao e um pacote do
+# workspace pnpm e `pnpm --dir` falha com ERR_PNPM_RECURSIVE_EXEC_NO_PACKAGE.
+pnpm turbo run test
+apps/api/mvnw -q -B -f apps/api/pom.xml test
