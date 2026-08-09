@@ -62,7 +62,7 @@ Um tech lead que abrir o repositório encontra: arquitetura hexagonal, ADRs, tes
 | Decisão | Escolha | ADR |
 |---------|---------|-----|
 | Escopo | Monorepo full-stack com API real em produção | [ADR-0001](#adr-0001-monorepo-full-stack-com-api-real) |
-| Backend | Java 21 + Spring Boot 3.4 | [ADR-0002](#adr-0002-java-21-e-spring-boot-34) |
+| Backend | Java 21 + Spring Boot 3.5 | [ADR-0002](#adr-0002-java-21-e-spring-boot-34), revisado pelo [ADR-0009](#adr-0009-spring-boot-35-substitui-o-adr-0002) |
 | Estilo arquitetural | Hexagonal (Ports & Adapters) + monólito modular | [ADR-0003](#adr-0003-arquitetura-hexagonal-com-monólito-modular) |
 | Fonte de verdade do conteúdo | PostgreSQL + Flyway | [ADR-0004](#adr-0004-postgresql-como-fonte-de-verdade-do-conteúdo) |
 | Comunicação web ↔ api | BFF via Route Handlers do Next.js | [ADR-0005](#adr-0005-bff-em-route-handlers-do-nextjs) |
@@ -2652,7 +2652,9 @@ Validado por commitlint no hook `commit-msg`. Commit fora do padrão **não entr
 
 ### ADR-0002: Java 21 e Spring Boot 3.4
 
-**Status:** Aceito
+**Status:** **Substituído pelo [ADR-0009](#adr-0009-spring-boot-35-substitui-o-adr-0002)** quanto à versão do Spring Boot. Todo o restante — Java 21, Maven e os recursos de linguagem — continua aceito e em vigor.
+
+> O texto abaixo é o original e não foi alterado: a seção 14 determina que ADR é imutável, e mudar o registro apagaria justamente o histórico que ele existe para preservar. Só a linha de status muda, que é o mecanismo padrão de substituição.
 
 **Contexto.** O backend precisa maximizar empregabilidade no mercado-alvo, demonstrar conhecimento atual do ecossistema e caber em um free tier com pouca memória e cold start.
 
@@ -2788,6 +2790,38 @@ Validado por commitlint no hook `commit-msg`. Commit fora do padrão **não entr
 **Consequências positivas.** O site funciona com o GitHub completamente fora do ar; cache de 6h reduz as chamadas para ~4/dia; estados do circuito expostos como métricas; **é a parte do código que melhor demonstra competência backend**; testável de forma determinística com WireMock.
 
 **Consequências negativas (aceitas).** Configuração muito maior que um `fetch` simples — justificado, é a demonstração central do MVP 4; dados até 6h desatualizados — irrelevante; mais uma dependência; complexidade de teste maior — contrapartida: são justamente esses testes que **provam** que a resiliência existe, em vez de apenas afirmá-la.
+
+### ADR-0009: Spring Boot 3.5 (substitui o ADR-0002)
+
+**Status:** Aceito. Substitui o [ADR-0002](#adr-0002-java-21-e-spring-boot-34) na parte da versão do Spring Boot. Tudo o mais que o ADR-0002 decidiu — Java 21, Maven, Records, sealed interfaces, Virtual Threads, text blocks — **continua valendo sem alteração**.
+
+**Contexto.** O ADR-0002 travou o backend em Spring Boot 3.4. Quando o commit 03 foi escrito, essa linha já não recebia correções: o último patch da 3.4 foi o `3.4.13`, de 18/12/2025, e nada saiu depois. A 3.5, por sua vez, seguia ativa — o `3.5.16` é de 25/06/2026.
+
+O conflito é com um critério do próprio plano, não com preferência. A [seção 17.2](#172-critérios-de-qualidade) exige **zero CVE HIGH ou CRITICAL** como condição de release. Uma linha sem manutenção não tem como cumprir isso: a primeira vulnerabilidade publicada no Spring Framework 6 ou em qualquer dependência transitiva ficaria sem correção oficial, e a única saída seria fixar versões de dependência à mão — exatamente o tipo de remendo que o plano evita.
+
+Existe ainda uma segunda pressão, registrada na operação: o Dependabot propôs o salto para a 4.1.0 disfarçado de bump de rotina, dentro de um grupo que não filtrava `update-types`. A ausência de uma decisão explícita sobre versão é o que torna esse tipo de proposta perigosa.
+
+**Decisão.** Spring Boot **3.5.x**, hoje na 3.5.16.
+
+O que torna a troca barata é que ela **não muda a plataforma**:
+
+| | 3.5.16 | 4.1.0 |
+|---|---|---|
+| Spring Framework | 6.2.19 | 7.0.8 |
+| Jakarta Persistence | 3.1.0 (Jakarta EE 10) | 3.2.0 (Jakarta EE 11) |
+| Hibernate | 6.6.53 | 7.4.1 |
+
+A 3.5 permanece em Spring Framework 6 e Jakarta EE 10 — a mesma base que a 3.4. Nenhum trecho de código deste plano muda, e nenhuma das decisões dos ADRs 0003, 0004, 0005 e 0008 é afetada.
+
+**Alternativas descartadas**
+
+- *Permanecer na 3.4* — é a alternativa que motivou este ADR. Cumpriria a letra do ADR-0002 e violaria o critério de segurança da seção 17.2, que é o mais duro dos dois. Fidelidade a uma decisão vencida não é rigor, é inércia.
+- *Saltar para o Spring Boot 4* — troca Spring Framework 6 por 7, Jakarta EE 10 por 11 e Hibernate 6 por 7. Migração real, com risco real, para ganhar uma linha que já está disponível na 3.5. Pior: consumiria o tempo do MVP 1, que é o que elimina o maior risco do projeto. **Fica registrado como reavaliação futura** — a decisão é adiar, não recusar.
+- *Fixar dependências vulneráveis à mão sobre a 3.4* — resolveria CVEs pontuais e criaria uma matriz de versões que ninguém mais testou junto. Trocaria um risco conhecido por um desconhecido.
+
+**Consequências positivas.** O critério de zero CVE HIGH/CRITICAL volta a ser alcançável por atualização normal; a linha recebe patch; nenhuma mudança de código; o Dependabot passa a ter um alvo definido — majors bloqueados nos dois ecossistemas, patches liberados.
+
+**Consequências negativas (aceitas).** O projeto fica uma linha atrás da mais recente, e um avaliador pode perguntar por que não a 4 — a resposta é este documento, que é justamente o que a seção 14 existe para produzir; a 3.5 também terá um fim de vida, e a decisão precisará ser revisitada, o que exigirá um ADR-00xx no futuro; e fica a dívida explícita de reavaliar o Spring Boot 4 quando o MVP 1 estiver em produção.
 
 ---
 ---
