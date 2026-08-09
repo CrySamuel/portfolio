@@ -132,9 +132,19 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
   /* ---------------------------------------------------------------------
-     Largura de leitura (7.4): 68 caracteres.
+     Larguras (7.4)
+
+     A de leitura e 68 caracteres; a da pagina, 1200px. As duas linhas da mesma
+     tabela do plano, entao vivem juntas - sem elas, Container e SectionHeading
+     precisariam de valor arbitrario no className, que e o que a 7.4 proibe.
+
+     O nome e "reading", e nao "prose", por colisao: max-w-prose e utilidade
+     estatica do Tailwind, fixada em 65ch, e nao consulta o namespace
+     --container-*. Um token chamado --container-prose nunca chega ao CSS - o
+     utilitario de mesmo nome vence e o valor daqui morre em silencio.
      --------------------------------------------------------------------- */
-  --container-prose: 68ch;
+  --container-reading: 68ch;
+  --container-page: 75rem; /* 1200px */
 }
 
 /*
