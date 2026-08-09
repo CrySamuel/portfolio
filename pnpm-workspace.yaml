@@ -1,3 +1,10 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+# Scripts de build de dependencias sao bloqueados por padrao no pnpm (supply chain).
+# Cada liberacao e explicita e justificada.
+allowBuilds:
+  # sharp: binario nativo de processamento de imagem, usado pelo next/image
+  # para servir AVIF/WebP e gerar o blurDataURL no build.
+  sharp: true
