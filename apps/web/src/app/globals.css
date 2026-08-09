@@ -1,9 +1,10 @@
 @import 'tailwindcss';
+@import '@portfolio/ui/styles/tokens.css';
 
 /*
-  Os design tokens (cor, tipografia, espacamento) entram no commit 10, em
-  packages/ui/src/styles/tokens.css. Este arquivo carrega o Tailwind e define
-  apenas as bases que valem para o documento inteiro.
+  Este arquivo carrega o Tailwind e o design system, e define apenas as bases
+  que valem para o documento inteiro. Cor, tipografia, raio e movimento vivem
+  em packages/ui/src/styles/tokens.css.
 */
 
 @layer base {
@@ -18,16 +19,30 @@
   }
 
   body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
   }
 
   /*
-    O anel de foco e substituido por um proprio no commit 10, nunca removido.
-    Ate la, vale o padrao do navegador.
+    Anel de foco duplo do token, aplicado em :focus-visible. O outline nativo e
+    substituido, nunca removido - remover sem substituto quebra o criterio
+    2.4.7 da WCAG e torna o site inutilizavel por teclado.
   */
   :focus-visible {
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Numeros de largura fixa em dados tabulares: metricas e versoes param de
+     "dancar" quando o valor muda. */
+  :where(code, kbd, samp, pre) {
+    font-family: var(--font-mono);
   }
 }
 

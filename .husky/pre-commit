@@ -1,1 +1,3 @@
-pnpm exec lint-staged
+# --concurrent false: eslint --fix e prettier --write podem cair no mesmo
+# arquivo, e em paralelo um sobrescreve o resultado do outro.
+pnpm exec lint-staged --concurrent false

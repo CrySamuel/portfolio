@@ -1,0 +1,183 @@
+/*
+  Design tokens - secao 7 do plano.
+
+  Regra de governanca (7.8): nenhum componente escreve um valor hexadecimal.
+  Cor entra por token, sempre. O mesmo vale para espacamento e raio.
+
+  Os valores de contraste anotados abaixo foram calculados pela formula de
+  luminancia relativa da WCAG, nao estimados. Eles sao a razao de cada cor ter
+  sido escolhida: uma cor bonita que falha em 4.5:1 nao entra.
+
+  Tema escuro e o padrao (7.1, principio 8). O claro e igualmente completo,
+  nao uma inversao automatica.
+*/
+
+@theme {
+  /* ---------------------------------------------------------------------
+     Cor - tema escuro (padrao)
+     --------------------------------------------------------------------- */
+  --color-bg: #08080a;
+  --color-surface: #0f0f12;
+  --color-surface-2: #16161a;
+
+  /* Divisoria decorativa: 1.28:1. Bordas puramente decorativas nao estao
+     sujeitas ao criterio 1.4.11 da WCAG - por isso existe o token separado
+     abaixo, para bordas que comunicam a fronteira de um controle. */
+  --color-border: #232329;
+  --color-border-interactive: #6a6a74; /* 3.74:1 - WCAG 1.4.11 */
+
+  --color-fg: #fafafa; /* 19.17:1 - AAA */
+  --color-fg-muted: #a1a1aa; /*  7.81:1 - AAA */
+  --color-fg-subtle: #8a8a94; /*  5.85:1 - AA  */
+
+  /* Violeta/indigo: familia cromatica do territorio "ferramenta de
+     desenvolvedor". O ponto decisivo nao foi estetico - e a unica que atinge
+     AA como texto sobre fundo escuro E como fundo de botao com texto branco. */
+  --color-accent: #8b7cf6; /*  6.01:1 - AA */
+  --color-accent-solid: #5b4bd6; /* branco sobre ele: 6.14:1 - AA */
+
+  --color-success: #3dd68c; /* 10.67:1 - AAA */
+  --color-warning: #ffb224; /* 11.10:1 - AAA */
+  --color-danger: #ff6369; /*  6.90:1 - AA  */
+
+  /* ---------------------------------------------------------------------
+     Tipografia (7.3)
+
+     As familias sao definidas via variavel para que o commit 11 injete as
+     fontes locais sem tocar neste arquivo. Ate la, valem os fallbacks.
+     --------------------------------------------------------------------- */
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, 'Cascadia Code', monospace;
+
+  /* Escala de razao 1.25, fluida com clamp: dispensa breakpoint para
+     tipografia e elimina os saltos entre tamanhos de tela. */
+  --text-display: clamp(2.5rem, 6vw, 4.5rem);
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 600;
+
+  --text-h1: clamp(2rem, 4vw, 3rem);
+  --text-h1--line-height: 1.15;
+  --text-h1--letter-spacing: -0.02em;
+  --text-h1--font-weight: 600;
+
+  --text-h2: clamp(1.5rem, 3vw, 2.25rem);
+  --text-h2--line-height: 1.2;
+  --text-h2--letter-spacing: -0.02em;
+  --text-h2--font-weight: 600;
+
+  --text-h3: 1.5rem;
+  --text-h3--line-height: 1.3;
+  --text-h3--letter-spacing: -0.01em;
+  --text-h3--font-weight: 600;
+
+  --text-h4: 1.25rem;
+  --text-h4--line-height: 1.4;
+  --text-h4--font-weight: 500;
+
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.65;
+
+  /* line-height 1.65 no corpo, acima do 1.5 usual: atende a recomendacao do
+     criterio 1.4.12 da WCAG e melhora a leitura em texto longo. */
+  --text-body: 1rem;
+  --text-body--line-height: 1.65;
+
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.6;
+
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.5;
+  --text-caption--letter-spacing: 0.02em;
+  --text-caption--font-weight: 500;
+
+  --text-mono: 0.875rem;
+  --text-mono--line-height: 1.6;
+
+  /* ---------------------------------------------------------------------
+     Raio (7.5)
+     --------------------------------------------------------------------- */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* ---------------------------------------------------------------------
+     Elevacao (7.5)
+
+     No tema escuro a profundidade vem de luminosidade de superficie e borda -
+     sombra preta sobre fundo preto e invisivel. Estas sombras existem para o
+     tema claro; no escuro, use surface / surface-2.
+     --------------------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.08);
+
+  /* ---------------------------------------------------------------------
+     Movimento (7.6)
+     --------------------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---------------------------------------------------------------------
+     Largura de leitura (7.4): 68 caracteres.
+     --------------------------------------------------------------------- */
+  --container-prose: 68ch;
+}
+
+/*
+  Espacamento nao aparece acima de proposito. A escala da secao 7.4 (base 4px,
+  geometrica: 4, 8, 12, 16, 24, 32, 48, 64, 96, 128) e exatamente a escala
+  padrao do Tailwind. Redeclara-la criaria duas fontes de verdade para o mesmo
+  valor. p-4 ja e o space-4 do plano.
+*/
+
+:root {
+  color-scheme: dark;
+
+  /* Duracoes (7.6). Ficam fora do @theme porque o Tailwind 4 nao tem namespace
+     de duracao - sao consumidas por var() nas transicoes. */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  --duration-slower: 400ms;
+  --stagger: 60ms;
+
+  /*
+    Anel de foco duplo, nao negociavel (7.5). O primeiro anel usa a cor de
+    fundo para criar um vao; o segundo e a cor de destaque. E o que garante
+    visibilidade sobre qualquer superficie, clara ou escura.
+  */
+  --focus-ring: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
+}
+
+/* -------------------------------------------------------------------------
+   Tema claro
+
+   Sobrescreve as variaveis de cor. As utilidades do Tailwind emitem
+   var(--color-*), entao redefinir aqui basta - nenhuma classe precisa mudar.
+   ------------------------------------------------------------------------- */
+[data-theme='light'] {
+  color-scheme: light;
+
+  --color-bg: #ffffff;
+  --color-surface: #fafafa;
+  --color-surface-2: #f4f4f5;
+
+  --color-border: #e4e4e7; /* 1.27:1 - decorativo */
+  --color-border-interactive: #82828b; /* 3.81:1 - WCAG 1.4.11 */
+
+  --color-fg: #09090b; /* 19.90:1 - AAA */
+  --color-fg-muted: #52525b; /*  7.73:1 - AAA */
+  --color-fg-subtle: #71717a; /*  4.83:1 - AA  */
+
+  --color-accent: #5b4bd6; /*  6.14:1 - AA */
+  --color-accent-solid: #5b4bd6;
+
+  /* Os tons de estado sao mais escuros que os do tema escuro: o mesmo verde
+     que da 10.67:1 sobre preto daria 1.8:1 sobre branco. Nao ha inversao
+     automatica possivel - cada tema tem sua propria paleta validada. */
+  --color-success: #0e7247; /*  5.97:1 - AA */
+  --color-warning: #8f5100; /*  6.28:1 - AA */
+  --color-danger: #c42a2f; /*  5.65:1 - AA */
+}
