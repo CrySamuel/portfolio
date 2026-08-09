@@ -1,0 +1,16 @@
+# Perfil de desenvolvimento. Ativado automaticamente por ./mvnw spring-boot:run
+# (configurado no spring-boot-maven-plugin), nunca pelo jar empacotado.
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,configprops,beans,mappings
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    dev.crystofer.portfolio: DEBUG
+    org.springframework.web: INFO

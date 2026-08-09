@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: portfolio-api
+
+  # Virtual Threads (Java 21). Chamadas bloqueantes deixam de reter threads de
+  # plataforma - e o que torna a programacao reativa desnecessaria neste projeto.
+  threads:
+    virtual:
+      enabled: true
+
+  # JMX desabilitado: nao ha consumidor, e o registro custa tempo de startup e
+  # memoria - ambos escassos no free tier (ADR-0006).
+  jmx:
+    enabled: false
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: application/json,application/problem+json,text/plain,text/css,application/javascript
+    min-response-size: 1KB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # Default seguro. O perfil local amplia; producao nunca herda o inverso.
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: '@project.name@'
+    version: '@project.version@'
+    description: '@project.description@'
+
+logging:
+  level:
+    root: INFO
