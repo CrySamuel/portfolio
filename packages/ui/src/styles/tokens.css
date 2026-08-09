@@ -12,6 +12,18 @@
   nao uma inversao automatica.
 */
 
+/*
+  A deteccao automatica de fontes do Tailwind 4 parte do diretorio do CSS de
+  entrada e ignora node_modules. Este pacote chega ao app por symlink dentro de
+  node_modules, entao nenhuma classe usada nos componentes daqui era encontrada:
+  as utilidades simplesmente nao entravam no CSS gerado, sem erro nenhum.
+
+  A declaracao mora aqui, e nao no globals.css do app, para que o pacote seja
+  autossuficiente - quem importa os tokens ja importa o alcance de varredura
+  correto, e um segundo consumidor nao precisa redescobrir isto.
+*/
+@source '../**/*.{ts,tsx}';
+
 @theme {
   /* ---------------------------------------------------------------------
      Cor - tema escuro (padrao)
