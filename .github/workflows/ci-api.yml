@@ -1,0 +1,54 @@
+name: CI · api
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/ci-api.yml'
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/ci-api.yml'
+
+concurrency:
+  group: ci-api-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: spotless · testes · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Instalar JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Verify
+        # verify cobre as tres coisas: spotless:check esta ligado a fase
+        # validate, os testes rodam em test, e o jar e empacotado em package.
+        # Formatacao errada reprova antes mesmo de compilar.
+        run: ./mvnw -B --no-transfer-progress verify
+
+      - name: Publicar relatorio de testes
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: surefire-reports
+          path: apps/api/target/surefire-reports/
+          retention-days: 7
+          if-no-files-found: ignore

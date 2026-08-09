@@ -1,0 +1,68 @@
+version: 2
+
+updates:
+  # ---------------------------------------------------------------------------
+  # Monorepo TypeScript. Um unico ecossistema npm cobre a raiz e os workspaces.
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'build(deps)'
+      prefix-development: 'build(deps)'
+    # Sem agrupamento, uma semana normal abre 15 PRs e ninguem revisa nenhum.
+    # Agrupados, viram dois PRs revisaveis.
+    groups:
+      producao:
+        dependency-type: production
+        update-types: [minor, patch]
+      desenvolvimento:
+        dependency-type: development
+        update-types: [minor, patch]
+    # Major exige leitura de changelog e vem em PR separado, deliberadamente.
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
+
+  # ---------------------------------------------------------------------------
+  # Backend Java
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: maven
+    directory: /apps/api
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'build(deps)'
+    groups:
+      spring:
+        patterns: ['org.springframework*']
+      demais:
+        patterns: ['*']
+        exclude-patterns: ['org.springframework*']
+        update-types: [minor, patch]
+
+  # ---------------------------------------------------------------------------
+  # As proprias actions do CI. Sao codigo de terceiro rodando com acesso ao
+  # repositorio - envelhecem como qualquer outra dependencia.
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: America/Sao_Paulo
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ['*']

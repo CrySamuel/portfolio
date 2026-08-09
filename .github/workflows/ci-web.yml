@@ -1,0 +1,74 @@
+name: CI · web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/ci-web.yml'
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/ci-web.yml'
+
+# Um push novo na mesma branch cancela a execucao anterior: nao ha valor em
+# terminar o CI de um commit que ja foi substituido.
+concurrency:
+  group: ci-web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # O Next coleta telemetria anonima por padrao. Desligada por coerencia com a
+  # postura de privacidade do projeto (secao 9.4: sem rastreamento).
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  quality:
+    name: lint · typecheck · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Instalar Node
+        uses: actions/setup-node@v7
+        with:
+          # Le a versao do .nvmrc: uma unica fonte de verdade entre a maquina
+          # de desenvolvimento e o runner.
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        # --frozen-lockfile falha se o lockfile divergir do package.json, em vez
+        # de resolver versoes novas silenciosamente. E o que torna o build
+        # reproduzivel.
+        run: pnpm install --frozen-lockfile
+
+      - name: Formatacao
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
