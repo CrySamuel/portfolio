@@ -26,6 +26,25 @@ spring:
     # tambem informa a intencao a quem le.
     clean-disabled: true
 
+  jpa:
+    hibernate:
+      # O par natural do Flyway (ADR-0004). O Hibernate confere se as entidades
+      # batem com o schema que a migracao criou e recusa o boot se divergirem;
+      # nunca altera nada. `update` faria o oposto - deduziria DDL do codigo e
+      # aplicaria calado, tornando o banco de producao o resultado acumulado de
+      # deploys em vez de algo versionado.
+      #
+      # A checagem so vale para o que esta mapeado: coluna que existe no banco e
+      # nao na entidade passa despercebida. Coluna mapeada que nao existe, nao.
+      ddl-auto: validate
+
+    # Sem isso a sessao fica aberta ate a resposta HTTP terminar. Duas
+    # consequencias: consulta preguicosa dispara no meio da serializacao, longe
+    # de onde o N+1 pode ser lido, e a conexao do pool fica presa durante a
+    # renderizacao inteira. Falso por padrao no Spring Boot desde a 2.0 apenas
+    # no aviso - o valor efetivo continua true.
+    open-in-view: false
+
   lifecycle:
     timeout-per-shutdown-phase: 30s
 

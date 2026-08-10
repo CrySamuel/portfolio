@@ -31,6 +31,9 @@
 
     <spotless.version>3.9.0</spotless.version>
     <google-java-format.version>1.36.1</google-java-format.version>
+
+    <!-- O spring-boot-dependencies nao gerencia o MapStruct; a versao e nossa. -->
+    <mapstruct.version>1.6.3</mapstruct.version>
   </properties>
 
   <dependencies>
@@ -45,15 +48,27 @@
     </dependency>
 
     <!--
-      JDBC, e nao JPA. O Flyway so e autoconfigurado se existir um bean
-      DataSource, e a condicao que cria esse bean depende de EmbeddedDatabaseType,
-      que vem do spring-jdbc - sem este starter a migracao simplesmente nao roda.
-      O starter-data-jpa entra no commit 18, quando houver entidade para mapear;
-      antecipa-lo aqui traria Hibernate inteiro para o classpath sem uso.
+      Substitui o spring-boot-starter-jdbc declarado no commit 16: o starter de
+      JPA ja o traz transitivamente, e manter os dois declarados sugeriria que a
+      aplicacao usa JDBC direto em algum lugar - nao usa. O DataSource de que o
+      Flyway depende continua vindo daqui.
     -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-jdbc</artifactId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+
+    <!--
+      Mapeia entidade JPA para modelo de dominio em tempo de compilacao, sem
+      reflection. O ganho decisivo nao e performance: e o compilador recusar o
+      build quando um campo do destino fica sem origem (ver a compilerArg
+      unmappedTargetPolicy, mais abaixo). Mapeamento manual erra em silencio - o
+      campo novo simplesmente chega null na tela.
+    -->
+    <dependency>
+      <groupId>org.mapstruct</groupId>
+      <artifactId>mapstruct</artifactId>
+      <version>${mapstruct.version}</version>
     </dependency>
 
     <!--
@@ -82,10 +97,81 @@
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <!--
+      Postgres 16 de verdade nos testes, em container descartavel. A versao vem
+      do spring-boot-dependencies (testcontainers 1.21.4), entao nao ha numero a
+      manter aqui.
+
+      O spring-boot-testcontainers e o que habilita @ServiceConnection: o
+      container passa a configurar datasource sozinho, sem @DynamicPropertySource
+      escrito a mao.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
+      <!--
+        O processador do MapStruct roda na compilacao e gera os *Impl. Duas
+        opcoes viram regra do projeto, e nao escolha de cada mapper:
+
+        unmappedTargetPolicy=ERROR  campo do destino sem origem reprova o build.
+                                    E o que transforma "esqueci de mapear" de bug
+                                    de producao em erro de compilacao - o motivo
+                                    de o plano escolher MapStruct (secao 4.1).
+
+        defaultComponentModel=spring  o *Impl nasce como @Component, injetavel
+                                      por construtor, sem repetir a anotacao em
+                                      cada interface.
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <executions>
+          <!--
+            Configurado na execucao, e nao no plugin. No nivel do plugin as
+            opcoes valeriam tambem para default-testCompile, que compila fontes
+            sem nenhum @Mapper: o javac recebe os -A, nao encontra processador
+            que os reconheca e imprime um WARNING a cada build. Aviso recorrente
+            e inofensivo e pior do que nenhum aviso - ensina a ignorar a coluna
+            onde um dia aparecera um aviso que importa.
+          -->
+          <execution>
+            <id>default-compile</id>
+            <configuration>
+              <annotationProcessorPaths>
+                <path>
+                  <groupId>org.mapstruct</groupId>
+                  <artifactId>mapstruct-processor</artifactId>
+                  <version>${mapstruct.version}</version>
+                </path>
+              </annotationProcessorPaths>
+              <compilerArgs>
+                <arg>-Amapstruct.unmappedTargetPolicy=ERROR</arg>
+                <arg>-Amapstruct.defaultComponentModel=spring</arg>
+              </compilerArgs>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>

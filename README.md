@@ -103,6 +103,11 @@ cd apps/api && ./mvnw spring-boot:run
 | `pnpm typecheck`        | `tsc --noEmit`                               |
 | `pnpm format`           | Prettier                                     |
 | `./mvnw spotless:apply` | Formata o código Java (dentro de `apps/api`) |
+| `./mvnw verify`         | Suíte da API — **exige Docker rodando**      |
+
+`./mvnw verify` sobe um PostgreSQL 16 descartável por Testcontainers, aplica as migrações
+Flyway do zero e valida as entidades JPA contra o schema resultante. O hook de `pre-push`
+executa a mesma suíte, então Docker parado impede o push.
 
 Para variáveis de ambiente, copie [.env.example](.env.example) para `.env`.
 
@@ -115,8 +120,8 @@ Para variáveis de ambiente, copie [.env.example](.env.example) para `.env`.
 
 | MVP | Entregável                                                            | Status          |
 | --- | --------------------------------------------------------------------- | --------------- |
-| 0   | Fundação técnica — monorepo com CI verde                              | 🚧 em andamento |
-| 1   | **Portfólio publicado** — link em produção com hero vindo do Postgres | ⏳              |
+| 0   | Fundação técnica — monorepo com CI verde                              | ✅ `v0.0.1`     |
+| 1   | **Portfólio publicado** — link em produção com hero vindo do Postgres | 🚧 em andamento |
 | 2   | Perfil completo — sobre, timeline, skills e CV                        | ⏳              |
 | 3   | Prova de trabalho — projetos com filtro e páginas de detalhe          | ⏳              |
 | 4   | Prova de engenharia backend — GitHub com circuit breaker e cache      | ⏳              |
