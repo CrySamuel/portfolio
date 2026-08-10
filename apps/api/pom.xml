@@ -35,6 +35,7 @@
     <!-- Nao gerenciadas pelo spring-boot-dependencies; as versoes sao nossas. -->
     <mapstruct.version>1.6.3</mapstruct.version>
     <springdoc.version>2.8.6</springdoc.version>
+    <archunit.version>1.5.0</archunit.version>
   </properties>
 
   <dependencies>
@@ -139,6 +140,21 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!--
+      Le o bytecode de target/classes e faz das regras de dependencia da secao
+      3.4 um teste. E o artefato agregador: traz a api (@AnalyzeClasses,
+      @ArchTest) e o engine do JUnit 5 que executa os campos ArchRule.
+
+      Escopo de teste de proposito. A verificacao acontece no build, entao nada
+      disto vai para o jar de producao - o custo em runtime e zero.
+    -->
+    <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit-junit5</artifactId>
+      <version>${archunit.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
