@@ -16,13 +16,11 @@
 -- Por isso o arquivo tem uma obrigacao: rodar duas vezes tem de deixar o banco
 -- exatamente no mesmo estado. Os dois comandos abaixo sao upsert por isso.
 
--- ATENCAO - conteudo provisorio.
---
--- Tres campos ficam vazios porque sao fatos sobre uma pessoa real e so ela pode
--- informa-los: location, resume_url e available_for_work (que assume o default
--- conservador, FALSE). O texto da bio abaixo afirma apenas o que este
--- repositorio comprova por si mesmo. Substituir isto e editar este arquivo -
--- nao e um bloqueio de engenharia (secao 17, risco de conteudo).
+-- Conteudo informado pelo dono do portfolio, com uma excecao: resume_url segue
+-- nulo porque o PDF do curriculo e entregavel do MVP 2. A bio continua sendo a
+-- redacao que afirma apenas o que este repositorio comprova por si mesmo, e
+-- pode ser trocada a qualquer momento - e para isso que esta migracao e
+-- repetivel.
 
 INSERT INTO profile (full_name, headline, bio, location, resume_url, available_for_work)
 VALUES (
@@ -33,9 +31,9 @@ VALUES (
         || 'APIs REST documentadas em OpenAPI. Este portfólio é a própria demonstração '
         || 'disso: o conteúdo desta página vem de uma API Java com PostgreSQL, e o '
         || 'código está público no GitHub.',
+    'Remoto · Brasil',
     NULL,
-    NULL,
-    FALSE
+    TRUE
 )
 -- O ON CONFLICT so e possivel porque a coluna singleton tem UNIQUE. Sem ela nao
 -- haveria chave sobre a qual reconhecer "a linha do perfil" - a tabela nao tem
@@ -50,20 +48,41 @@ ON CONFLICT (singleton) DO UPDATE SET
     available_for_work = EXCLUDED.available_for_work,
     updated_at         = now();
 
--- Um unico link, e nao por esquecimento: e a unica URL confirmavel a partir
--- deste repositorio. LinkedIn e e-mail dependem de decisao do dono - publicar um
--- endereco de e-mail e escolha dele, nao do codigo. A mesma regra ja vale no
--- front, em lib/navigation.ts, e as duas listas se encontram no commit 22.
+-- A lista `desejados` e a fonte de verdade dos links: o que esta nela existe no
+-- banco, o que nao esta e removido. Sem o DELETE, o seed saberia acrescentar e
+-- corrigir mas nunca tirar - e a frase "editar este arquivo atualiza o
+-- portfolio" seria falsa justamente no caso em que mais importa, o de despublicar
+-- um perfil.
+--
+-- O DELETE mora numa CTE porque o PostgreSQL executa CTE que modifica dados
+-- exatamente uma vez e ate o fim, referenciada ou nao. Assim a lista aparece uma
+-- vez so no arquivo. A ordem entre as duas sub-instrucoes nao importa: elas
+-- operam sobre conjuntos disjuntos - o DELETE so alcanca plataformas fora da
+-- lista, o INSERT so alcanca as de dentro.
 --
 -- O profile_id vem de consulta, e nao de constante: a coluna id e GENERATED
 -- ALWAYS, entao o valor nao e conhecido por quem escreve o seed. Como a tabela
 -- tem uma linha so, o CROSS JOIN produz exatamente uma tupla por plataforma.
+--
+-- Nao ha telefone aqui, e a ausencia e uma decisao. Numero pessoal em
+-- repositorio publico e permanente: sai do banco com uma edicao, mas segue
+-- recuperavel por `git log -p`, e a secao 17.3 proibe force push na main
+-- publicada. O e-mail nao tem esse custo - ja consta do package.json e da
+-- autoria dos commits, entao publica-lo aqui nao aumenta exposicao.
+WITH desejados (platform, url, display_order) AS (
+    VALUES
+        ('github',   'https://github.com/CrySamuel',                  0),
+        ('linkedin', 'https://www.linkedin.com/in/crystofer-samuel/', 1),
+        ('email',    'mailto:crystoferdemetino@gmail.com',            2)
+),
+removidos AS (
+    DELETE FROM social_link
+    WHERE platform NOT IN (SELECT platform FROM desejados)
+)
 INSERT INTO social_link (profile_id, platform, url, display_order)
-SELECT p.id, v.platform, v.url, v.display_order
+SELECT p.id, d.platform, d.url, d.display_order
 FROM profile p
-CROSS JOIN (VALUES
-    ('github', 'https://github.com/CrySamuel', 0)
-) AS v (platform, url, display_order)
+CROSS JOIN desejados d
 ON CONFLICT (profile_id, platform) DO UPDATE SET
     url           = EXCLUDED.url,
     display_order = EXCLUDED.display_order,
