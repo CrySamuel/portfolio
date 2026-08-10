@@ -4,7 +4,12 @@ node_modules/
 
 # --- Build: web ---
 .next/
-out/
+# Ancorado no app, e nao solto. Um `out/` sem barra inicial casa com QUALQUER
+# diretorio chamado out em qualquer profundidade - inclusive
+# profile/domain/port/out e adapter/out/persistence, que sao o lado de saida da
+# arquitetura hexagonal (secao 3.4). O efeito era silencioso: os arquivos nao
+# entravam no commit e nem apareciam como untracked no git status.
+/apps/web/out/
 dist/
 build/
 .turbo/
