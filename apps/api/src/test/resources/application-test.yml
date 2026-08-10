@@ -1,0 +1,27 @@
+# Perfil dos testes de integracao.
+#
+# So o que muda em relacao ao application.yml. Repetir aqui datasource, Flyway ou
+# ddl-auto seria criar uma segunda configuracao para manter - e testes que rodam
+# sob configuracao propria testam essa configuracao, nao a que vai para
+# producao. O datasource vem do container, por @ServiceConnection.
+spring:
+  jpa:
+    properties:
+      hibernate:
+        # Liga o contador de statements do Hibernate.
+        #
+        # E o que permite ao ProfileIntegrationTest afirmar que perfil e links
+        # saem numa consulta so, contra SQL de verdade. Essa promessa e do
+        # @EntityGraph do ProfileJpaRepository e ate aqui existia apenas como
+        # comentario - e comentario nao reprova build (secao 4.1 do estado).
+        #
+        # Fica restrito a este perfil: em producao o contador custaria memoria e
+        # sincronizacao a cada consulta, para ninguem ler o resultado.
+        generate_statistics: true
+
+logging:
+  level:
+    # O contador ligado faz o Hibernate imprimir um resumo de metricas por
+    # sessao, em INFO. Seriam dezenas de blocos por execucao afogando a saida do
+    # build, e a informacao util ja esta nas assercoes.
+    org.hibernate.stat: WARN
