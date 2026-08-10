@@ -39,7 +39,7 @@ blob-report/
 packages/api-client/src/generated/
 
 # --- Ferramentas locais ---
-.claude/settings.local.json
+.claude/
 
 # --- IDE ---
 .idea/
