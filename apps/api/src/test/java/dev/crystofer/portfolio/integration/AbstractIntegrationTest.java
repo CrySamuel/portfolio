@@ -7,8 +7,6 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Base dos testes que sobem a aplicacao inteira contra um Postgres de verdade.
@@ -23,6 +21,19 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * todas as subclasses compartilham a mesma instancia, e o Postgres sobe uma vez por JVM. Fosse um
  * container por classe, cada teste de integracao novo acrescentaria dezenas de segundos ao CI - o
  * tipo de custo que faz alguem propor "usa H2 nos testes" seis meses depois.
+ *
+ * <p><strong>E por isso o container sobe num bloco estatico, e nao por {@code @Testcontainers} com
+ * {@code @Container}.</strong> Aquele par tem ciclo de vida por classe: a extensao do JUnit inicia
+ * o container no {@code beforeAll} e o <em>para</em> no {@code afterAll} de cada classe que o
+ * herda. O contexto do Spring, esse, fica em cache e e reaproveitado pela classe seguinte - com a
+ * URL do banco que acabou de morrer. A segunda classe entao falha com {@code Connection refused}
+ * numa porta que ja nao existe.
+ *
+ * <p>O detalhe que torna o defeito perigoso e que ele depende da ordem de execucao: se a classe que
+ * usa o banco rodar primeiro, tudo passa. Foi o que aconteceu - verde na maquina de
+ * desenvolvimento, vermelho no CI, que ordenou as classes de outro jeito. Iniciado no bloco
+ * estatico e nunca parado a mao, o container vive enquanto a JVM viver, e quem o remove no fim e o
+ * resource reaper do proprio Testcontainers.
  *
  * <p>Pelo mesmo motivo as anotacoes de contexto ficam nesta classe e nao nas subclasses: a chave de
  * cache de contexto do Spring passa a ser identica entre elas, entao o contexto tambem e montado
@@ -39,11 +50,14 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-@Testcontainers
 public abstract class AbstractIntegrationTest {
 
-  @Container @ServiceConnection
+  @ServiceConnection
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+
+  static {
+    POSTGRES.start();
+  }
 
   /** Cliente HTTP ja apontado para a porta sorteada. */
   @Autowired protected TestRestTemplate restTemplate;
