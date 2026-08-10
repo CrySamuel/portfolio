@@ -32,8 +32,9 @@
     <spotless.version>3.9.0</spotless.version>
     <google-java-format.version>1.36.1</google-java-format.version>
 
-    <!-- O spring-boot-dependencies nao gerencia o MapStruct; a versao e nossa. -->
+    <!-- Nao gerenciadas pelo spring-boot-dependencies; as versoes sao nossas. -->
     <mapstruct.version>1.6.3</mapstruct.version>
+    <springdoc.version>2.8.6</springdoc.version>
   </properties>
 
   <dependencies>
@@ -90,6 +91,22 @@
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
+    </dependency>
+
+    <!--
+      Gera o OpenAPI 3.1 a partir dos proprios controllers, e nao de um arquivo
+      escrito a mao que envelhece em silencio. O documento resultante e o que
+      alimenta o @portfolio/api-client: contrato divergente vira build quebrado,
+      nao bug de producao (secao 3.8).
+
+      O -ui traz o Swagger UI junto. Sao ~2 MB de webjar que nao pesam no
+      runtime, e uma pagina navegavel vale muito para quem abre o repositorio
+      para avaliar - que e um dos publicos declarados na secao 1.2.
+    -->
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+      <version>${springdoc.version}</version>
     </dependency>
 
     <dependency>
