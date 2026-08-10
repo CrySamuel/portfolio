@@ -43,10 +43,25 @@ export const NAVBAR_HEIGHT = 64;
  * guarda dado (regra 6 da seção 8.7) e porque um único lugar é mais fácil de
  * apagar do que uma prop espalhada.
  *
- * Só o GitHub entra por enquanto: é a única URL que dá para confirmar a partir
- * do próprio repositório. LinkedIn e e-mail dependem de decisão do dono do
- * portfólio - publicar um endereço de e-mail é escolha dele, não do código.
+ * A lista espelha `R__seed_profile.sql`, inclusive na ordem: enquanto as duas
+ * existirem, divergir seria mostrar uma coisa no rodapé e servir outra pela API.
+ * A duplicação tem prazo e é ela que o commit 22 elimina.
+ *
+ * Telefone não entra, por decisão do dono do portfólio. O e-mail entra porque
+ * já consta do `package.json` e da autoria dos commits - publicá-lo aqui não
+ * aumenta exposição, enquanto um número pessoal aumentaria e seria permanente
+ * no histórico do git.
  */
 export const SOCIAL_LINKS = [
   { platform: 'github', href: 'https://github.com/CrySamuel', label: 'Perfil no GitHub' },
+  {
+    platform: 'linkedin',
+    href: 'https://www.linkedin.com/in/crystofer-samuel/',
+    label: 'Perfil no LinkedIn',
+  },
+  {
+    platform: 'email',
+    href: 'mailto:crystoferdemetino@gmail.com',
+    label: 'Enviar e-mail para Crystofer',
+  },
 ] as const;
