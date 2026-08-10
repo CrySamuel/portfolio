@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
-import { ThemeToggle } from '@/components/common/ThemeToggle';
+import { SkipLink } from '@/components/common/SkipLink';
+import { Footer } from '@/components/layout/Footer';
+import { Navbar } from '@/components/layout/Navbar';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { fontVariables } from '@/lib/fonts';
+import { MAIN_ID, SOCIAL_LINKS } from '@/lib/navigation';
 
 import './globals.css';
 
@@ -42,14 +45,25 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <ThemeProvider>
           {/*
-            Posicao provisoria. O lugar definitivo do botao e a navbar, que
-            chega no commit 15 - ate la ele fica flutuando no canto, porque
-            componente que nao e renderizado nao e componente verificado.
+            Primeiro no DOM, e portanto primeiro na ordem de tabulacao - essa
+            posicao e a razao de o componente existir. Skip link depois da navbar
+            nao pula nada.
           */}
-          <div className="fixed top-4 right-4 z-50">
-            <ThemeToggle />
-          </div>
-          {children}
+          <SkipLink />
+          <Navbar />
+
+          {/*
+            tabIndex={-1} nao e detalhe: sem ele o pulo do skip link move a
+            rolagem mas nao o foco, e o proximo Tab volta para o topo da navbar -
+            o atalho parece funcionar e nao funciona.
+
+            pt-16 compensa a altura do header fixo, que saiu do fluxo.
+          */}
+          <main id={MAIN_ID} tabIndex={-1} className="pt-16">
+            {children}
+          </main>
+
+          <Footer links={SOCIAL_LINKS} />
         </ThemeProvider>
       </body>
     </html>

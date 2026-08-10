@@ -44,6 +44,24 @@
   :where(code, kbd, samp, pre) {
     font-family: var(--font-mono);
   }
+
+  /*
+    Unica coisa que o <dialog> nativo nao entrega sozinho: o fundo continua
+    rolando atras do modal. Com :has() isso vira uma regra de CSS, sem estado no
+    React e sem escrever no style do body a cada abertura - que e como as
+    bibliotecas resolvem, e a razao de elas precisarem restaurar a rolagem no
+    unmount.
+
+    scrollbar-gutter reserva a barra o tempo todo; sem isso a pagina salta
+    lateralmente no instante em que ela some.
+  */
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  body:has(dialog[open]) {
+    overflow: hidden;
+  }
 }
 
 /*

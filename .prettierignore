@@ -21,3 +21,10 @@ docs/PLANO-COMPLETO.md
 apps/api/mvnw
 apps/api/mvnw.cmd
 apps/api/.mvn
+
+# Artefatos do GitHub Copilot App Modernization. Ja sao ignorados pelo git
+# (.github/modernize/java-upgrade/.gitignore), mas o Prettier nao le .gitignore -
+# so .prettierignore. Sem esta entrada o format:check quebra num arquivo .json
+# que na verdade contem JSONL, e a falha nao e nossa nem tem conserto do nosso
+# lado: o arquivo e gerado por outra ferramenta.
+.github/modernize
