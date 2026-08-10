@@ -13,6 +13,19 @@ spring:
   jmx:
     enabled: false
 
+  flyway:
+    # Explicito porque o default do JVM nao e confiavel entre os dois ambientes
+    # deste projeto: o desenvolvimento e Windows e o CI e Ubuntu. O seed tem
+    # acentuacao, e ler UTF-8 como CP1252 nao quebra a migracao - grava mojibake
+    # no banco, que so aparece na tela do visitante.
+    encoding: UTF-8
+
+    # Ja e o default do Flyway 10, e esta escrito assim mesmo: `clean` apaga
+    # todos os objetos do schema, e o unico banco onde alguem digitaria isso por
+    # engano e o de producao. Default silencioso protege; default declarado
+    # tambem informa a intencao a quem le.
+    clean-disabled: true
+
   lifecycle:
     timeout-per-shutdown-phase: 30s
 
