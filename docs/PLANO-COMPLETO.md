@@ -62,7 +62,7 @@ Um tech lead que abrir o repositório encontra: arquitetura hexagonal, ADRs, tes
 | Decisão | Escolha | ADR |
 |---------|---------|-----|
 | Escopo | Monorepo full-stack com API real em produção | [ADR-0001](#adr-0001-monorepo-full-stack-com-api-real) |
-| Backend | Java 21 + Spring Boot 3.5 | [ADR-0002](#adr-0002-java-21-e-spring-boot-34), revisado pelo [ADR-0009](#adr-0009-spring-boot-35-substitui-o-adr-0002) |
+| Backend | Java 21 + Spring Boot 4.1 | [ADR-0002](#adr-0002-java-21-e-spring-boot-34) → [ADR-0009](#adr-0009-spring-boot-35-substitui-o-adr-0002) → [ADR-0011](#adr-0011-spring-boot-41-substitui-o-adr-0009) |
 | Estilo arquitetural | Hexagonal (Ports & Adapters) + monólito modular | [ADR-0003](#adr-0003-arquitetura-hexagonal-com-monólito-modular) |
 | Fonte de verdade do conteúdo | PostgreSQL + Flyway | [ADR-0004](#adr-0004-postgresql-como-fonte-de-verdade-do-conteúdo) |
 | Comunicação web ↔ api | BFF via Route Handlers do Next.js | [ADR-0005](#adr-0005-bff-em-route-handlers-do-nextjs) |
@@ -343,7 +343,7 @@ Atributos de qualidade competem entre si. Estas são as trocas conscientes:
 | Contêiner | Tecnologia | Responsabilidade | Onde roda |
 |-----------|-----------|------------------|-----------|
 | **web** | Next.js 15, React 19, TS | Renderização, SEO, UI, BFF | Vercel (edge + serverless) |
-| **api** | Java 21, Spring Boot 3.4 | Regras de negócio, persistência, integrações | Render (container Docker) |
+| **api** | Java 21, Spring Boot 4.1 | Regras de negócio, persistência, integrações | Render (container Docker) |
 | **db** | PostgreSQL 16 | Fonte de verdade do conteúdo e das mensagens | Neon ([ADR-0010](#adr-0010-postgres-no-neon-emenda-o-adr-0006)) |
 | **cache** | Caffeine (in-process) | Cache de leitura e de respostas do GitHub | Dentro da `api` |
 | **ui** | Biblioteca React | Primitivos de design system | Pacote do monorepo |
@@ -620,7 +620,7 @@ Nenhuma configuração fica hardcoded: `application.yml` por perfil, variáveis 
 | Tecnologia | Problema que resolve | Por quê | Alternativa descartada |
 |-----------|---------------------|---------|------------------------|
 | **Java 21 (LTS)** | Linguagem-alvo das vagas backend enterprise | LTS até 2031; Records eliminam boilerplate; sealed interfaces + pattern matching dão exaustividade verificada pelo compilador; **Virtual Threads** tornam chamadas bloqueantes baratas; text blocks | **Java 17** — sem Virtual Threads nem pattern matching completo |
-| **Spring Boot 3.4** | Infraestrutura de aplicação sem escrevê-la | Domínio absoluto no mercado enterprise; Actuator; `@TransactionalEventListener`; `RestClient` moderno; `ProblemDetail` nativo; Virtual Threads em uma linha de config | **Quarkus** — melhor startup, menor demanda de mercado |
+| **Spring Boot 4.1** *([ADR-0011](#adr-0011-spring-boot-41-substitui-o-adr-0009))* | Infraestrutura de aplicação sem escrevê-la | Domínio absoluto no mercado enterprise; Actuator; `@TransactionalEventListener`; `RestClient` moderno; `ProblemDetail` nativo; Virtual Threads em uma linha de config | **Quarkus** — melhor startup, menor demanda de mercado |
 | **Maven** | Build e ciclo de testes | Declarativo e previsível; plugins maduros (Flyway, JaCoCo, Spotless, OWASP); é o que times Spring usam | **Gradle** — Kotlin DSL adiciona uma linguagem a mais na leitura |
 | **PostgreSQL 16** | Persistência confiável | ACID sólido; `jsonb`; full-text search nativo; free tier em todo PaaS; o relacional mais requisitado | **MongoDB** — os dados são fortemente relacionais |
 | **Flyway** | Evolução versionada do schema | SQL puro versionado em Git, validado no CI. Substitui `ddl-auto` (aceitável em tutorial, inaceitável em produção). Bônus: adicionar projeto ao portfólio **é** escrever uma migration | `ddl-auto=update` |
@@ -2793,11 +2793,11 @@ Validado por commitlint no hook `commit-msg`. Commit fora do padrão **não entr
 
 ### ADR-0009: Spring Boot 3.5 (substitui o ADR-0002)
 
-**Status:** Aceito. Substitui o [ADR-0002](#adr-0002-java-21-e-spring-boot-34) na parte da versão do Spring Boot. Tudo o mais que o ADR-0002 decidiu — Java 21, Maven, Records, sealed interfaces, Virtual Threads, text blocks — **continua valendo sem alteração**.
+**Status:** **Substituído pelo [ADR-0011](#adr-0011-spring-boot-41-substitui-o-adr-0009)** quanto à versão, quando a linha 3.5 saiu do suporte OSS em junho de 2026. O raciocínio abaixo continua sendo o registro de por que a 3.5 foi escolhida no lugar da 3.4 — e é literalmente o mesmo que levou à 4.1 depois.
 
 **Contexto.** O ADR-0002 travou o backend em Spring Boot 3.4. Quando o commit 03 foi escrito, essa linha já não recebia correções: o último patch da 3.4 foi o `3.4.13`, de 18/12/2025, e nada saiu depois. A 3.5, por sua vez, seguia ativa — o `3.5.16` é de 25/06/2026.
 
-O conflito é com um critério do próprio plano, não com preferência. A [seção 17.2](#172-critérios-de-qualidade) exige **zero CVE HIGH ou CRITICAL** como condição de release. Uma linha sem manutenção não tem como cumprir isso: a primeira vulnerabilidade publicada no Spring Framework 6 ou em qualquer dependência transitiva ficaria sem correção oficial, e a única saída seria fixar versões de dependência à mão — exatamente o tipo de remendo que o plano evita.
+O conflito é com um critério do próprio plano, não com preferência. A [seção 17.2](#172-definition-of-done-global-do-projeto) exige **zero CVE HIGH ou CRITICAL** como condição de release. Uma linha sem manutenção não tem como cumprir isso: a primeira vulnerabilidade publicada no Spring Framework 6 ou em qualquer dependência transitiva ficaria sem correção oficial, e a única saída seria fixar versões de dependência à mão — exatamente o tipo de remendo que o plano evita.
 
 Existe ainda uma segunda pressão, registrada na operação: o Dependabot propôs o salto para a 4.1.0 disfarçado de bump de rotina, dentro de um grupo que não filtrava `update-types`. A ausência de uma decisão explícita sobre versão é o que torna esse tipo de proposta perigosa.
 
@@ -2851,6 +2851,46 @@ Isso colide com dois pontos do próprio plano. A [seção 2.2](#22-manutenibilid
 - **O scale-to-zero exige configuração que o Render não exigiria.** Conexão aberta conta como atividade, então `minimum-idle: 0` e `idle-timeout: 60000` são o que permite o banco dormir — sem eles a cota de compute se esgota com o site parado e ninguém visitando. O `max-lifetime: 300000` existe porque o Neon derruba conexão ociosa pelo lado dele, e um pool que não recicla antes disso entrega ao Hibernate uma conexão morta. E a sonda da plataforma passa a ser `/actuator/health/liveness`, porque o health completo inclui o indicador `db` e acordaria o banco a cada verificação.
 - **O pooler do Neon não serve ao driver JDBC.** É PgBouncer em modo transação, e o driver usa prepared statements do servidor a partir da quinta execução. Usa-se o endpoint direto, sem o sufixo `-pooler`, com o HikariCP fazendo o papel de pool. É uma pegadinha a mais na string de conexão, e ela não é adivinhável a partir do que o painel do Neon mostra.
 - **O plano gratuito não permite restringir acesso por IP.** A credencial do banco vale de qualquer lugar da internet, o que eleva o custo de vazá-la. Por isso todos os segredos entram como `sync: false` no `render.yaml` e nunca passam pelo repositório — o blueprint foi escrito assim de propósito.
+
+### ADR-0011: Spring Boot 4.1 (substitui o ADR-0009)
+
+**Status:** Aceito. Substitui o [ADR-0009](#adr-0009-spring-boot-35-substitui-o-adr-0002) quanto à versão do Spring Boot. O [ADR-0002](#adr-0002-java-21-e-spring-boot-34) segue valendo em tudo o mais — **Java 21**, Maven, Records, sealed interfaces, Virtual Threads e text blocks não são tocados.
+
+**Contexto.** O ADR-0009 escolheu a linha 3.5 e explicou por quê: a 3.4 tinha parado de receber correções, e a [seção 17.2](#172-definition-of-done-global-do-projeto) exige **zero CVE HIGH ou CRITICAL** como condição de release — critério que uma linha sem manutenção não tem como cumprir.
+
+Em 25/06/2026 a mesma coisa aconteceu com a 3.5. O anúncio do `3.5.16` declara que é **o último release OSS da geração 3.5**, e recomenda subir para a 4.0 ou 4.1 para continuar recebendo suporte aberto. O projeto usava exatamente o `3.5.16`.
+
+Não há decisão nova a tomar aqui, e sim uma já tomada a executar. O ADR-0009 registrou o salto para a 4 como *"reavaliação futura — a decisão é adiar, não recusar"*, e fixou o gatilho: **quando o MVP 1 estiver em produção**. O MVP 1 foi publicado e marcado com a tag `v0.1.0`.
+
+**Decisão.** Spring Boot **4.1.x**.
+
+O que o ADR-0009 apontou como custo do salto continua verdadeiro — e agora foi pago:
+
+| | 3.5.16 | 4.1.0 |
+|---|---|---|
+| Spring Framework | 6.2.19 | 7.x |
+| Jakarta EE | 10 | 11 |
+| Hibernate | 6.6.x | 7.x |
+| Jackson | 2 (`com.fasterxml.jackson`) | **3** (`tools.jackson`) |
+| Java mínimo | 17 | 17 |
+
+A última linha é o ponto que mantém o ADR-0002 intacto: a 4.0 tem **Java 17** como base, então a escolha do Java 21 LTS não é afetada.
+
+**Alternativas descartadas**
+
+- *Permanecer na 3.5* — é a alternativa que motivou este ADR, exatamente como permanecer na 3.4 motivou o anterior. Cumpriria a letra do ADR-0009 e violaria o critério de segurança da seção 17.2, que é o mais duro dos dois. Repetir aqui a frase que já valeu uma vez: fidelidade a uma decisão vencida não é rigor, é inércia.
+- *Suporte comercial da 3.5* — existe, e é a saída oferecida a quem não pode migrar. Custa dinheiro, e a [seção 1.5](#15-escopo) fixa orçamento próximo de zero.
+- *Adiar de novo, até depois do MVP 2* — foi considerada com um argumento razoável: migração logo após um lançamento bem-sucedido é risco mal colocado. Descartada pelo custo composto — os 9 commits do MVP 2 seriam escritos numa plataforma que seria trocada em seguida, e cada MVP adiante encarece a mesma migração. Com um módulo, quatro tabelas e 73 testes, **este é o momento mais barato que ela teria**.
+- *Migrar apenas para a 4.0* — a linha mais antiga das duas suportadas ganharia menos tempo até a próxima migração, pelo mesmo trabalho.
+
+**Consequências positivas.** O critério de zero CVE HIGH/CRITICAL volta a ser alcançável por atualização normal. A dívida mais antiga do projeto sai da lista. E a migração vira um item verificável no repositório: os 73 testes seguem verdes, o documento OpenAPI publicado é byte a byte idêntico ao versionado — o springdoc 3.1 preserva `required`, os tipos nuláveis e o enum —, e a imagem de produção sobe em 19,5s contra 23,7s da anterior, usando 249 MB dos 512 do free tier.
+
+**Consequências negativas (aceitas).**
+
+- **A modularização da 4.0 espalhou o que era um starter em vários módulos**, e cada peça ausente só se manifesta ao tentar usá-la — `spring-boot-starter-webmvc` no lugar de `-web`, starter próprio para Flyway, `resttestclient` e `restclient` para o `TestRestTemplate`, `starter-webmvc-test` para o `@WebMvcTest`. Uma delas falha com `NoClassDefFoundError` dentro de um `@ConditionalOnMissingBean`, mensagem que não cita nenhuma das classes envolvidas. Está tudo registrado no corpo do commit da migração.
+- **Jackson 3 alcança o código de produção**, movendo o databind de `com.fasterxml.jackson` para `tools.jackson`. A regra de ArchUnit que barra Jackson no domínio passou a listar os dois pacotes, porque as anotações ficaram no pacote antigo — e é a anotação o vazamento provável.
+- **O Testcontainers deixou de ser gerenciado pelo Boot** e passou a exigir BOM próprio, com os artefatos renomeados na 2.0.
+- **A 4.1 também terá um fim de vida**, e esta decisão será revisitada — como o ADR-0009 previu para si mesmo. A diferença é que agora existe um precedente de como fazê-lo: verificar o calendário de suporte, não a data do último release.
 
 ---
 ---
