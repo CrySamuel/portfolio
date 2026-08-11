@@ -43,6 +43,17 @@ export interface ApiClientOptions {
  * que nao renderiza nada.
  */
 export interface RequestOptions {
+  /**
+   * Sobrepoe o timeout do cliente nesta chamada.
+   *
+   * Existe porque nem toda chamada tem alguem esperando. A leitura que alimenta
+   * a pre-renderizacao e a revalidacao do ISR roda no build e em segundo plano,
+   * onde vale a pena aguardar um servico hibernado acordar; a mesma espera numa
+   * requisicao de visitante seria inaceitavel. Um numero so no cliente
+   * obrigaria a escolher entre falhar o build e travar a pagina.
+   */
+  readonly timeoutMs?: number;
+
   readonly next?: {
     readonly revalidate?: number | false;
     // `string[]`, e nao `readonly string[]`: o Next declara a propriedade como
@@ -102,7 +113,7 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     try {
       resposta = await fetch(url, {
         headers: { Accept: 'application/json', ...headers },
-        signal: sinal(timeoutMs, requestOptions.signal),
+        signal: sinal(requestOptions.timeoutMs ?? timeoutMs, requestOptions.signal),
         // Espalhado condicionalmente: com exactOptionalPropertyTypes ligado,
         // passar `next: undefined` nao e o mesmo que nao passar `next`.
         ...(requestOptions.next ? { next: requestOptions.next } : {}),

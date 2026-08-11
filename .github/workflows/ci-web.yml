@@ -35,23 +35,9 @@ env:
   # postura de privacidade do projeto (secao 9.4: sem rastreamento).
   NEXT_TELEMETRY_DISABLED: '1'
 
-  # A validacao de ambiente roda na importacao do modulo, e o `next build`
-  # importa a arvore inteira - entao sem esta variavel o build falha antes de
-  # compilar qualquer coisa. E configuracao, nao dependencia: nenhuma rota e
-  # pre-renderizada aqui (ver `dynamic` no layout), entao o endereco nao chega a
-  # ser chamado. Quando o commit 23 trouxer SSG, este job precisa de uma API de
-  # verdade alcancavel - e a mudanca sera deliberada, nao acidental.
-  API_URL: 'http://localhost:8080'
-
-  # Idem: o `lib/env.ts` exige a chave na importacao do modulo. Aqui ela e
-  # descartavel de proposito - nao ha API para chamar neste job, e a chave de
-  # verdade so existe nos paineis do Render e da Vercel. Um segredo do GitHub
-  # daria a impressao de que este valor importa.
-  SERVICE_API_KEY: 'chave-de-ci-sem-valor-algum-32-caracteres'
-
 jobs:
   quality:
-    name: lint · typecheck · build
+    name: format · lint · typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -84,5 +70,18 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Build
-        run: pnpm build
+      # O `pnpm build` saiu daqui no commit 23, e a razao merece registro.
+      #
+      # Desde que a home passou a ser pre-renderizada (ISR), o `next build`
+      # busca o perfil na API para gerar o HTML. Este runner so tem Node: o
+      # build falharia por nao alcancar a API, e nao por defeito no codigo.
+      #
+      # Havia duas saidas. Uma era servir um dublê da API aqui, o que faria este
+      # job passar com dado inventado - um portao que confirma o que ele mesmo
+      # produziu. A outra e reconhecer que o build so e verificavel onde existe
+      # API de verdade, e la ele ja acontece: a Vercel builda cada push e cada
+      # PR, com as variaveis reais, e reprova o deploy se quebrar.
+      #
+      # O que sobrou aqui continua real e independente da API - formatacao,
+      # fronteiras de arquitetura e tipos, incluindo os tipos gerados do
+      # contrato, que o `typecheck` reconstroi pelo turbo antes de rodar.

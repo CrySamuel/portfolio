@@ -13,21 +13,20 @@ import { MAIN_ID } from '@/lib/navigation';
 import './globals.css';
 
 /**
- * Nada e pre-renderizado no build. **Temporario, sai no commit 23.**
+ * HTML pre-renderizado no build, revalidado de hora em hora (ISR).
  *
- * O layout busca o perfil na API, e o `next build` roda onde a API pode nao
- * existir - o CI do web, por exemplo, so tem Node. Sem esta linha o build
- * tentaria pre-renderizar `/` e a pagina de 404, falhando por infraestrutura e
- * nao por defeito.
+ * Nao e preferencia: e o que impede o visitante de esperar pelo cold start. O
+ * servico gratuito do Render hiberna depois de 15 minutos sem trafego e leva
+ * cerca de um minuto para voltar - com renderizacao por requisicao, quem
+ * abrisse o site depois de um periodo parado ficaria esse minuto olhando para
+ * uma tela de carregamento. Com ISR, a CDN entrega o HTML pronto e so a
+ * revalidacao em segundo plano toca a API. E o raciocinio do ADR-0006, agora
+ * com numero.
  *
- * A secao 8.5 pede SSG para o hero, e ela esta certa: com a API hibernando no
- * free tier (ADR-0006), HTML pronto na CDN e o que impede o visitante de esperar
- * pelo cold start. Mas essa escolha depende de existir uma API alcancavel no
- * ambiente de build, o que so passa a valer no commit 23, junto do deploy e do
- * keep-alive. Ate la o dado e buscado no servidor a cada requisicao, com cache
- * de uma hora no fetch - a API e consultada uma vez por hora, nao por visita.
+ * Expirado o prazo, o Next serve a versao antiga na hora e revalida atras -
+ * entao nem a revalidacao faz alguem esperar.
  */
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: 'Crystofer Demetino — Desenvolvedor Backend',

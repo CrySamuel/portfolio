@@ -17,6 +17,22 @@ export const PROFILE_REVALIDATE_SECONDS = 3600;
 export const PROFILE_CACHE_TAG = 'profile';
 
 /**
+ * Espera longa, e de propósito.
+ *
+ * Quem chama esta função é o `next build`, que pré-renderiza a página, e a
+ * revalidação do ISR, que roda em segundo plano — **nunca** um visitante. O
+ * serviço gratuito do Render hiberna após 15 minutos sem tráfego e leva cerca de
+ * um minuto para voltar; com o timeout padrão de 5s do cliente, um deploy feito
+ * de madrugada falharia por a API estar dormindo, e o erro pareceria defeito de
+ * código.
+ *
+ * O número é o cold start observado com folga. Se um dia houver leitura com
+ * visitante esperando, ela usa o padrão do cliente — que é curto justamente por
+ * isso.
+ */
+const COLD_START_TIMEOUT_MS = 90_000;
+
+/**
  * O perfil publico.
  *
  * O `cache` do React memoiza por passagem de renderizacao: o rodape no layout e
@@ -32,5 +48,6 @@ export const PROFILE_CACHE_TAG = 'profile';
 export const getProfile = cache((): Promise<Profile> => {
   return api.getProfile({
     next: { revalidate: PROFILE_REVALIDATE_SECONDS, tags: [PROFILE_CACHE_TAG] },
+    timeoutMs: COLD_START_TIMEOUT_MS,
   });
 });
