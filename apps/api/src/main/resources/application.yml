@@ -65,6 +65,20 @@ management:
   endpoint:
     health:
       show-details: never
+
+      # Liga /actuator/health/liveness e /actuator/health/readiness.
+      #
+      # E o que permite a sonda da plataforma e o keep-alive baterem num
+      # endpoint que **nao toca o banco**. O /actuator/health completo inclui o
+      # indicador `db`, que roda uma query de validacao: usado como health
+      # check recorrente, acordaria o Postgres gerenciado a cada poucos
+      # segundos e anularia o scale-to-zero que o perfil de producao configura
+      # o pool para preservar.
+      #
+      # Fica aqui, e nao so no perfil prod, porque endpoint que existe apenas em
+      # producao e endpoint que ninguem consegue exercitar antes de produzir.
+      probes:
+        enabled: true
   info:
     env:
       enabled: true

@@ -36,19 +36,6 @@ spring:
       # requisicao falha com erro de rede que nao diz o que aconteceu.
       max-lifetime: 300000
 
-management:
-  endpoint:
-    health:
-      # Liga /actuator/health/liveness e /actuator/health/readiness.
-      #
-      # E o que permite a sonda da plataforma e o keep-alive baterem num
-      # endpoint que **nao toca o banco**. O /actuator/health completo inclui o
-      # indicador `db`, que roda uma query de validacao: usado como health check,
-      # ele acordaria o Neon a cada poucos segundos e anularia o scale-to-zero
-      # que as linhas acima existem para preservar.
-      probes:
-        enabled: true
-
 logging:
   level:
     root: INFO

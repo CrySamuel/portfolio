@@ -1,0 +1,81 @@
+# Blueprint do Render - a infraestrutura da API descrita em arquivo.
+#
+# Em vez de preencher formulario no painel, o Render le este arquivo e cria o
+# servico. A diferenca nao e conveniencia: configuracao clicada nao aparece em
+# diff, nao tem historico e nao volta atras. Aqui, mudar o health check ou a
+# regiao e um commit revisavel.
+#
+# Como aplicar: no painel, New > Blueprint, apontando para este repositorio.
+#
+# O banco NAO esta aqui de proposito. O Postgres gratuito do Render **expira 30
+# dias depois de criado** e e apagado apos mais 14 - um portfolio hospedado nele
+# sairia do ar sozinho, sem aviso. O banco vive no Neon, cujo plano gratuito nao
+# expira, e chega aqui como variavel de ambiente.
+
+services:
+  - name: portfolio-api
+    type: web
+    runtime: docker
+    plan: free
+
+    # Ohio e o par de us-east-2, que e onde esta o projeto do Neon. Banco e
+    # aplicacao em regioes diferentes pagariam a latencia entre elas em toda
+    # consulta - e quem paga essa conta aqui e a revalidacao do ISR, que
+    # apareceria como build e revalidacao lentos.
+    region: ohio
+
+    branch: main
+
+    # Caminhos relativos a raiz do repositorio. O contexto e apps/api, e nao a
+    # raiz: o monorepo carrega node_modules e .next, centenas de megabytes que
+    # nada tem a ver com o Java e que seriam enviados a cada deploy.
+    dockerfilePath: ./infra/docker/Dockerfile.api
+    dockerContext: ./apps/api
+
+    # Liveness, e nao /actuator/health.
+    #
+    # O health completo inclui o indicador `db`, que roda uma query de
+    # validacao. Como sonda da plataforma - consultada de forma recorrente -
+    # ele acordaria o Neon o tempo todo e anularia o scale-to-zero, esgotando as
+    # horas de compute do plano gratuito com o site parado. O liveness responde
+    # sem tocar em banco, o que foi verificado parando o Postgres: ele seguiu UP
+    # enquanto o health completo ficou pendurado.
+    healthCheckPath: /actuator/health/liveness
+
+    # Deploy a cada commit na main. O CI roda no mesmo push e reprova antes, mas
+    # os dois sao independentes - se algum dia isso precisar mudar, o valor
+    # `checksPass` faz o deploy esperar os checks.
+    autoDeployTrigger: commit
+
+    envVars:
+      # Sem isto o jar sobe com os defaults de application.yml, que nao trazem
+      # datasource nem as configuracoes de pool que o Neon exige.
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+
+      # `sync: false` significa: o Render pergunta o valor na criacao e o guarda
+      # no painel. Nenhum destes quatro entra no repositorio - tres sao
+      # credenciais do banco e o quarto e o que separa a API do resto da
+      # internet.
+      #
+      # SPRING_DATASOURCE_URL usa a forma JDBC, que nao e a mesma que o Neon
+      # mostra. Da string deles, aproveite host e nome do banco:
+      #
+      #   jdbc:postgresql://<host>.us-east-2.aws.neon.tech/neondb?sslmode=require
+      #
+      # Use o endpoint **direto**, sem o sufixo `-pooler`: o pooler do Neon e
+      # PgBouncer em modo transacao, e o driver JDBC usa prepared statements do
+      # servidor a partir da quinta execucao - combinacao que falha. Esta
+      # aplicacao ja tem pool proprio (Hikari), entao o pooler nao acrescenta
+      # nada. `channel_binding` tambem sai: e parametro do libpq, nao do JDBC.
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+
+      # A mesma chave cadastrada na Vercel. Divergirem e o unico jeito de o site
+      # subir e mesmo assim responder 401 (secao 2.4).
+      - key: SERVICE_API_KEY
+        sync: false

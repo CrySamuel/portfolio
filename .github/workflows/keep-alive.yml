@@ -1,0 +1,48 @@
+name: keep-alive
+
+# Janela de 10:00 as 01:59 UTC, ou seja 07:00 as 22:59 em Brasilia.
+#
+# O intervalo e de dez minutos porque o Render hiberna com quinze sem trafego -
+# a margem cobre o atraso com que o GitHub costuma disparar agendamentos, que
+# pode passar de cinco minutos em horario de pico.
+#
+# Fora da janela o servico dorme, e e isso que mantem o consumo em ~487 das 750
+# horas mensais do plano gratuito. Ver o cabecalho de infra/scripts/keep-alive.sh
+# para a conta.
+#
+# Aviso do GitHub: agendamento e desativado automaticamente apos 60 dias sem
+# commit no repositorio. Num portfolio em desenvolvimento isso nao acontece, mas
+# se o projeto ficar parado, o keep-alive para junto - e o sintoma seria o
+# Swagger lento, nao um erro.
+on:
+  schedule:
+    - cron: '*/10 10-23,0-1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    name: acordar a api
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    # A variavel e cadastrada em Settings > Secrets and variables > Actions >
+    # Variables, com o nome API_BASE_URL e a URL publica do Render. Nao e
+    # segredo: o endereco aparece em qualquer requisicao.
+    #
+    # Sem ela o job e pulado, e nao reprovado. O keep-alive e otimizacao, nao
+    # correcao: transformar "ainda nao configurei" em execucao vermelha a cada
+    # dez minutos sujaria o historico do repositorio, que aqui e entregavel.
+    if: vars.API_BASE_URL != ''
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Acordar a API
+        run: ./infra/scripts/keep-alive.sh "${{ vars.API_BASE_URL }}"
