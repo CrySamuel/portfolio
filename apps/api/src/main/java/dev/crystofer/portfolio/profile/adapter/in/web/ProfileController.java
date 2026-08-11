@@ -3,6 +3,7 @@ package dev.crystofer.portfolio.profile.adapter.in.web;
 import java.time.Duration;
 
 import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -56,7 +57,13 @@ public class ProfileController {
     this.mapper = mapper;
   }
 
-  @GetMapping
+  /**
+   * O {@code produces} nao e decoracao: sem ele o springdoc publica a resposta sob {@code *\/*}, e
+   * o contrato passa a dizer que este endpoint devolve qualquer coisa. O cliente gerado herda a
+   * imprecisao, e um {@code Accept: application/xml} deixa de receber 406 - recebe JSON com o
+   * cabecalho errado.
+   */
+  @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   @Operation(
       summary = "Devolve o perfil publico",
       description = "Nome, headline, bio, disponibilidade e perfis externos, em ordem de exibicao.")
