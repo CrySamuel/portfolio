@@ -35,6 +35,14 @@ env:
   # postura de privacidade do projeto (secao 9.4: sem rastreamento).
   NEXT_TELEMETRY_DISABLED: '1'
 
+  # A validacao de ambiente roda na importacao do modulo, e o `next build`
+  # importa a arvore inteira - entao sem esta variavel o build falha antes de
+  # compilar qualquer coisa. E configuracao, nao dependencia: nenhuma rota e
+  # pre-renderizada aqui (ver `dynamic` no layout), entao o endereco nao chega a
+  # ser chamado. Quando o commit 23 trouxer SSG, este job precisa de uma API de
+  # verdade alcancavel - e a mudanca sera deliberada, nao acidental.
+  API_URL: 'http://localhost:8080'
+
 jobs:
   quality:
     name: lint · typecheck · build

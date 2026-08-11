@@ -1,0 +1,114 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portfolio API",
+    "description": "API que serve o conteudo do portfolio de Crystofer Demetino.\n\nO site nao chama estes endpoints do navegador: quem chama e o BFF do Next.js, em build time e na revalidacao do ISR (ADR-0005). Por isso as respostas trazem Cache-Control generoso - o visitante recebe HTML da CDN e nunca espera pela API.",
+    "contact": {
+      "name": "Crystofer Demetino"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "0.0.1-SNAPSHOT"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Generated server url"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Profile",
+      "description": "Dados publicos do dono do portfolio"
+    }
+  ],
+  "paths": {
+    "/api/v1/profile": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Devolve o perfil publico",
+        "description": "Nome, headline, bio, disponibilidade e perfis externos, em ordem de exibicao.",
+        "operationId": "getProfile",
+        "responses": {
+          "200": {
+            "description": "Perfil encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nenhum perfil cadastrado - o seed nao foi aplicado"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Profile": {
+        "type": "object",
+        "description": "Perfil publico do portfolio",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "example": "Crystofer Demetino"
+          },
+          "headline": {
+            "type": "string",
+            "example": "Desenvolvedor Backend — Java & Spring Boot"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "location": {
+            "type": ["string", "null"],
+            "example": "Remoto · Brasil"
+          },
+          "resumeUrl": {
+            "type": ["string", "null"]
+          },
+          "availableForWork": {
+            "type": "boolean"
+          },
+          "socialLinks": {
+            "type": "array",
+            "description": "Perfis externos, ja em ordem de exibicao",
+            "items": {
+              "$ref": "#/components/schemas/SocialLink"
+            }
+          }
+        },
+        "required": [
+          "availableForWork",
+          "bio",
+          "fullName",
+          "headline",
+          "location",
+          "resumeUrl",
+          "socialLinks"
+        ]
+      },
+      "SocialLink": {
+        "type": "object",
+        "properties": {
+          "platform": {
+            "type": "string",
+            "enum": ["github", "linkedin", "email"],
+            "example": "github"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://github.com/CrySamuel"
+          }
+        },
+        "required": ["platform", "url"]
+      }
+    }
+  }
+}
