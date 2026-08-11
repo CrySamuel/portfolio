@@ -1,0 +1,90 @@
+# Imagem de producao da API (secao 16, commit 23).
+#
+# O contexto de build e `apps/api`, e nao a raiz do repositorio: o monorepo tem
+# node_modules e .next, que somam centenas de megabytes e nao tem nada a ver com
+# o Java. Contexto menor e upload menor a cada deploy.
+
+# ---------------------------------------------------------------------------
+# Estagio 1 - compilacao
+# ---------------------------------------------------------------------------
+FROM eclipse-temurin:21-jdk-alpine AS build
+
+WORKDIR /build
+
+# O pom entra sozinho, antes do codigo, e essa ordem e o ponto do estagio.
+# Docker invalida uma camada quando o que ela copia muda; separando o download
+# das dependencias da compilacao do codigo, mexer numa classe reaproveita o
+# ~/.m2 ja baixado. Juntos, cada commit baixaria a internet de novo.
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+
+# O wrapper vem do repositorio com bit de execucao (secao 4.2), mas o `chmod`
+# aqui e barato e torna a imagem imune a um checkout que o perca - o CI ja
+# quebrou uma vez por isso.
+RUN chmod +x mvnw && ./mvnw -B -q dependency:go-offline
+
+COPY src/ src/
+
+# Sem testes de proposito. A suite exige Docker (Testcontainers), e o build da
+# imagem roda dentro de um container - nao ha daemon para subir Postgres. Quem
+# executa a suite e o CI, no push, antes de qualquer deploy: a imagem so e
+# construida a partir de um commit que ja passou.
+RUN ./mvnw -B -q package -DskipTests
+
+# ---------------------------------------------------------------------------
+# Estagio 2 - separacao em camadas
+# ---------------------------------------------------------------------------
+# O jar do Spring Boot e um arquivo unico de ~50 MB, e dele ~95% sao
+# dependencias que mudam raramente. Extraido em camadas, uma mudanca de codigo
+# reenvia so a camada da aplicacao; sem isso, cada deploy empurra os 50 MB
+# inteiros.
+FROM eclipse-temurin:21-jdk-alpine AS layers
+
+WORKDIR /layers
+COPY --from=build /build/target/*.jar app.jar
+
+# O destino e um subdiretorio, e nao `.`: a extracao recusa escrever num
+# diretorio que ja tem conteudo, e o proprio app.jar esta aqui.
+RUN java -Djarmode=tools -jar app.jar extract --layers --launcher --destination extracted
+
+# ---------------------------------------------------------------------------
+# Estagio 3 - execucao
+# ---------------------------------------------------------------------------
+# JRE, e nao JDK: compilador, javadoc e ferramentas nao sao usados em producao e
+# so aumentam a superficie de ataque. Alpine pelo mesmo motivo - menos pacotes
+# instalados, menos CVE a acompanhar (secao 17.2 exige zero HIGH/CRITICAL).
+FROM eclipse-temurin:21-jre-alpine AS runtime
+
+# Usuario proprio, sem shell e sem senha. Container que roda como root da ao
+# processo, se comprometido, o mesmo poder no volume montado e nas capacidades
+# do kernel - e nada nesta aplicacao precisa de privilegio.
+RUN addgroup -S -g 10001 portfolio && adduser -S -u 10001 -G portfolio -H -s /sbin/nologin portfolio
+
+WORKDIR /app
+
+# Da menos volatil para a mais volatil, que e a ordem em que o Docker reaproveita
+# cache: dependencias primeiro, codigo da aplicacao por ultimo.
+COPY --from=layers --chown=portfolio:portfolio /layers/extracted/dependencies/ ./
+COPY --from=layers --chown=portfolio:portfolio /layers/extracted/spring-boot-loader/ ./
+COPY --from=layers --chown=portfolio:portfolio /layers/extracted/snapshot-dependencies/ ./
+COPY --from=layers --chown=portfolio:portfolio /layers/extracted/application/ ./
+
+USER portfolio
+
+# O free tier do Render da 512 MB. O default da JVM e usar 25% da memoria do
+# container como heap maximo - 128 MB aqui, deixando quase 400 MB parados
+# enquanto a aplicacao pode estar em GC constante. 70% deixa margem para
+# metaspace, pilhas de thread e o proprio runtime.
+#
+# O coletor nao e escolhido a mao: com menos de dois processadores e menos de
+# 1792 MB, a JVM ja seleciona o Serial, que e o certo aqui - G1 gastaria threads
+# que a instancia nao tem.
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=70 -XX:+ExitOnOutOfMemoryError"
+
+# Documental: quem publica a porta e a plataforma. O Render injeta PORT, e o
+# application.yml ja le ${PORT:8080}.
+EXPOSE 8080
+
+# JarLauncher, e nao `java -jar app.jar`: o jar foi desmontado em camadas e nao
+# existe mais como arquivo unico.
+ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

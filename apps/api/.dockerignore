@@ -1,0 +1,14 @@
+# O que nao entra no contexto de build da imagem.
+#
+# Sem isto, `target/` inteiro - jar, classes e relatorios de teste - seria
+# enviado ao daemon do Docker a cada build, e o `COPY src/` ainda assim
+# recompilaria tudo. Contexto menor e build mais rapido e deploy mais leve.
+target/
+.idea/
+*.iml
+
+# Configuracao local nunca vai para a imagem: producao le variaveis de
+# ambiente, e uma copia esquecida aqui poderia sobrescrever o que a plataforma
+# injeta.
+.env
+.env.*

@@ -1,0 +1,57 @@
+# Perfil de producao. Ativado por SPRING_PROFILES_ACTIVE=prod, injetada pela
+# plataforma - o jar nao carrega perfil nenhum sozinho, entao esquecer a variavel
+# faz a aplicacao subir com os defaults seguros do application.yml em vez de
+# herdar configuracao de desenvolvimento.
+#
+# Nao ha datasource declarado aqui, e a ausencia e deliberada: SPRING_DATASOURCE_URL,
+# _USERNAME e _PASSWORD sao lidas direto do ambiente pelo binding do Spring.
+# Redeclara-las neste arquivo criaria um segundo nome para a mesma coisa e uma
+# chance a mais de divergir do que o painel do Render tem cadastrado.
+
+spring:
+  datasource:
+    hikari:
+      # As tres linhas abaixo existem por causa do scale-to-zero do Neon, e sem
+      # elas o custo aparece so na fatura.
+      #
+      # O Neon suspende o compute depois de alguns minutos sem atividade, e
+      # conexao aberta conta como atividade. Com o pool segurando as conexoes
+      # ociosas que o Hikari mantem por padrao, o banco nunca dorme: as horas de
+      # compute do free tier se esgotam sozinhas, com o site parado e ninguem
+      # visitando.
+      #
+      # minimum-idle: 0 e o que permite o pool esvaziar. O idle-timeout decide
+      # em quanto tempo, e um minuto e curto o bastante para o banco suspender
+      # entre uma revalidacao do ISR e a proxima, que sao de hora em hora.
+      minimum-idle: 0
+      idle-timeout: 60000
+
+      # O free tier tem teto de conexoes simultaneas, e uma instancia unica
+      # servindo revalidacao de ISR nao precisa de mais do que isto. Pool grande
+      # aqui nao aceleraria nada e ocuparia cota do banco.
+      maximum-pool-size: 5
+
+      # O Neon derruba conexao ociosa pelo lado dele. O pool precisa reciclar
+      # antes disso, senao entrega ao Hibernate uma conexao ja morta e a
+      # requisicao falha com erro de rede que nao diz o que aconteceu.
+      max-lifetime: 300000
+
+management:
+  endpoint:
+    health:
+      # Liga /actuator/health/liveness e /actuator/health/readiness.
+      #
+      # E o que permite a sonda da plataforma e o keep-alive baterem num
+      # endpoint que **nao toca o banco**. O /actuator/health completo inclui o
+      # indicador `db`, que roda uma query de validacao: usado como health check,
+      # ele acordaria o Neon a cada poucos segundos e anularia o scale-to-zero
+      # que as linhas acima existem para preservar.
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    # O proprio codigo em INFO: DEBUG em producao enche o log de ruido e, num
+    # plano gratuito, log e cota.
+    dev.crystofer.portfolio: INFO
