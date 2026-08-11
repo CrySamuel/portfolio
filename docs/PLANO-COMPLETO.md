@@ -66,7 +66,7 @@ Um tech lead que abrir o repositório encontra: arquitetura hexagonal, ADRs, tes
 | Estilo arquitetural | Hexagonal (Ports & Adapters) + monólito modular | [ADR-0003](#adr-0003-arquitetura-hexagonal-com-monólito-modular) |
 | Fonte de verdade do conteúdo | PostgreSQL + Flyway | [ADR-0004](#adr-0004-postgresql-como-fonte-de-verdade-do-conteúdo) |
 | Comunicação web ↔ api | BFF via Route Handlers do Next.js | [ADR-0005](#adr-0005-bff-em-route-handlers-do-nextjs) |
-| Hospedagem | Vercel (web) + Render (api + Postgres) | [ADR-0006](#adr-0006-hospedagem-em-vercel-e-render) |
+| Hospedagem | Vercel (web) + Render (api) + Neon (Postgres) | [ADR-0006](#adr-0006-hospedagem-em-vercel-e-render), emendado pelo [ADR-0010](#adr-0010-postgres-no-neon-emenda-o-adr-0006) |
 | Renderização | SSG + ISR com revalidação por tag | [ADR-0007](#adr-0007-ssg-com-isr-e-revalidação-por-tag) |
 | Resiliência externa | Resilience4j: circuit breaker + retry + fallback | [ADR-0008](#adr-0008-resiliência-na-integração-com-o-github) |
 
@@ -344,7 +344,7 @@ Atributos de qualidade competem entre si. Estas são as trocas conscientes:
 |-----------|-----------|------------------|-----------|
 | **web** | Next.js 15, React 19, TS | Renderização, SEO, UI, BFF | Vercel (edge + serverless) |
 | **api** | Java 21, Spring Boot 3.4 | Regras de negócio, persistência, integrações | Render (container Docker) |
-| **db** | PostgreSQL 16 | Fonte de verdade do conteúdo e das mensagens | Render Postgres |
+| **db** | PostgreSQL 16 | Fonte de verdade do conteúdo e das mensagens | Neon ([ADR-0010](#adr-0010-postgres-no-neon-emenda-o-adr-0006)) |
 | **cache** | Caffeine (in-process) | Cache de leitura e de respostas do GitHub | Dentro da `api` |
 | **ui** | Biblioteca React | Primitivos de design system | Pacote do monorepo |
 | **api-client** | TS gerado do OpenAPI | Contrato tipado entre web e api | Pacote do monorepo |
@@ -605,7 +605,7 @@ Implementação com **Resilience4j** (não Hystrix, que está em manutenção). 
 | **local** | `pnpm dev` | `mvn spring-boot:run` (perfil `local`) | Postgres no Docker Compose | Desenvolvimento |
 | **test** | Vitest / Playwright | JUnit + Testcontainers | Postgres efêmero | CI |
 | **preview** | Preview da Vercel por PR | Staging no Render | Banco de staging | Revisão de PR |
-| **production** | Vercel (main) | Render (main) | Postgres de produção | Público |
+| **production** | Vercel (main) | Render (main) | Neon, branch `production` | Público |
 
 Nenhuma configuração fica hardcoded: `application.yml` por perfil, variáveis de ambiente injetadas, nenhum segredo versionado. `.env.example` documenta todas as variáveis exigidas.
 
@@ -2729,7 +2729,7 @@ Validado por commitlint no hook `commit-msg`. Commit fora do padrão **não entr
 
 ### ADR-0006: Hospedagem em Vercel e Render
 
-**Status:** Aceito
+**Status:** Aceito, **emendado pelo [ADR-0010](#adr-0010-postgres-no-neon-emenda-o-adr-0006)** quanto ao banco de dados, que passou para o Neon. Todo o restante — web na Vercel, API no Render, deploy por push, preview por PR — continua aceito e em vigor.
 
 **Contexto.** Três componentes para hospedar (web, api, banco), com orçamento próximo de zero, deploy automatizado a partir do Git e HTTPS com domínio customizado.
 
@@ -2822,6 +2822,35 @@ A 3.5 permanece em Spring Framework 6 e Jakarta EE 10 — a mesma base que a 3.4
 **Consequências positivas.** O critério de zero CVE HIGH/CRITICAL volta a ser alcançável por atualização normal; a linha recebe patch; nenhuma mudança de código; o Dependabot passa a ter um alvo definido — majors bloqueados nos dois ecossistemas, patches liberados.
 
 **Consequências negativas (aceitas).** O projeto fica uma linha atrás da mais recente, e um avaliador pode perguntar por que não a 4 — a resposta é este documento, que é justamente o que a seção 14 existe para produzir; a 3.5 também terá um fim de vida, e a decisão precisará ser revisitada, o que exigirá um ADR-00xx no futuro; e fica a dívida explícita de reavaliar o Spring Boot 4 quando o MVP 1 estiver em produção.
+
+### ADR-0010: Postgres no Neon (emenda o ADR-0006)
+
+**Status:** Aceito. Emenda o [ADR-0006](#adr-0006-hospedagem-em-vercel-e-render) na parte do banco de dados. Tudo o mais que o ADR-0006 decidiu — web na Vercel, API no Render em container Docker, deploy automático da `main`, preview por PR — **continua valendo sem alteração**.
+
+**Contexto.** O ADR-0006 colocou os três componentes em duas plataformas, com o Postgres no Render junto da API. Ao preparar o commit 23, a conferência da documentação dos planos gratuitos (11/08/2026) revelou o que decide este ADR: **o Postgres gratuito do Render expira 30 dias depois de criado** e é apagado após mais 14.
+
+O ADR-0006 previu esse risco e o aceitou, na forma "*Free tier do Postgres pode expirar — as migrações Flyway são o backup; o banco pode ser recriado em minutos em qualquer provedor*". A mitigação está correta quanto ao dado e errada quanto ao efeito. O que se perde na expiração não é o conteúdo — é **o site**. Trinta dias após o deploy o portfólio sai do ar sozinho, sem aviso, e só volta quando alguém perceber e recriar o banco à mão.
+
+Isso colide com dois pontos do próprio plano. A [seção 2.2](#22-manutenibilidade) quer que manter o portfólio custe minutos por mudança de conteúdo, não uma tarefa recorrente de infraestrutura para continuar existindo. E a [seção 1.5](#15-escopo) declara que o autor é o público de manutenção ao longo dos anos: um sistema que exige intervenção mensal para não morrer falha com quem mais importa. Pior no contexto: a falha acontece calada, e o momento provável de descobri-la é quando alguém abrir o link do currículo.
+
+**Decisão.** Postgres no **Neon**, plano gratuito, região `us-east-2` (Ohio) — a mesma da API no Render, para que banco e aplicação não paguem a travessia do país em toda consulta.
+
+**Alternativas descartadas**
+
+- *Recriar o banco no Render a cada 30 dias* — transforma o portfólio em tarefa recorrente, e o custo do esquecimento é o site fora do ar. Automatizar seria escrever um robô para contornar um limite que outro provedor simplesmente não tem.
+- *Postgres pago no Render* — resolve o problema e viola a restrição de orçamento próximo de zero da [seção 1.5](#15-escopo), que é premissa e não preferência.
+- *Manter o Render e aceitar a expiração* — é a posição do ADR-0006, e é o que este ADR revisa. Aceitar um risco cujo custo é "o portfólio sai do ar sozinho" não é tolerância a risco, é não ter medido a consequência.
+- *SQLite em volume no Render* — o disco do plano gratuito é efêmero, e trocaria o Postgres 16 idêntico em dev, teste e produção por outro banco, violando a [seção 4.3](#43-testes) e o motivo pelo qual o Testcontainers existe neste projeto.
+- *Outros provedores gerenciados (Supabase, Railway, Aiven)* — **não foram avaliados em profundidade**, e o registro honesto é esse: o Neon atendia a todas as restrições na primeira verificação, e continuar comparando teria custado tempo do MVP 1 sem mudar o resultado. Se o Neon mudar de política, é aqui que a busca recomeça.
+
+**Consequências positivas.** O site deixa de ter prazo de validade. Os 0,5 GB do plano são folgados para um conteúdo que hoje é uma linha de perfil e alguns links. A suspensão por inatividade acontece em ~5 min mas o retorno é de centenas de milissegundos — uma ordem de grandeza abaixo do minuto que o serviço do Render leva para acordar, de modo que o banco deixa de ser o gargalo da revalidação. E o `render.yaml` fica mais honesto: descreve exatamente o que o Render hospeda, sem um banco que ele não tem.
+
+**Consequências negativas (aceitas).**
+
+- **Mais um provedor na topologia** — mais uma conta, mais um painel e mais uma política que pode mudar sem aviso. A regra registrada é reconferir os limites antes de qualquer mudança de plano ou de provedor.
+- **O scale-to-zero exige configuração que o Render não exigiria.** Conexão aberta conta como atividade, então `minimum-idle: 0` e `idle-timeout: 60000` são o que permite o banco dormir — sem eles a cota de compute se esgota com o site parado e ninguém visitando. O `max-lifetime: 300000` existe porque o Neon derruba conexão ociosa pelo lado dele, e um pool que não recicla antes disso entrega ao Hibernate uma conexão morta. E a sonda da plataforma passa a ser `/actuator/health/liveness`, porque o health completo inclui o indicador `db` e acordaria o banco a cada verificação.
+- **O pooler do Neon não serve ao driver JDBC.** É PgBouncer em modo transação, e o driver usa prepared statements do servidor a partir da quinta execução. Usa-se o endpoint direto, sem o sufixo `-pooler`, com o HikariCP fazendo o papel de pool. É uma pegadinha a mais na string de conexão, e ela não é adivinhável a partir do que o painel do Neon mostra.
+- **O plano gratuito não permite restringir acesso por IP.** A credencial do banco vale de qualquer lugar da internet, o que eleva o custo de vazá-la. Por isso todos os segredos entram como `sync: false` no `render.yaml` e nunca passam pelo repositório — o blueprint foi escrito assim de propósito.
 
 ---
 ---
