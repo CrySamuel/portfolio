@@ -33,7 +33,11 @@ const schema = z.object({
   // resto da internet (ADR-0005). Ela sai daqui para o cabeçalho X-Service-Key,
   // sempre do servidor - o navegador jamais a vê.
   SERVICE_API_KEY: z
-    .string()
+    // A mensagem de tipo precisa ser explícita: variável ausente chega aqui como
+    // `undefined` e falha antes do `.min()`, então o texto padrão do Zod
+    // ("Invalid input") seria o que apareceria no log do deploy - justamente no
+    // caso mais provável, que é alguém esquecer de cadastrá-la no painel.
+    .string({ error: 'é obrigatória — gere com: openssl rand -base64 32' })
     .min(
       TAMANHO_MINIMO_DA_CHAVE,
       `precisa ter ao menos ${String(TAMANHO_MINIMO_DA_CHAVE)} caracteres (openssl rand -base64 32)`,
