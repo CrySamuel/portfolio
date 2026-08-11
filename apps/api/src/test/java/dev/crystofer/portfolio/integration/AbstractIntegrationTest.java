@@ -1,8 +1,9 @@
 package dev.crystofer.portfolio.integration;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -55,6 +56,7 @@ import dev.crystofer.portfolio.shared.web.ServiceKeyAuthFilter;
  * chances de a aplicacao conectar num banco diferente daquele que o teste prepara.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
 @ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
 
@@ -73,7 +75,18 @@ public abstract class AbstractIntegrationTest {
    */
   protected static final String CHAVE_DE_SERVICO = "chave-de-teste-com-tamanho-suficiente";
 
-  /** Cliente HTTP ja apontado para a porta sorteada. */
+  /**
+   * Cliente HTTP ja apontado para a porta sorteada.
+   *
+   * <p>O bean vem do {@code @AutoConfigureTestRestTemplate} na classe. Ate o Boot 3.5 o
+   * {@code @SpringBootTest} com porta real o registrava sozinho; a modularizacao do Boot 4 tornou a
+   * anotacao explicita, pelo mesmo motivo que fez o mesmo com o {@code MockMvc} - quem nao usa o
+   * cliente nao carrega a autoconfiguracao dele.
+   *
+   * <p>A anotacao mora aqui, e nao nas subclasses, pela razao registrada acima: qualquer anotacao
+   * de contexto fora desta classe muda a chave de cache do Spring e faz o contexto ser montado mais
+   * de uma vez.
+   */
   @Autowired protected TestRestTemplate restTemplate;
 
   /**

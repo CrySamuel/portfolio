@@ -5,9 +5,8 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import dev.crystofer.portfolio.shared.web.ServiceKeyAuthFilter;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Onde a chave de servico e exigida - e onde ela deixa de ser exigida.

@@ -13,9 +13,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import dev.crystofer.portfolio.shared.error.ProblemTypes;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Exige a chave compartilhada entre o BFF e a API (secao 2.4, ADR-0005).

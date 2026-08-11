@@ -48,9 +48,12 @@ class HexagonalArchitectureTest {
    *   <li>{@code jakarta..} - e nao apenas {@code jakarta.persistence..} - porque {@code
    *       jakarta.validation} anotaria o dominio com a mesma facilidade, e a secao 3.4 escolheu
    *       validacao no construtor, que nao depende de ninguem executar um validador.
-   *   <li>{@code com.fasterxml.jackson..} porque anotar o modelo com {@code @JsonProperty}
-   *       amarraria o formato publicado a um nome de campo interno - a razao de existir do DTO do
-   *       commit 19.
+   *   <li>{@code tools.jackson..} <strong>e</strong> {@code com.fasterxml.jackson..} porque anotar
+   *       o modelo com {@code @JsonProperty} amarraria o formato publicado a um nome de campo
+   *       interno - a razao de existir do DTO do commit 19. Os dois pacotes estao na lista porque o
+   *       Jackson 3, que o Boot 4 adotou, mudou o databind para {@code tools.jackson} e deixou as
+   *       anotacoes em {@code com.fasterxml.jackson.annotation}. Barrar so o pacote novo deixaria a
+   *       anotacao passar, que e justamente o vazamento mais provavel aqui.
    *   <li>{@code ..application..} porque a camada de aplicacao esta fora do dominio: ela conhece as
    *       portas, as portas nao a conhecem.
    * </ul>
@@ -66,6 +69,7 @@ class HexagonalArchitectureTest {
               "org.springframework..",
               "jakarta..",
               "org.hibernate..",
+              "tools.jackson..",
               "com.fasterxml.jackson..",
               "io.swagger..",
               "..adapter..",
