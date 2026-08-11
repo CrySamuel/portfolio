@@ -16,4 +16,12 @@ import { env } from '@/lib/env';
  * extra so acrescentaria latencia. Route Handler existe para **escrita**, onde
  * ha segredo a esconder do navegador e Turnstile a verificar.
  */
-export const api = createApiClient({ baseUrl: env.API_URL });
+export const api = createApiClient({
+  baseUrl: env.API_URL,
+
+  // A chave vai em todas as requisições, e não só nas de escrita: a API recusa
+  // `/api/*` inteiro sem ela. Declarada aqui, num lugar só, para que nenhuma
+  // chamada futura precise lembrar de mandá-la - esquecer viraria 401 em
+  // produção, no primeiro deploy depois do MVP.
+  headers: { 'X-Service-Key': env.SERVICE_API_KEY },
+});

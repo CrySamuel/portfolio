@@ -4,9 +4,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.testcontainers.containers.PostgreSQLContainer;
+
+import dev.crystofer.portfolio.shared.web.ServiceKeyAuthFilter;
 
 /**
  * Base dos testes que sobem a aplicacao inteira contra um Postgres de verdade.
@@ -59,8 +65,30 @@ public abstract class AbstractIntegrationTest {
     POSTGRES.start();
   }
 
+  /**
+   * A chave que o perfil {@code test} configura.
+   *
+   * <p>Repetida aqui e no {@code application-test.yml}, e nao lida do ambiente: teste que depende
+   * de variavel de ambiente passa na maquina de quem a exportou e falha na dos outros.
+   */
+  protected static final String CHAVE_DE_SERVICO = "chave-de-teste-com-tamanho-suficiente";
+
   /** Cliente HTTP ja apontado para a porta sorteada. */
   @Autowired protected TestRestTemplate restTemplate;
+
+  /**
+   * GET autenticado com a chave de servico.
+   *
+   * <p>Explicito no lugar de um interceptor no cliente inteiro: com o cabecalho automatico,
+   * escrever um teste que prova a recusa exigiria desfazer a automacao, e a chance de o filtro
+   * inteiro ficar sem cobertura por engano seria alta. Aqui, quem quer entrar mostra a chave, e
+   * quem testa a porta fechada usa o {@code restTemplate} cru.
+   */
+  protected <T> ResponseEntity<T> getComChave(String path, Class<T> tipo) {
+    var headers = new HttpHeaders();
+    headers.set(ServiceKeyAuthFilter.HEADER, CHAVE_DE_SERVICO);
+    return restTemplate.exchange(path, HttpMethod.GET, new HttpEntity<>(headers), tipo);
+  }
 
   /**
    * Acesso direto ao banco, para preparar e conferir estado.

@@ -16,8 +16,28 @@ import { z } from 'zod';
  * interna; a chave de servico entra em seguida, e ai o erro seria vazamento de
  * segredo, nao configuracao errada.
  */
+/**
+ * O mesmo piso que a API exige no boot (`SecurityConfig`).
+ *
+ * Repetido nas duas pontas de propósito: se só a API validasse, uma chave curta
+ * subiria o web normalmente e o erro apareceria como 401 em produção, longe da
+ * causa. Validando aqui também, os dois lados recusam pelo mesmo motivo e na
+ * mesma hora.
+ */
+const TAMANHO_MINIMO_DA_CHAVE = 32;
+
 const schema = z.object({
   API_URL: z.url('precisa ser uma URL absoluta (ex.: http://localhost:8080)'),
+
+  // Nunca com prefixo NEXT_PUBLIC_: esta chave é o que separa a API pública do
+  // resto da internet (ADR-0005). Ela sai daqui para o cabeçalho X-Service-Key,
+  // sempre do servidor - o navegador jamais a vê.
+  SERVICE_API_KEY: z
+    .string()
+    .min(
+      TAMANHO_MINIMO_DA_CHAVE,
+      `precisa ter ao menos ${String(TAMANHO_MINIMO_DA_CHAVE)} caracteres (openssl rand -base64 32)`,
+    ),
 });
 
 const resultado = schema.safeParse(process.env);

@@ -4,6 +4,13 @@
 # ddl-auto seria criar uma segunda configuracao para manter - e testes que rodam
 # sob configuracao propria testam essa configuracao, nao a que vai para
 # producao. O datasource vem do container, por @ServiceConnection.
+portfolio:
+  security:
+    # A mesma chave que ServiceKeyAuthFilterTest apresenta. Fixa e no arquivo de
+    # configuracao para que os testes nao dependam do ambiente de quem os roda -
+    # e para que a constante do teste tenha uma unica contraparte.
+    service-key: chave-de-teste-com-tamanho-suficiente
+
 spring:
   jpa:
     properties:

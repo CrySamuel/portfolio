@@ -10,6 +10,17 @@ spring:
     username: ${POSTGRES_USER:portfolio}
     password: ${POSTGRES_PASSWORD:portfolio}
 
+portfolio:
+  security:
+    # Chave fixa de desenvolvimento. Vale so neste perfil, que o jar empacotado
+    # nunca carrega - producao continua obrigada a injetar SERVICE_API_KEY.
+    #
+    # O valor esta em claro porque nao e segredo: qualquer pessoa com este
+    # repositorio pode subir a aplicacao e ler o mesmo dado publico do seed. O
+    # que precisa ser segredo e a chave de producao, e essa nunca sai do painel
+    # do Render e da Vercel.
+    service-key: ${SERVICE_API_KEY:chave-local-de-desenvolvimento-nao-use-em-producao}
+
 management:
   endpoints:
     web:

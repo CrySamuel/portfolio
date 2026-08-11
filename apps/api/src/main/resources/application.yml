@@ -75,6 +75,19 @@ info:
     version: '@project.version@'
     description: '@project.description@'
 
+portfolio:
+  security:
+    # Chave compartilhada entre o BFF do Next e esta API (ADR-0005).
+    #
+    # Sem valor padrao, e de proposito: a aplicacao recusa subir sem ela
+    # (SecurityConfig). Um default aqui - mesmo obviamente falso - seria pior do
+    # que a ausencia, porque producao herdaria uma chave conhecida e continuaria
+    # respondendo como se estivesse protegida.
+    #
+    # Os perfis local e test declaram a propria chave, para que desenvolver e
+    # testar nao dependa de variavel de ambiente.
+    service-key: ${SERVICE_API_KEY:}
+
 logging:
   level:
     root: INFO

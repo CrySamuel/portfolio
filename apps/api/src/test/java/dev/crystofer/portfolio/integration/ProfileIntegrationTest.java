@@ -69,7 +69,7 @@ class ProfileIntegrationTest extends AbstractIntegrationTest {
     ProfileFixtures.replaceWithTestProfile(jdbcTemplate);
 
     // when
-    ResponseEntity<byte[]> response = restTemplate.getForEntity(ENDPOINT, byte[].class);
+    ResponseEntity<byte[]> response = getComChave(ENDPOINT, byte[].class);
     String body = new String(response.getBody(), StandardCharsets.UTF_8);
 
     // then
@@ -130,7 +130,7 @@ class ProfileIntegrationTest extends AbstractIntegrationTest {
     statistics.clear();
 
     // when
-    ResponseEntity<String> response = restTemplate.getForEntity(ENDPOINT, String.class);
+    ResponseEntity<String> response = getComChave(ENDPOINT, String.class);
 
     // then
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -153,7 +153,7 @@ class ProfileIntegrationTest extends AbstractIntegrationTest {
     ProfileFixtures.empty(jdbcTemplate);
 
     // when
-    ResponseEntity<String> response = restTemplate.getForEntity(ENDPOINT, String.class);
+    ResponseEntity<String> response = getComChave(ENDPOINT, String.class);
 
     // then
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);

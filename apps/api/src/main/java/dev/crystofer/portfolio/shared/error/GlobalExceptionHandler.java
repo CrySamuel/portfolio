@@ -1,7 +1,5 @@
 package dev.crystofer.portfolio.shared.error;
 
-import java.net.URI;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -24,16 +22,6 @@ public class GlobalExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-  /**
-   * URI relativa de proposito.
-   *
-   * <p>O RFC 9457 aceita referencia relativa em {@code type}, e o dominio deste portfolio ainda nao
-   * foi escolhido - ele e pre-requisito do commit 23. Fixar {@code https://portfolio.dev/...} agora
-   * seria publicar um endereco que nao controlamos, e trocar depois quebraria o contrato de quem ja
-   * consumisse. Vira absoluta quando o dominio existir.
-   */
-  private static final String TYPE_PREFIX = "/errors/";
-
   @ExceptionHandler(ResourceNotFoundException.class)
   ProblemDetail handleResourceNotFound(ResourceNotFoundException exception) {
     // WARN e nao ERROR: 404 e resposta prevista do protocolo, nao falha do
@@ -42,7 +30,7 @@ public class GlobalExceptionHandler {
 
     var problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
     problem.setTitle("Recurso nao encontrado");
-    problem.setType(URI.create(TYPE_PREFIX + "resource-not-found"));
+    problem.setType(ProblemTypes.de("resource-not-found"));
     return problem;
   }
 
@@ -62,7 +50,7 @@ public class GlobalExceptionHandler {
         ProblemDetail.forStatusAndDetail(
             HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno ao processar a requisicao");
     problem.setTitle("Erro interno");
-    problem.setType(URI.create(TYPE_PREFIX + "internal-error"));
+    problem.setType(ProblemTypes.de("internal-error"));
     return problem;
   }
 }

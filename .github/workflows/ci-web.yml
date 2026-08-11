@@ -43,6 +43,12 @@ env:
   # verdade alcancavel - e a mudanca sera deliberada, nao acidental.
   API_URL: 'http://localhost:8080'
 
+  # Idem: o `lib/env.ts` exige a chave na importacao do modulo. Aqui ela e
+  # descartavel de proposito - nao ha API para chamar neste job, e a chave de
+  # verdade so existe nos paineis do Render e da Vercel. Um segredo do GitHub
+  # daria a impressao de que este valor importa.
+  SERVICE_API_KEY: 'chave-de-ci-sem-valor-algum-32-caracteres'
+
 jobs:
   quality:
     name: lint · typecheck · build
