@@ -69,6 +69,7 @@ Um tech lead que abrir o repositório encontra: arquitetura hexagonal, ADRs, tes
 | Hospedagem | Vercel (web) + Render (api) + Neon (Postgres) | [ADR-0006](#adr-0006-hospedagem-em-vercel-e-render), emendado pelo [ADR-0010](#adr-0010-postgres-no-neon-emenda-o-adr-0006) |
 | Renderização | SSG + ISR com revalidação por tag | [ADR-0007](#adr-0007-ssg-com-isr-e-revalidação-por-tag) |
 | Resiliência externa | Resilience4j: circuit breaker + retry + fallback | [ADR-0008](#adr-0008-resiliência-na-integração-com-o-github) |
+| Cabeçalhos de segurança | CSP estática, sem nonce, para preservar o ISR | [ADR-0012](#adr-0012-csp-estática-sem-nonce-emenda-a-seção-24) |
 
 ---
 ---
@@ -247,7 +248,7 @@ Detalhamento na [seção 10](#10-estratégia-de-performance).
 - Antispam em camadas: honeypot + Cloudflare Turnstile + validação de tamanho e conteúdo.
 - Bean Validation em todos os DTOs; erros no formato RFC 9457 (Problem Details).
 - Apenas JPA com queries parametrizadas; zero concatenação de SQL.
-- Headers: CSP com nonce, HSTS, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`.
+- Headers: CSP, HSTS, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`. A CSP é **estática, sem nonce** — o nonce exigiria renderização por requisição e desligaria o ISR que protege o visitante do cold start. Ver [ADR-0012](#adr-0012-csp-estática-sem-nonce-emenda-a-seção-24).
 - Dependabot semanal, Trivy no build da imagem, OWASP Dependency-Check no CI, CodeQL nas duas linguagens.
 - Logs sem PII: o e-mail do contato é registrado mascarado.
 - LGPD: aviso claro no formulário sobre finalidade e retenção dos dados.
@@ -2891,6 +2892,41 @@ A última linha é o ponto que mantém o ADR-0002 intacto: a 4.0 tem **Java 17**
 - **Jackson 3 alcança o código de produção**, movendo o databind de `com.fasterxml.jackson` para `tools.jackson`. A regra de ArchUnit que barra Jackson no domínio passou a listar os dois pacotes, porque as anotações ficaram no pacote antigo — e é a anotação o vazamento provável.
 - **O Testcontainers deixou de ser gerenciado pelo Boot** e passou a exigir BOM próprio, com os artefatos renomeados na 2.0.
 - **A 4.1 também terá um fim de vida**, e esta decisão será revisitada — como o ADR-0009 previu para si mesmo. A diferença é que agora existe um precedente de como fazê-lo: verificar o calendário de suporte, não a data do último release.
+
+### ADR-0012: CSP estática sem nonce (emenda a seção 2.4)
+
+**Status:** Aceito. Emenda a [seção 2.4](#24-segurança) quanto à **forma** da Content Security Policy. Todo o restante da seção 2.4 — HSTS, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` e as demais medidas — continua valendo sem alteração, e é entregue junto com esta decisão.
+
+**Contexto.** A seção 2.4 lista, entre os cabeçalhos exigidos, "CSP com nonce". Nenhum dos 54 commits agenda cabeçalho nenhum — é lacuna do plano, da mesma classe que a chave de serviço foi. A medição no site publicado, em 11 e 12/08/2026, confirmou o efeito: existe **apenas** o HSTS, que a Vercel envia por conta própria.
+
+Ao implementar, os dois requisitos se revelaram incompatíveis entre si. Um nonce é único por requisição, então só pode existir onde há uma requisição no instante da renderização. A documentação do Next é literal a respeito: com nonce, *"Static optimization and Incremental Static Regeneration (ISR) are disabled"*.
+
+E o ISR não é preferência de performance aqui. É a peça que o [ADR-0006](#adr-0006-hospedagem-em-vercel-e-render) usa para tornar aceitável o plano gratuito do Render: o serviço hiberna após 15 minutos sem tráfego e leva cerca de um minuto para voltar. Com a home pré-renderizada, o visitante recebe HTML da CDN e só a revalidação em segundo plano toca a API. Adotar o nonce devolveria esse minuto de espera a quem abrisse o site depois de um período parado — que é, justamente, o caso mais provável no portfólio de uma pessoa só.
+
+A medição que fecha o quadro: o HTML pré-renderizado da home tem **11 scripts inline** — os dados de flight do App Router e o script anti-FOUC do next-themes — contra 7 externos. São eles que forçam a escolha entre nonce e `'unsafe-inline'`; nenhuma política sem um dos dois deixa a página funcionar.
+
+**Decisão.** CSP **estática, sem nonce**, declarada em `next.config.ts` e aplicada a todas as rotas, com `'unsafe-inline'` em `script-src` e `style-src` e todas as demais diretivas restritivas — `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`, `default-src 'self'`. Junto vão `X-Content-Type-Options`, `Referrer-Policy` e `Permissions-Policy`. O HSTS fica com a Vercel, para não haver duas fontes de verdade para o mesmo valor.
+
+**Alternativas descartadas**
+
+- *CSP com nonce via middleware* — é o que a seção 2.4 pede ao pé da letra, e é a razão deste ADR existir. Cumpriria o texto e desligaria o ISR, transferindo ao visitante o cold start que o ADR-0006 foi escrito para evitar. A troca é ruim nos dois sentidos: o ganho de segurança é pequeno num site sem entrada de usuário, e a perda de experiência é de um minuto de tela em branco. Fidelidade à letra de um requisito, quando ela custa o efeito de outro, não é rigor.
+- *SRI experimental (`experimental.sri`)* — é a única saída que preservaria o ISR **e** dispensaria o `'unsafe-inline'`, e por isso foi considerada a sério. Descartada por duas razões independentes: o recurso é declaradamente experimental, e o que ele promete são hashes dos **arquivos** de script, enquanto o problema aqui são os 11 scripts **inline**. Uma guarda experimental que pode parar de valer num bump de versão, em silêncio, é pior do que uma diretiva honesta sobre a própria limitação — é o padrão da seção 4.1 outra vez, e este projeto já o pagou quatro vezes.
+- *Hashes dos scripts inline* — descartada **com medida**, e a medida separa dois casos que pareciam um só. Bloqueando o inline de propósito, o navegador informa o hash de cada recurso recusado: os 11 scripts devolveram **11 hashes distintos**, porque carregam os dados de flight, que mudam com o conteúdo vindo do banco e com cada build. Fixá-los exigiria recalcular a política a cada publicação e a cada edição de perfil, e a falha apareceria como a página deixando de hidratar em produção.
+- *Hash do estilo inline, mantendo o `'unsafe-inline'` só no `script-src`* — este é o caso separado, e é **tecnicamente viável**: o `style-src` recusou um hash **único e estável**, o do CSS que o next-themes injeta para desligar transições. Descartada assim mesmo, e vale registrar por quê, porque a razão não é a mesma das outras: esse hash é o de um detalhe interno de uma dependência, não de código deste repositório. Um bump de patch do next-themes muda o CSS, invalida o hash e quebra a troca de tema **sem que nada acuse** — e hoje não existe verificação automatizada que pegasse isso. A partir do commit 52, com Playwright e axe no CI, passa a existir; **é lá que esta alternativa deve ser reavaliada**, e não antes.
+- *Adiar a CSP inteira para o MVP 5* — deixaria o site sem `X-Content-Type-Options`, `Referrer-Policy` e `Permissions-Policy`, que não têm trade-off nenhum, por causa da única diretiva que tem.
+
+**Consequências positivas.** O site deixa de poder ser embutido em iframe de terceiro (`frame-ancestors 'none'`), fechando o vetor de clickjacking. `base-uri` e `form-action` fecham dois caminhos clássicos de exfiltração que sobrevivem mesmo a um XSS já ocorrido. `object-src 'none'` remove a superfície de plugins legados. O ISR permanece intacto — verificável no relatório do build, que segue marcando `○ /` com `Revalidate 1h` — e nenhum middleware entra no projeto, o que mantém o caminho da requisição com uma peça a menos.
+
+**A política foi validada quebrando**, como toda guarda deste projeto. Removido o `'unsafe-inline'` do `script-src`, os 11 scripts inline são bloqueados, o React não hidrata (`Connection closed`), o anti-FOUC não roda — `data-theme` fica nulo — e a página perde título e `<h1>`. Removido o do `style-src`, a injeção do next-themes é bloqueada a cada troca de tema. Restaurada a política, as duas quebras desaparecem e o console volta a zero. As diretivas não são decorativas: cada uma foi vista fazendo efeito.
+
+**Armadilha de método encontrada no caminho.** O `headers()` do Next é avaliado **no build** e gravado no `routes-manifest.json`; o `next start` lê o manifesto. Editar o `next.config.ts` e reiniciar o servidor serve a política **antiga**, sem aviso. Toda verificação de cabeçalho exige `build` novo — medir depois de um simples restart é medir o que já estava lá.
+
+**Consequências negativas (aceitas).**
+
+- **`'unsafe-inline'` em `script-src` é a metade fraca desta política, e não adianta chamá-la de outra coisa.** O que a torna aceitável hoje é a ausência de caminho de injeção: o site não tem formulário, não aceita entrada de usuário, não renderiza HTML de terceiro e não carrega script externo. Todo o conteúdo vem da própria API, através de Server Components. A diretiva autoriza um inline que ninguém tem como plantar.
+- **Isso muda no MVP 5**, que traz o formulário de contato, o Turnstile da Cloudflare e, com ele, `script-src` e `frame-src` apontando para `challenges.cloudflare.com`. É quando a política precisa crescer e quando esta decisão deve ser reavaliada — com a diferença de que, lá, haverá entrada de usuário para justificar o custo do nonce, e o formulário não é a home pré-renderizada.
+- **`'unsafe-inline'` em `style-src` é requisito de funcionamento, não conveniência.** O next-themes injeta um `<style>` em tempo de execução para desligar transições durante a troca de tema; bloqueá-lo faria as cores voltarem a interpolar no meio da troca, que é exatamente o mecanismo por trás dos dois falsos positivos de contraste investigados no MVP 1.
+- **Uma política única para todas as rotas** não distingue a home pré-renderizada de uma rota dinâmica futura. Quando a distinção passar a importar — de novo, MVP 5 —, ela terá de ser introduzida.
 
 ---
 ---
