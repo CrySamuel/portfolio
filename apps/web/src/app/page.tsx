@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { AboutSection } from '@/features/about/components/AboutSection';
 import { HeroSection } from '@/features/hero/components/HeroSection';
+import { SkillsSection } from '@/features/skills/components/SkillsSection';
 
 /**
  * A home.
@@ -21,6 +22,7 @@ export default function HomePage(): ReactNode {
     <>
       <HeroSection />
       <AboutSection />
+      <SkillsSection />
     </>
   );
 }

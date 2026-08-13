@@ -19,6 +19,20 @@ export type SocialPlatform = SocialLink['platform'];
  */
 export type Experience = components['schemas']['Experience'];
 
+/**
+ * Um grupo de competencias, ja agrupado pelo servidor.
+ *
+ * O agrupamento e regra de negocio e chega pronto: o cliente desenha grupos, sem
+ * percorrer lista plana decidindo onde comeca cada cabecalho.
+ */
+export type SkillCategory = components['schemas']['SkillCategory'];
+
+/** Uma competencia. `yearsOfExperience` e `number | null` - ausencia difere de zero. */
+export type Skill = components['schemas']['Skill'];
+
+/** Uniao literal - `'basic' | 'intermediate' | 'advanced'`, e nao `string`. */
+export type Proficiency = Skill['proficiency'];
+
 /** Resposta que nao foi 2xx, ou que nao chegou. */
 export class ApiError extends Error {
   /** `0` quando a requisicao nem chegou a ter resposta (rede, timeout). */
@@ -89,6 +103,17 @@ export interface ApiClient {
    * Devolve lista vazia quando nao ha nenhuma passagem cadastrada, e nao um erro.
    */
   listExperiences(options?: RequestOptions): Promise<Experience[]>;
+
+  /**
+   * As competencias agrupadas por categoria, ja ordenadas.
+   *
+   * Categorias em ordem editorial; dentro de cada uma, do maior nivel para o
+   * menor. Quem consome nao deve reordenar nem reagrupar - seria um segundo
+   * lugar decidindo a mesma coisa.
+   *
+   * Devolve lista vazia quando nao ha nada cadastrado, e nao um erro.
+   */
+  listSkills(options?: RequestOptions): Promise<SkillCategory[]>;
 }
 
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -158,6 +183,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
     listExperiences(requestOptions: RequestOptions = {}) {
       return request<Experience[]>('/api/v1/experiences', requestOptions);
+    },
+
+    listSkills(requestOptions: RequestOptions = {}) {
+      return request<SkillCategory[]>('/api/v1/skills', requestOptions);
     },
   };
 }
