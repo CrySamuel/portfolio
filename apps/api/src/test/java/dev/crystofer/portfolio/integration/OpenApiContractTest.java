@@ -185,6 +185,64 @@ class OpenApiContractTest extends AbstractIntegrationTest {
         .isEqualTo("string");
   }
 
+  @Test
+  @DisplayName("as competencias sao publicadas como array de SkillCategory, em application/json")
+  void shouldPublishGroupedSkills_forTheSkillsEndpoint() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathMapValue("$.paths./api/v1/skills.get.responses.200.content")
+        .containsOnlyKeys("application/json");
+
+    var schema = "$.paths./api/v1/skills.get.responses.200.content.application/json.schema";
+    assertThat(json.from(body)).extractingJsonPathStringValue(schema + ".type").isEqualTo("array");
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue(schema + ".items.$ref")
+        .isEqualTo("#/components/schemas/SkillCategory");
+  }
+
+  /**
+   * O campo nulavel aqui e numerico, e o tipo composto precisa dizer isso.
+   *
+   * <p>{@code yearsOfExperience} nulo significa "sem numero declarado", que e diferente de zero -
+   * zero e de quem comecou agora. Publicado como {@code integer} simples, o TypeScript prometeria
+   * um numero que as vezes nao vem, e a tela quebraria ao formata-lo.
+   */
+  @Test
+  @DisplayName("todo campo da competencia e required, e yearsOfExperience diz que pode vir nulo")
+  void shouldDeclareRequiredAndNullableFields_forTheSkillSchema() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue("$.components.schemas.SkillCategory.required")
+        .containsExactlyInAnyOrder("name", "skills");
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue("$.components.schemas.Skill.required")
+        .containsExactlyInAnyOrder("name", "proficiency", "yearsOfExperience");
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue(
+            "$.components.schemas.Skill.properties.yearsOfExperience.type")
+        .containsExactly("integer", "null");
+
+    // Nao nulavel: string e string. A distincao so vale onde ha ausencia real.
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue("$.components.schemas.Skill.properties.name.type")
+        .isEqualTo("string");
+  }
+
+  /** O enum e o que faz {@code proficiency} virar uniao literal no TypeScript, e nao string. */
+  @Test
+  @DisplayName("proficiency publica a escala fechada de niveis")
+  void shouldPublishTheProficiencyEnum() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue("$.components.schemas.Skill.properties.proficiency.enum")
+        .containsExactly("basic", "intermediate", "advanced");
+  }
+
   private String fetchApiDocs() {
     ResponseEntity<String> response = restTemplate.getForEntity("/v3/api-docs", String.class);
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);

@@ -26,9 +26,36 @@
     {
       "name": "Profile",
       "description": "Dados publicos do dono do portfolio"
+    },
+    {
+      "name": "Skill",
+      "description": "Competencias tecnicas agrupadas por categoria"
     }
   ],
   "paths": {
+    "/api/v1/skills": {
+      "get": {
+        "tags": ["Skill"],
+        "summary": "Lista as competencias agrupadas por categoria",
+        "description": "Categorias em ordem editorial; dentro de cada uma, competencias do maior nivel para o menor. Categoria sem competencia nao aparece.",
+        "operationId": "listSkills",
+        "responses": {
+          "200": {
+            "description": "Catalogo, possivelmente vazio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SkillCategory"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/profile": {
       "get": {
         "tags": ["Profile"],
@@ -78,6 +105,44 @@
   },
   "components": {
     "schemas": {
+      "Skill": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Java"
+          },
+          "proficiency": {
+            "type": "string",
+            "enum": ["basic", "intermediate", "advanced"],
+            "example": "advanced"
+          },
+          "yearsOfExperience": {
+            "type": ["integer", "null"],
+            "format": "int32",
+            "example": 3
+          }
+        },
+        "required": ["name", "proficiency", "yearsOfExperience"]
+      },
+      "SkillCategory": {
+        "type": "object",
+        "description": "Competencias agrupadas por categoria",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Linguagens & Frameworks"
+          },
+          "skills": {
+            "type": "array",
+            "description": "Competencias do grupo, da mais dominada para a menos",
+            "items": {
+              "$ref": "#/components/schemas/Skill"
+            }
+          }
+        },
+        "required": ["name", "skills"]
+      },
       "Profile": {
         "type": "object",
         "description": "Perfil publico do portfolio",

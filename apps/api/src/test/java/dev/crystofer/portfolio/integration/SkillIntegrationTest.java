@@ -2,10 +2,14 @@ package dev.crystofer.portfolio.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.json.BasicJsonTester;
+import org.springframework.http.HttpStatus;
 
 import dev.crystofer.portfolio.profile.domain.model.Proficiency;
 import dev.crystofer.portfolio.profile.domain.model.Skill;
@@ -22,6 +26,8 @@ import dev.crystofer.portfolio.profile.domain.port.in.ListSkillsUseCase;
  * circular.
  */
 class SkillIntegrationTest extends AbstractIntegrationTest {
+
+  private final BasicJsonTester json = new BasicJsonTester(getClass());
 
   @Autowired ListSkillsUseCase listSkillsUseCase;
 
@@ -129,6 +135,64 @@ class SkillIntegrationTest extends AbstractIntegrationTest {
     assertThat(catalogo.categories().getFirst().name()).isEqualTo("Infraestrutura & Versionamento");
     assertThat(catalogo.categories().getFirst().skills().getFirst().name())
         .isEqualTo("Integração Contínua");
+  }
+
+  /**
+   * O endpoint inteiro, por HTTP de verdade e com o banco no caminho.
+   *
+   * <p>A fatia {@code @WebMvcTest} usa duble de caso de uso e simula o container servlet, entao nao
+   * alcanca nem a consulta nem a codificacao dos bytes na rede.
+   */
+  @Test
+  @DisplayName("deve servir as competencias agrupadas por http, com acentuacao intacta")
+  void shouldServeGroupedSkillsOverHttp_whenRowsExist() {
+    // given
+    long infra = criarCategoria("Infraestrutura", 1);
+    long linguagens = criarCategoria("Linguagens", 0);
+    inserirSkill(infra, "Integração Contínua", "intermediate", null);
+    inserirSkill(linguagens, "Java", "advanced", 3);
+
+    // when
+    var response = getComChave("/api/v1/skills", byte[].class);
+
+    // then
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getCacheControl())
+        .isEqualTo("max-age=300, public, stale-while-revalidate=3600");
+
+    var corpo = new String(response.getBody(), StandardCharsets.UTF_8);
+    assertThat(json.from(corpo)).extractingJsonPathStringValue("$[0].name").isEqualTo("Linguagens");
+    assertThat(json.from(corpo))
+        .extractingJsonPathStringValue("$[0].skills[0].proficiency")
+        .isEqualTo("advanced");
+    assertThat(json.from(corpo))
+        .extractingJsonPathStringValue("$[1].skills[0].name")
+        .isEqualTo("Integração Contínua");
+
+    // Nulo explicito, e nao chave omitida - ver SkillControllerTest.
+    assertThat(corpo).contains("\"yearsOfExperience\":null");
+  }
+
+  @Test
+  @DisplayName("deve responder 200 com array vazio, e nao 404, quando nao ha competencias")
+  void shouldRespondEmptyArray_whenThereAreNoRows() {
+    // when
+    var response = getComChave("/api/v1/skills", String.class);
+
+    // then
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).isEqualTo("[]");
+  }
+
+  /** O filtro de chave cobre {@code /api/*} por prefixo, entao o endpoint novo nasce protegido. */
+  @Test
+  @DisplayName("deve recusar as competencias sem a chave de servico")
+  void shouldReject_whenServiceKeyIsMissing() {
+    // when
+    var response = restTemplate.getForEntity("/api/v1/skills", String.class);
+
+    // then
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
   }
 
   private long criarCategoria(String nome, int ordem) {
