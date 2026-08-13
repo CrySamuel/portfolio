@@ -3,11 +3,17 @@ package dev.crystofer.portfolio.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import dev.crystofer.portfolio.support.fixtures.ExperienceFixtures;
 
 /**
  * As promessas da {@code V2__create_experience_table} contra o Postgres 16 de verdade.
@@ -38,16 +44,24 @@ class ExperienceSchemaTest extends AbstractIntegrationTest {
       VALUES (?, ?, ?::date, ?::date, ?, COALESCE(?::jsonb, '[]'::jsonb))
       """;
 
+  @Autowired DataSource dataSource;
+
   /**
-   * A tabela nasce vazia e assim deve terminar.
+   * Tabela vazia antes, seed de producao depois.
    *
-   * <p>Diferente do perfil, que o {@code R__seed_profile} repovoa, aqui nao ha seed a restaurar - o
-   * conteudo da timeline chega no MVP 2. Limpar mesmo assim e o que mantem os testes independentes
-   * da ordem de execucao, que e a licao que custou um CI vermelho neste projeto.
+   * <p>O {@code @BeforeEach} nao era necessario enquanto a timeline nao tinha conteudo. Passou a
+   * ser quando o {@code R__seed_experience} entrou: o Flyway o aplica no container, entao a tabela
+   * chega a este teste com as duas posicoes reais, e as contagens abaixo passariam a medir o seed
+   * em vez das linhas que o proprio teste escreve.
    */
+  @BeforeEach
+  void esvaziarATabela() {
+    ExperienceFixtures.empty(jdbcTemplate);
+  }
+
   @AfterEach
-  void limparATabela() {
-    jdbcTemplate.update("DELETE FROM experience");
+  void devolverOBancoAoSeed() {
+    ExperienceFixtures.reapplySeed(dataSource);
   }
 
   @Test

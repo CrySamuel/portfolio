@@ -4,8 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+
+import javax.sql.DataSource;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import dev.crystofer.portfolio.profile.domain.model.Experience;
 import dev.crystofer.portfolio.profile.domain.port.in.ListExperiencesUseCase;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadExperiencePort;
+import dev.crystofer.portfolio.support.fixtures.ExperienceFixtures;
 
 /**
  * O caminho do banco ate o dominio, com Postgres de verdade.
@@ -46,9 +52,24 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired ListExperiencesUseCase listExperiencesUseCase;
 
+  @Autowired DataSource dataSource;
+
+  /**
+   * Tabela vazia antes, seed de producao depois.
+   *
+   * <p>Desde que o {@code R__seed_experience} entrou, o container chega aqui com as duas posicoes
+   * reais aplicadas pelo Flyway. Sem esvaziar antes, cada assercao abaixo mediria o conteudo
+   * publicado em vez das linhas que o proprio teste escreve - e uma correcao de texto no seed
+   * viraria build vermelho.
+   */
+  @BeforeEach
+  void esvaziarATabela() {
+    ExperienceFixtures.empty(jdbcTemplate);
+  }
+
   @AfterEach
-  void limparATabela() {
-    jdbcTemplate.update("DELETE FROM experience");
+  void devolverOBancoAoSeed() {
+    ExperienceFixtures.reapplySeed(dataSource);
   }
 
   /**
@@ -212,6 +233,68 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
 
     // then
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+  }
+
+  /**
+   * A idempotencia que o {@code R__seed_experience.sql} promete no proprio cabecalho.
+   *
+   * <p>Nenhum outro teste cobre isso, porque o Flyway so reexecuta a repetivel quando o checksum do
+   * arquivo muda - em condicoes normais ela roda uma vez e nunca mais. Se o arquivo deixasse de ser
+   * idempotente, o efeito apareceria em producao, no deploy seguinte a uma correcao de texto.
+   *
+   * <p><strong>O snapshot inclui os ids de proposito.</strong> E o que distingue upsert de {@code
+   * DELETE} seguido de {@code INSERT}: os dois deixam o mesmo conteudo, mas o segundo troca as
+   * chaves a cada execucao. Aqui isso ainda nao quebraria nada, porque nenhuma tabela referencia
+   * {@code experience} - a assercao esta posta para o dia em que alguma referenciar.
+   *
+   * <p>{@code created_at} e {@code updated_at} ficam fora do snapshot, e nao por conveniencia: o
+   * seed grava {@code now()} no {@code ON CONFLICT}, entao {@code updated_at} muda de propria
+   * vontade a cada execucao. Compara-lo afirmaria que o seed nao roda, e nao que ele e idempotente.
+   */
+  @Test
+  @DisplayName("o seed e idempotente: rodar duas vezes deixa o banco identico, ids inclusive")
+  void shouldBeIdempotent_whenSeedRunsTwice() {
+    // given
+    ExperienceFixtures.reapplySeed(dataSource);
+    List<Map<String, Object>> depoisDaPrimeira = snapshot();
+
+    // when
+    ExperienceFixtures.reapplySeed(dataSource);
+
+    // then
+    assertThat(snapshot()).isEqualTo(depoisDaPrimeira);
+  }
+
+  /**
+   * A lista do seed e fonte de verdade nos dois sentidos.
+   *
+   * <p>Sem o {@code DELETE} da CTE, o seed saberia acrescentar e corrigir mas nunca tirar - e
+   * despublicar uma posicao, que e o caso em que mais importa, deixaria de funcionar em silencio.
+   */
+  @Test
+  @DisplayName("o seed remove passagem que nao esta mais na lista")
+  void shouldRemoveExperience_whenItIsNoLongerInTheSeedList() {
+    // given
+    inserir("Empresa Que Nao Existe", "Cargo Inventado", "2010-01-01", null, "[]");
+
+    // when
+    ExperienceFixtures.reapplySeed(dataSource);
+
+    // then
+    assertThat(listarEmpresas()).doesNotContain("Empresa Que Nao Existe").hasSize(2);
+  }
+
+  private List<Map<String, Object>> snapshot() {
+    return jdbcTemplate.queryForList(
+        """
+        SELECT id, company, role, start_date, end_date, description, highlights::text
+        FROM experience
+        ORDER BY id
+        """);
+  }
+
+  private List<String> listarEmpresas() {
+    return jdbcTemplate.queryForList("SELECT company FROM experience", String.class);
   }
 
   private void inserir(
