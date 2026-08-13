@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { AboutSection } from '@/features/about/components/AboutSection';
 import { HeroSection } from '@/features/hero/components/HeroSection';
 
 /**
@@ -16,5 +17,10 @@ import { HeroSection } from '@/features/hero/components/HeroSection';
  * exigir prefixo de idioma sem nada para resolve-lo.
  */
 export default function HomePage(): ReactNode {
-  return <HeroSection />;
+  return (
+    <>
+      <HeroSection />
+      <AboutSection />
+    </>
+  );
 }

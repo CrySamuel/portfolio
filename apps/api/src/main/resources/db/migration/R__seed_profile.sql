@@ -16,11 +16,18 @@
 -- Por isso o arquivo tem uma obrigacao: rodar duas vezes tem de deixar o banco
 -- exatamente no mesmo estado. Os dois comandos abaixo sao upsert por isso.
 
--- Conteudo informado pelo dono do portfolio, com uma excecao: resume_url segue
--- nulo porque o PDF do curriculo e entregavel do MVP 2. A bio continua sendo a
--- redacao que afirma apenas o que este repositorio comprova por si mesmo, e
--- pode ser trocada a qualquer momento - e para isso que esta migracao e
--- repetivel.
+-- Conteudo informado pelo dono do portfolio. A bio continua sendo a redacao que
+-- afirma apenas o que este repositorio comprova por si mesmo, e pode ser trocada
+-- a qualquer momento - e para isso que esta migracao e repetivel.
+--
+-- O resume_url deixou de ser nulo no commit 28, quando o PDF entrou em
+-- apps/web/public/resume/. O caminho e **relativo**, e a escolha repete a do
+-- ProblemTypes: fixar https://portfolio.dev/... seria publicar um endereco que
+-- ainda nao controlamos, e troca-lo depois quebraria quem ja consumisse. O
+-- proprio site serve o arquivo, entao a raiz e ele.
+--
+-- O nome do arquivo tem o idioma no fim porque o commit 51 traz en-US, e a
+-- versao em ingles vai conviver com esta.
 
 INSERT INTO profile (full_name, headline, bio, location, resume_url, available_for_work)
 VALUES (
@@ -32,7 +39,7 @@ VALUES (
         || 'disso: o conteúdo desta página vem de uma API Java com PostgreSQL, e o '
         || 'código está público no GitHub.',
     'Remoto · Brasil',
-    NULL,
+    '/resume/crystofer-cv-pt-br.pdf',
     TRUE
 )
 -- O ON CONFLICT so e possivel porque a coluna singleton tem UNIQUE. Sem ela nao
