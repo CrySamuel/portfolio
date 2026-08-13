@@ -9,6 +9,16 @@ export type SocialLink = components['schemas']['SocialLink'];
 /** Uniao literal - `'github' | 'linkedin' | 'email'`, e nao `string`. */
 export type SocialPlatform = SocialLink['platform'];
 
+/**
+ * Uma passagem profissional da timeline.
+ *
+ * `endDate` e `string | null`, e o nulo carrega significado: e ele que define
+ * cargo atual. O contrato declara o campo como obrigatorio **e** nulavel, entao
+ * o tipo gerado obriga quem consome a tratar o caso - que e exatamente o do
+ * badge "Atual".
+ */
+export type Experience = components['schemas']['Experience'];
+
 /** Resposta que nao foi 2xx, ou que nao chegou. */
 export class ApiError extends Error {
   /** `0` quando a requisicao nem chegou a ter resposta (rede, timeout). */
@@ -67,6 +77,18 @@ export interface RequestOptions {
 
 export interface ApiClient {
   getProfile(options?: RequestOptions): Promise<Profile>;
+
+  /**
+   * A timeline profissional, ja em ordem cronologica decrescente.
+   *
+   * A ordem e do servidor - mais precisamente, do dominio dele - e nao uma
+   * gentileza da serializacao. Quem consome nao deve reordenar: seria um segundo
+   * lugar decidindo a mesma coisa, e o caminho pelo qual duas telas do mesmo
+   * sistema passam a mostrar ordens diferentes.
+   *
+   * Devolve lista vazia quando nao ha nenhuma passagem cadastrada, e nao um erro.
+   */
+  listExperiences(options?: RequestOptions): Promise<Experience[]>;
 }
 
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -132,6 +154,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   return {
     getProfile(requestOptions: RequestOptions = {}) {
       return request<Profile>('/api/v1/profile', requestOptions);
+    },
+
+    listExperiences(requestOptions: RequestOptions = {}) {
+      return request<Experience[]>('/api/v1/experiences', requestOptions);
     },
   };
 }

@@ -3,6 +3,7 @@ export {
   createApiClient,
   type ApiClient,
   type ApiClientOptions,
+  type Experience,
   type Profile,
   type RequestOptions,
   type SocialLink,
