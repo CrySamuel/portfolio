@@ -92,6 +92,99 @@ class OpenApiContractTest extends AbstractIntegrationTest {
         .containsExactly("github", "linkedin", "email");
   }
 
+  @Test
+  @DisplayName("a resposta da timeline e publicada como application/json, e nao como coringa")
+  void shouldPublishJsonMediaType_forTheExperienceResponse() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathMapValue("$.paths./api/v1/experiences.get.responses.200.content")
+        .containsOnlyKeys("application/json");
+  }
+
+  /** O endpoint devolve um array puro, e o contrato precisa dizer isso ao cliente gerado. */
+  @Test
+  @DisplayName("a timeline e publicada como array de Experience")
+  void shouldPublishAnArrayOfExperience_forTheTimeline() {
+    String body = fetchApiDocs();
+
+    var schema = "$.paths./api/v1/experiences.get.responses.200.content.application/json.schema";
+    assertThat(json.from(body)).extractingJsonPathStringValue(schema + ".type").isEqualTo("array");
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue(schema + ".items.$ref")
+        .isEqualTo("#/components/schemas/Experience");
+  }
+
+  /**
+   * O campo nulavel da timeline carrega significado, e nao apenas ausencia.
+   *
+   * <p>{@code endDate} nulo <em>e</em> o que define cargo atual. Publicado como {@code string}
+   * simples, o TypeScript prometeria uma data que nunca chega, e o componente do badge "Atual"
+   * quebraria na posicao mais importante da timeline. Nada disto tem efeito no Java.
+   */
+  @Test
+  @DisplayName("todo campo da experiencia e required, e endDate diz no tipo que pode vir nulo")
+  void shouldDeclareRequiredAndNullableFields_forTheExperienceSchema() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue("$.components.schemas.Experience.required")
+        .containsExactlyInAnyOrder(
+            "company", "role", "startDate", "endDate", "description", "highlights");
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue("$.components.schemas.Experience.properties.endDate.type")
+        .containsExactly("string", "null");
+
+    // Nao nulavel: a entrada sempre existe. A distincao so vale onde ha ausencia real.
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue("$.components.schemas.Experience.properties.startDate.type")
+        .isEqualTo("string");
+  }
+
+  /**
+   * O {@code format} sobrevive ao tipo composto - e isso foi medido, nao suposto.
+   *
+   * <p>A suposicao ao escrever o DTO era a oposta: que declarar {@code types = {"string","null"}}
+   * substituiria o {@code type} inferido de {@code LocalDate} e levaria junto o {@code format:
+   * date}, deixando o campo como texto livre no contrato. O DTO chegou a trazer {@code format =
+   * "date"} escrito a mao por causa disso. Removida a declaracao, o documento continuou publicando
+   * {@code format: date} nos dois campos - o springdoc infere a partir do tipo Java
+   * independentemente do {@code types}. A anotacao redundante saiu.
+   *
+   * <p>O teste fica, com outro papel: ele passa a vigiar essa inferencia. Uma versao futura do
+   * springdoc que deixasse de aplica-la publicaria data como texto livre, e nada do lado Java
+   * mudaria de comportamento para avisar.
+   */
+  @Test
+  @DisplayName("as duas datas publicam format date, inclusive a nulavel")
+  void shouldKeepDateFormat_forBothDateFields() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue(
+            "$.components.schemas.Experience.properties.startDate.format")
+        .isEqualTo("date");
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue("$.components.schemas.Experience.properties.endDate.format")
+        .isEqualTo("date");
+  }
+
+  /** Lista de texto, e nao {@code array} sem item declarado - que viraria {@code unknown[]}. */
+  @Test
+  @DisplayName("highlights publica o tipo dos itens")
+  void shouldPublishItemTypeForHighlights() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue("$.components.schemas.Experience.properties.highlights.type")
+        .isEqualTo("array");
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue(
+            "$.components.schemas.Experience.properties.highlights.items.type")
+        .isEqualTo("string");
+  }
+
   private String fetchApiDocs() {
     ResponseEntity<String> response = restTemplate.getForEntity("/v3/api-docs", String.class);
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);

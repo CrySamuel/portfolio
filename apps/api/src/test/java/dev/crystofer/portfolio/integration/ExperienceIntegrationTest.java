@@ -2,12 +2,15 @@ package dev.crystofer.portfolio.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.json.BasicJsonTester;
+import org.springframework.http.HttpStatus;
 
 import dev.crystofer.portfolio.profile.domain.model.Experience;
 import dev.crystofer.portfolio.profile.domain.port.in.ListExperiencesUseCase;
@@ -36,6 +39,8 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
       INSERT INTO experience (company, role, start_date, end_date, description, highlights)
       VALUES (?, ?, ?::date, ?::date, ?, ?::jsonb)
       """;
+
+  private final BasicJsonTester json = new BasicJsonTester(getClass());
 
   @Autowired LoadExperiencePort loadExperiencePort;
 
@@ -138,6 +143,75 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
 
     // then
     assertThat(timeline.isEmpty()).isTrue();
+  }
+
+  /**
+   * O endpoint inteiro, por HTTP de verdade e com o banco no caminho.
+   *
+   * <p>A fatia {@code @WebMvcTest} usa duble de caso de uso e simula o container servlet, entao ela
+   * nao alcanca nem a consulta nem a codificacao dos bytes na rede. Aqui a requisicao sai pela rede
+   * local, atravessa Tomcat, filtro de chave, controlador, caso de uso, adaptador, Hibernate,
+   * driver e Postgres, e volta.
+   *
+   * <p>A resposta e lida como bytes e decodificada em UTF-8 a mao, pelo mesmo motivo do perfil:
+   * assim o que se afirma e que os bytes na rede sao UTF-8, em vez de deixar o cliente adivinhar o
+   * charset e esconder justamente o defeito procurado.
+   */
+  @Test
+  @DisplayName("deve servir a timeline por http, com acentuacao e ordem intactas")
+  void shouldServeTimelineOverHttp_whenRowsExist() {
+    // given
+    inserir("Empresa Antiga", "Desenvolvedor Junior", "2019-02-01", "2021-07-31", "[]");
+    inserir(
+        "Empresa Atual",
+        "Desenvolvedor Backend",
+        "2022-08-01",
+        null,
+        "[\"Migrou o deploy para contêiner\"]");
+
+    // when
+    var response = getComChave("/api/v1/experiences", byte[].class);
+
+    // then
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getCacheControl())
+        .isEqualTo("max-age=300, public, stale-while-revalidate=3600");
+
+    var corpo = new String(response.getBody(), StandardCharsets.UTF_8);
+    assertThat(json.from(corpo))
+        .extractingJsonPathStringValue("$[0].company")
+        .isEqualTo("Empresa Atual");
+    assertThat(json.from(corpo))
+        .extractingJsonPathStringValue("$[1].company")
+        .isEqualTo("Empresa Antiga");
+    assertThat(json.from(corpo))
+        .extractingJsonPathStringValue("$[0].highlights[0]")
+        .isEqualTo("Migrou o deploy para contêiner");
+
+    // Nulo explicito, e nao chave omitida - ver ExperienceControllerTest.
+    assertThat(corpo).contains("\"endDate\":null");
+  }
+
+  @Test
+  @DisplayName("deve responder 200 com array vazio, e nao 404, quando nao ha passagens")
+  void shouldRespondEmptyArray_whenThereAreNoRows() {
+    // when
+    var response = getComChave("/api/v1/experiences", String.class);
+
+    // then
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody()).isEqualTo("[]");
+  }
+
+  /** O filtro de chave cobre {@code /api/*} por prefixo, entao o endpoint novo entra protegido. */
+  @Test
+  @DisplayName("deve recusar a timeline sem a chave de servico")
+  void shouldReject_whenServiceKeyIsMissing() {
+    // when
+    var response = restTemplate.getForEntity("/api/v1/experiences", String.class);
+
+    // then
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
   }
 
   private void inserir(

@@ -20,6 +20,10 @@
   ],
   "tags": [
     {
+      "name": "Experience",
+      "description": "Timeline profissional do dono do portfolio"
+    },
+    {
       "name": "Profile",
       "description": "Dados publicos do dono do portfolio"
     }
@@ -44,6 +48,29 @@
           },
           "404": {
             "description": "Nenhum perfil cadastrado - o seed nao foi aplicado"
+          }
+        }
+      }
+    },
+    "/api/v1/experiences": {
+      "get": {
+        "tags": ["Experience"],
+        "summary": "Lista a timeline profissional",
+        "description": "Passagens em ordem cronologica decrescente. Data de saida nula significa cargo atual.",
+        "operationId": "listExperiences",
+        "responses": {
+          "200": {
+            "description": "Timeline, possivelmente vazia",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Experience"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -108,6 +135,42 @@
           }
         },
         "required": ["platform", "url"]
+      },
+      "Experience": {
+        "type": "object",
+        "description": "Uma passagem profissional da timeline",
+        "properties": {
+          "company": {
+            "type": "string",
+            "example": "Acme"
+          },
+          "role": {
+            "type": "string",
+            "example": "Desenvolvedor Backend"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "example": "2022-03-01"
+          },
+          "endDate": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "Nulo significa cargo atual",
+            "example": "2024-01-31"
+          },
+          "description": {
+            "type": "string"
+          },
+          "highlights": {
+            "type": "array",
+            "description": "Destaques da posicao; lista vazia quando nao ha",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["company", "description", "endDate", "highlights", "role", "startDate"]
       }
     }
   }
