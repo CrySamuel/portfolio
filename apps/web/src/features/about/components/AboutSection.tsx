@@ -1,3 +1,6 @@
+import { statSync } from 'node:fs';
+import { join } from 'node:path';
+
 import type { ReactNode } from 'react';
 
 import { ResumeDownload } from '@/components/common/ResumeDownload';
@@ -47,10 +50,36 @@ export async function AboutSection(): Promise<ReactNode> {
         */}
         {profile.resumeUrl === null ? null : (
           <div>
-            <ResumeDownload href={profile.resumeUrl} fileName="crystofer-demetino-cv.pdf" />
+            <ResumeDownload
+              href={profile.resumeUrl}
+              sizeInBytes={tamanhoDoArquivoPublico(profile.resumeUrl)}
+              fileName="crystofer-demetino-backend-2026.pdf"
+            />
           </div>
         )}
       </Container>
     </Section>
   );
+}
+
+/**
+ * O tamanho do arquivo, lido do disco em tempo de build.
+ *
+ * <p><strong>Medido, e nao escrito a mao.</strong> Um "77 KB" fixo no codigo vira
+ * mentira na primeira vez que o curriculo for atualizado - e ele ja foi trocado
+ * uma vez antes mesmo de entrar no repositorio. Duas fontes de verdade para o
+ * mesmo fato divergem; aqui so ha uma, que e o proprio arquivo.
+ *
+ * <p>A leitura acontece no servidor, durante a pre-renderizacao, entao nao custa
+ * nada ao visitante nem vai para o bundle. O caminho sai do `resumeUrl` porque
+ * ele ja e relativo a raiz publica - a mesma premissa que faz o atributo
+ * `download` funcionar, ja que ele exige mesma origem.
+ *
+ * <p>Sem try/catch de proposito. Arquivo ausente derruba o build, e e o que se
+ * quer: a alternativa seria publicar um botao que responde 404, e defeito que
+ * aparece so para o visitante e pior do que build vermelho. E a mesma escolha que
+ * `getProfile` faz ao nao engolir falha de API.
+ */
+function tamanhoDoArquivoPublico(caminhoPublico: string): number {
+  return statSync(join(process.cwd(), 'public', caminhoPublico)).size;
 }
