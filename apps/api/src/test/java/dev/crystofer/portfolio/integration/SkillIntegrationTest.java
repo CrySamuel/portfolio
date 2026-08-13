@@ -4,7 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +18,7 @@ import dev.crystofer.portfolio.profile.domain.model.Proficiency;
 import dev.crystofer.portfolio.profile.domain.model.Skill;
 import dev.crystofer.portfolio.profile.domain.model.SkillCategory;
 import dev.crystofer.portfolio.profile.domain.port.in.ListSkillsUseCase;
+import dev.crystofer.portfolio.support.fixtures.SkillFixtures;
 
 /**
  * O caminho do banco ate o dominio, com Postgres de verdade.
@@ -31,9 +35,23 @@ class SkillIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired ListSkillsUseCase listSkillsUseCase;
 
+  @Autowired DataSource dataSource;
+
+  /**
+   * Tabelas vazias antes, seed de producao depois.
+   *
+   * <p>Desde que o {@code R__seed_skills} entrou, o container chega aqui com as quatro categorias
+   * reais. Sem esvaziar antes, cada assercao mediria o conteudo publicado - e um ajuste de nivel
+   * feito pelo dono viraria build vermelho.
+   */
+  @BeforeEach
+  void esvaziarAsTabelas() {
+    SkillFixtures.empty(jdbcTemplate);
+  }
+
   @AfterEach
-  void limparAsTabelas() {
-    jdbcTemplate.update("DELETE FROM skill_category");
+  void devolverOBancoAoSeed() {
+    SkillFixtures.reapplySeed(dataSource);
   }
 
   @Test
@@ -193,6 +211,75 @@ class SkillIntegrationTest extends AbstractIntegrationTest {
 
     // then
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+  }
+
+  /**
+   * A idempotencia que o {@code R__seed_skills.sql} promete no proprio cabecalho.
+   *
+   * <p>O Flyway so reexecuta a repetivel quando o checksum do arquivo muda, entao em condicoes
+   * normais ela roda uma vez e nunca mais. Se deixasse de ser idempotente, o efeito apareceria em
+   * producao, no deploy seguinte a um ajuste de nivel.
+   *
+   * <p>O snapshot inclui os ids: e o que distingue upsert de {@code DELETE} seguido de {@code
+   * INSERT}. Aqui isso importa de verdade, e nao so por principio - {@code skill} referencia {@code
+   * skill_category} por chave estrangeira, entao recriar as categorias arrastaria as competencias
+   * pelo cascade a cada execucao.
+   */
+  @Test
+  @DisplayName("o seed e idempotente: rodar duas vezes deixa o banco identico, ids inclusive")
+  void shouldBeIdempotent_whenSeedRunsTwice() {
+    // given
+    SkillFixtures.reapplySeed(dataSource);
+    var depoisDaPrimeira = snapshot();
+
+    // when
+    SkillFixtures.reapplySeed(dataSource);
+
+    // then
+    assertThat(snapshot()).isEqualTo(depoisDaPrimeira);
+  }
+
+  /**
+   * A lista do seed e fonte de verdade nos dois sentidos.
+   *
+   * <p>Sem os {@code DELETE} das CTEs, o seed saberia acrescentar e corrigir mas nunca tirar - e
+   * despublicar uma competencia, que e o caso em que mais importa, deixaria de funcionar em
+   * silencio.
+   */
+  @Test
+  @DisplayName("o seed remove competencia e categoria que nao estao mais na lista")
+  void shouldRemoveWhatIsNoLongerInTheSeedList() {
+    // given
+    SkillFixtures.reapplySeed(dataSource);
+    long inventada = criarCategoria("Categoria Inventada", 9);
+    inserirSkill(inventada, "Competencia Inventada", "advanced", null);
+    long real =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM skill_category WHERE name = 'Bancos de Dados'", Long.class);
+    inserirSkill(real, "Competencia Intrusa", "advanced", null);
+
+    // when
+    SkillFixtures.reapplySeed(dataSource);
+
+    // then
+    assertThat(listarNomes("SELECT name FROM skill_category"))
+        .doesNotContain("Categoria Inventada");
+    assertThat(listarNomes("SELECT name FROM skill"))
+        .doesNotContain("Competencia Inventada", "Competencia Intrusa");
+  }
+
+  private java.util.List<java.util.Map<String, Object>> snapshot() {
+    return jdbcTemplate.queryForList(
+        """
+        SELECT c.id, c.name, c.display_order, s.id, s.name, s.proficiency, s.years_of_experience
+        FROM skill_category c
+        LEFT JOIN skill s ON s.category_id = c.id
+        ORDER BY c.id, s.id
+        """);
+  }
+
+  private java.util.List<String> listarNomes(String sql) {
+    return jdbcTemplate.queryForList(sql, String.class);
   }
 
   private long criarCategoria(String nome, int ordem) {

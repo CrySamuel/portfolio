@@ -3,11 +3,17 @@ package dev.crystofer.portfolio.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import dev.crystofer.portfolio.support.fixtures.SkillFixtures;
 
 /**
  * As promessas da {@code V3__create_skill_tables} contra o Postgres 16 de verdade.
@@ -27,20 +33,24 @@ class SkillSchemaTest extends AbstractIntegrationTest {
       VALUES (?, ?, ?, ?)
       """;
 
+  @Autowired DataSource dataSource;
+
   /**
-   * As duas tabelas nascem vazias e assim devem terminar.
+   * Tabelas vazias antes, seed de producao depois.
    *
-   * <p>Nao ha seed a restaurar - o conteudo das skills depende do dono, que ainda nao informou os
-   * niveis. Quando houver um {@code R__seed_skills}, este metodo vira o par esvaziar/restaurar que
-   * {@code ExperienceFixtures} ja implementa.
-   *
-   * <p>Apagar so {@code skill_category}: as competencias vao junto pelo {@code ON DELETE CASCADE}.
-   * E mais que limpeza - se o cascade sumir numa migracao futura, sobra linha orfa e a contagem
-   * denuncia.
+   * <p>O {@code @BeforeEach} passou a ser necessario quando o {@code R__seed_skills} entrou: o
+   * Flyway o aplica no container, entao as tabelas chegam a este teste com as quatro categorias
+   * reais, e as contagens abaixo passariam a medir o seed em vez das linhas que o proprio teste
+   * escreve.
    */
+  @BeforeEach
+  void esvaziarAsTabelas() {
+    SkillFixtures.empty(jdbcTemplate);
+  }
+
   @AfterEach
-  void limparAsTabelas() {
-    jdbcTemplate.update("DELETE FROM skill_category");
+  void devolverOBancoAoSeed() {
+    SkillFixtures.reapplySeed(dataSource);
   }
 
   @Test
