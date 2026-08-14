@@ -1,18 +1,30 @@
 package dev.crystofer.portfolio.support.fixtures;
 
+import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+
+import javax.sql.DataSource;
+
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.support.EncodedResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 
 /**
  * Estado conhecido das tabelas de projeto para os testes de integracao.
  *
- * <p>Diferente de {@link ProfileFixtures}, {@link ExperienceFixtures} e {@link SkillFixtures}, aqui
- * nao ha seed de producao a restaurar: o conteudo dos projetos chega num commit proprio, depois do
- * endpoint. As tabelas nascem vazias no container, entao basta devolve-las vazias.
+ * <p>O gatilho e o mesmo dos outros tres: enquanto as tabelas nasciam vazias no container, bastava
+ * limpar o que cada teste sujava. Com o {@code R__seed_projects} aplicado pelo Flyway, elas ja
+ * chegam com os dois projetos reais - e qualquer teste que conte linhas passa a depender de um
+ * estado que nao controla.
  *
  * <p>O que este arquivo escreve e cenario de teste, e nao conteudo publicado. Afirmar sobre dado
  * real transformaria "o dono ajustou um texto" em build vermelho.
  */
 public final class ProjectFixtures {
+
+  private static final String SEED_SCRIPT = "db/migration/R__seed_projects.sql";
 
   private static final String INSERIR_PROJETO =
       """
@@ -24,6 +36,24 @@ public final class ProjectFixtures {
       """;
 
   private ProjectFixtures() {}
+
+  /**
+   * Reaplica o seed de producao, o mesmo arquivo que o Flyway executa.
+   *
+   * <p>O {@code EncodedResource} com UTF-8 explicito repete a escolha do {@code flyway.encoding}:
+   * em Windows o charset padrao da JVM nao e UTF-8, e ler o arquivo como CP1252 gravaria mojibake
+   * sem erro nenhum - e este seed tem acentuacao em toda a narrativa.
+   */
+  public static void reapplySeed(DataSource dataSource) {
+    Connection connection = DataSourceUtils.getConnection(dataSource);
+    try {
+      ScriptUtils.executeSqlScript(
+          connection,
+          new EncodedResource(new ClassPathResource(SEED_SCRIPT), StandardCharsets.UTF_8));
+    } finally {
+      DataSourceUtils.releaseConnection(connection, dataSource);
+    }
+  }
 
   /**
    * Apaga so {@code project} e {@code technology}.

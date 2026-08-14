@@ -2,6 +2,8 @@ package dev.crystofer.portfolio.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import javax.sql.DataSource;
+
 import jakarta.persistence.EntityManagerFactory;
 
 import org.hibernate.SessionFactory;
@@ -31,10 +33,16 @@ class ProjectIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired EntityManagerFactory entityManagerFactory;
 
+  @Autowired DataSource dataSource;
+
   @BeforeEach
-  @AfterEach
-  void limparAsTabelas() {
+  void partirDeTabelasVazias() {
     ProjectFixtures.empty(jdbcTemplate);
+  }
+
+  @AfterEach
+  void devolverOBancoAoSeed() {
+    ProjectFixtures.reapplySeed(dataSource);
   }
 
   @Test
@@ -210,6 +218,97 @@ class ProjectIntegrationTest extends AbstractIntegrationTest {
     // then
     assertThat(new String(response.getBody(), java.nio.charset.StandardCharsets.UTF_8))
         .contains("Gestão de Métricas");
+  }
+
+  /**
+   * O seed repetivel promete no cabecalho que rodar duas vezes deixa o banco igual.
+   *
+   * <p>A promessa e o que separa "migracao repetivel" de "migracao que duplica a cada deploy", e o
+   * Flyway a executa em toda subida da aplicacao. Sem esta assercao ela ficaria conferida so a mao,
+   * uma vez, no dia em que o arquivo foi escrito.
+   *
+   * <p>O snapshot inclui os <strong>ids</strong> de proposito. Um seed que apagasse tudo e
+   * reinserisse tambem deixaria o conteudo igual - e descartaria as chaves, quebrando qualquer
+   * referencia. Comparar ids e o que distingue {@code ON CONFLICT DO UPDATE} de {@code DELETE} mais
+   * {@code INSERT}. As colunas de tempo ficam fora, porque o seed grava {@code now()}.
+   */
+  @Test
+  @DisplayName("deve deixar o banco identico ao rodar o seed duas vezes")
+  void shouldBeIdempotent_whenSeedRunsTwice() {
+    // given
+    ProjectFixtures.reapplySeed(dataSource);
+    var primeira = snapshotDoCatalogo();
+    assertThat(primeira).as("o seed precisa ter escrito alguma coisa").isNotEmpty();
+
+    // when
+    ProjectFixtures.reapplySeed(dataSource);
+
+    // then
+    assertThat(snapshotDoCatalogo()).isEqualTo(primeira);
+  }
+
+  /**
+   * A lista do seed e fonte de verdade nos dois sentidos.
+   *
+   * <p>Sem o {@code DELETE}, o arquivo saberia acrescentar e corrigir mas nunca tirar - e conteudo
+   * retirado da lista continuaria publicado para sempre. Esta guarda nao e hipotetica: foi ela que
+   * tornou possivel remover o Music Style API do catalogo editando uma lista.
+   */
+  @Test
+  @DisplayName("deve remover o projeto que sai da lista do seed")
+  void shouldRemoveProject_whenItLeavesTheSeedList() {
+    // given
+    ProjectFixtures.reapplySeed(dataSource);
+    jdbcTemplate.update(
+        """
+        INSERT INTO project (slug, title, summary, problem, solution, outcome)
+        VALUES ('obsoleto', 'Obsoleto', 'r', 'p', 's', 'o')
+        """);
+    assertThat(existe("project", "obsoleto")).isTrue();
+
+    // when
+    ProjectFixtures.reapplySeed(dataSource);
+
+    // then
+    assertThat(existe("project", "obsoleto")).isFalse();
+  }
+
+  /** O mesmo para tecnologia, cuja remocao so e possivel depois de os vinculos sairem. */
+  @Test
+  @DisplayName("deve remover a tecnologia que sai da lista do seed")
+  void shouldRemoveTechnology_whenItLeavesTheSeedList() {
+    // given
+    ProjectFixtures.reapplySeed(dataSource);
+    jdbcTemplate.update(
+        "INSERT INTO technology (name, slug, category) VALUES ('COBOL', 'cobol', 'language')");
+    assertThat(existe("technology", "cobol")).isTrue();
+
+    // when
+    ProjectFixtures.reapplySeed(dataSource);
+
+    // then
+    assertThat(existe("technology", "cobol")).isFalse();
+  }
+
+  private boolean existe(String tabela, String slug) {
+    Integer total =
+        jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM " + tabela + " WHERE slug = ?", Integer.class, slug);
+    return total != null && total > 0;
+  }
+
+  private java.util.List<java.util.Map<String, Object>> snapshotDoCatalogo() {
+    return jdbcTemplate.queryForList(
+        """
+        SELECT p.id, p.slug, p.title, p.display_order, p.featured, p.live_url,
+               t.id AS tech_id, t.slug AS tech_slug,
+               m.id AS metric_id, m.label, m.value
+        FROM project p
+        LEFT JOIN project_tech pt   ON pt.project_id = p.id
+        LEFT JOIN technology t      ON t.id = pt.technology_id
+        LEFT JOIN project_metric m  ON m.project_id = p.id
+        ORDER BY p.id, t.slug, m.label
+        """);
   }
 
   private org.springframework.http.ResponseEntity<String> getComEtag(String path, String etag) {

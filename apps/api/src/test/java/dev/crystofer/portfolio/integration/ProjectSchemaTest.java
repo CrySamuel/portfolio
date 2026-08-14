@@ -3,12 +3,17 @@ package dev.crystofer.portfolio.integration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import dev.crystofer.portfolio.support.fixtures.ProjectFixtures;
 
 /**
  * As promessas da {@code V4__create_project_tables} contra o Postgres 16 de verdade.
@@ -20,10 +25,14 @@ import org.junit.jupiter.params.provider.ValueSource;
  * <p>Cada assercao exige o nome da restricao. Um {@code INSERT} pode ser recusado por muitos
  * motivos, e teste que aceita qualquer falha como prova passa pelo motivo errado.
  *
- * <p>Diferente dos dois anteriores, aqui nao ha seed a restaurar: o conteudo dos projetos depende
- * do dono e chega depois. As tabelas nascem vazias no container, entao basta devolve-las vazias.
+ * <p>As tabelas chegam a este teste com os dois projetos reais, porque o Flyway aplica o {@code
+ * R__seed_projects} no container. Por isso o {@code @BeforeEach} esvazia e o {@code @AfterEach}
+ * restaura - as contagens abaixo medem as linhas que o proprio teste escreve, e nao o conteudo
+ * publicado.
  */
 class ProjectSchemaTest extends AbstractIntegrationTest {
+
+  @Autowired DataSource dataSource;
 
   private static final String INSERIR_PROJETO =
       """
@@ -41,17 +50,12 @@ class ProjectSchemaTest extends AbstractIntegrationTest {
    */
   @BeforeEach
   void partirDeTabelasVazias() {
-    esvaziarAsTabelas();
+    ProjectFixtures.empty(jdbcTemplate);
   }
 
   @AfterEach
-  void devolverTabelasVazias() {
-    esvaziarAsTabelas();
-  }
-
-  private void esvaziarAsTabelas() {
-    jdbcTemplate.update("DELETE FROM project");
-    jdbcTemplate.update("DELETE FROM technology");
+  void devolverOBancoAoSeed() {
+    ProjectFixtures.reapplySeed(dataSource);
   }
 
   @Test

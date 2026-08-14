@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
+import javax.sql.DataSource;
+
 import jakarta.persistence.EntityManagerFactory;
 
 import org.hibernate.SessionFactory;
@@ -38,10 +40,16 @@ class ProjectPersistenceIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired EntityManagerFactory entityManagerFactory;
 
+  @Autowired DataSource dataSource;
+
   @BeforeEach
-  @AfterEach
-  void limparAsTabelas() {
+  void partirDeTabelasVazias() {
     ProjectFixtures.empty(jdbcTemplate);
+  }
+
+  @AfterEach
+  void devolverOBancoAoSeed() {
+    ProjectFixtures.reapplySeed(dataSource);
   }
 
   /**
