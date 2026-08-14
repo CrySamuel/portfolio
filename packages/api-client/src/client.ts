@@ -33,6 +33,29 @@ export type Skill = components['schemas']['Skill'];
 /** Uniao literal - `'basic' | 'intermediate' | 'advanced'`, e nao `string`. */
 export type Proficiency = Skill['proficiency'];
 
+/**
+ * Um projeto como a listagem o exibe.
+ *
+ * Nao traz `problem`, `solution` nem `outcome`, e tambem nao traz `repoUrl` nem
+ * `liveUrl` - as duas omissoes sao do contrato, e a segunda e de acessibilidade:
+ * o card precisa de uma unica area de foco, e link dentro de card que ja e link
+ * cria alvo aninhado. O tipo torna isso impossivel de errar, porque os campos
+ * nao existem para o componente desenhar.
+ */
+export type ProjectSummary = components['schemas']['ProjectSummary'];
+
+/** Um projeto com a narrativa completa, os enderecos e as metricas. */
+export type ProjectDetail = components['schemas']['ProjectDetail'];
+
+/** Uma tecnologia declarada por um projeto. `iconSlug` e `string | null`. */
+export type Technology = components['schemas']['Technology'];
+
+/** Uniao literal das cinco familias, e nao `string`. */
+export type TechnologyCategory = Technology['category'];
+
+/** Um numero que sustenta o resultado de um projeto. O valor carrega a unidade. */
+export type ProjectMetric = components['schemas']['ProjectMetric'];
+
 /** Resposta que nao foi 2xx, ou que nao chegou. */
 export class ApiError extends Error {
   /** `0` quando a requisicao nem chegou a ter resposta (rede, timeout). */
