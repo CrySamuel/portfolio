@@ -243,6 +243,129 @@ class OpenApiContractTest extends AbstractIntegrationTest {
         .containsExactly("basic", "intermediate", "advanced");
   }
 
+  @Test
+  @DisplayName("as duas rotas de projeto sao publicadas como application/json")
+  void shouldPublishJsonMediaType_forTheProjectRoutes() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathMapValue("$.paths./api/v1/projects.get.responses.200.content")
+        .containsOnlyKeys("application/json");
+    assertThat(json.from(body))
+        .extractingJsonPathMapValue("$.paths./api/v1/projects/{slug}.get.responses.200.content")
+        .containsOnlyKeys("application/json");
+  }
+
+  /**
+   * A listagem publica o resumo, e o detalhe publica o detalhe - sao schemas distintos.
+   *
+   * <p>Se as duas rotas apontassem para o mesmo schema, o cliente TypeScript prometeria a narrativa
+   * completa nos cards. O componente compilaria, leria {@code problem} e receberia {@code
+   * undefined} em producao.
+   */
+  @Test
+  @DisplayName("a listagem publica array de ProjectSummary e o detalhe publica ProjectDetail")
+  void shouldPublishDistinctSchemas_forListingAndDetail() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue(
+            "$.paths./api/v1/projects.get.responses.200.content.application/json.schema.type")
+        .isEqualTo("array");
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue(
+            "$.paths./api/v1/projects.get.responses.200.content.application/json.schema.items.$ref")
+        .isEqualTo("#/components/schemas/ProjectSummary");
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue(
+            "$.paths./api/v1/projects/{slug}.get.responses.200.content.application/json.schema.$ref")
+        .isEqualTo("#/components/schemas/ProjectDetail");
+  }
+
+  /**
+   * Os quatro nulaveis do detalhe, que sao os que mais pesam neste commit.
+   *
+   * <p>{@code repoUrl} e {@code liveUrl} decidem se o botao existe; publicados como {@code string}
+   * simples, o TypeScript prometeria endereco onde chega {@code null} e o componente montaria um
+   * link para lugar nenhum.
+   */
+  @Test
+  @DisplayName("todo campo do detalhe e required, e os quatro nulaveis dizem isso no tipo")
+  void shouldDeclareRequiredAndNullableFields_forTheProjectDetailSchema() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue("$.components.schemas.ProjectDetail.required")
+        .containsExactlyInAnyOrder(
+            "slug",
+            "title",
+            "summary",
+            "problem",
+            "solution",
+            "outcome",
+            "repoUrl",
+            "liveUrl",
+            "coverImage",
+            "featured",
+            "publishedAt",
+            "technologies",
+            "metrics");
+
+    for (String nulavel : new String[] {"repoUrl", "liveUrl", "coverImage", "publishedAt"}) {
+      assertThat(json.from(body))
+          .extractingJsonPathArrayValue(
+              "$.components.schemas.ProjectDetail.properties." + nulavel + ".type")
+          .as("o nulavel %s precisa publicar a uniao com null", nulavel)
+          .containsExactly("string", "null");
+    }
+
+    // Nao nulavel: sempre existe. A distincao so vale onde ha ausencia real.
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue("$.components.schemas.ProjectDetail.properties.slug.type")
+        .isEqualTo("string");
+  }
+
+  /**
+   * O resumo omite a narrativa e os enderecos, e o contrato registra essa omissao.
+   *
+   * <p>O {@code unmappedTargetPolicy} do MapStruct guarda o sentido contrario - campo do DTO sem
+   * origem no dominio -, mas nao tem como distinguir omissao deliberada de esquecimento. Esta e a
+   * unica guarda sobre a forma reduzida do card.
+   */
+  @Test
+  @DisplayName("o resumo nao publica narrativa, enderecos nem metricas")
+  void shouldKeepTheSummaryLean() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue("$.components.schemas.ProjectSummary.required")
+        .containsExactlyInAnyOrder(
+            "slug", "title", "summary", "coverImage", "featured", "publishedAt", "technologies")
+        .doesNotContain("problem", "solution", "outcome", "repoUrl", "liveUrl", "metrics");
+
+    // Os dois nulaveis do resumo precisam da mesma uniao que os do detalhe. Esta
+    // metade faltava na primeira versao do teste, e a falta so apareceu ao montar
+    // a quebra proposital - o que e, por si, a razao de quebrar.
+    for (String nulavel : new String[] {"coverImage", "publishedAt"}) {
+      assertThat(json.from(body))
+          .extractingJsonPathArrayValue(
+              "$.components.schemas.ProjectSummary.properties." + nulavel + ".type")
+          .as("o nulavel %s do resumo precisa publicar a uniao com null", nulavel)
+          .containsExactly("string", "null");
+    }
+  }
+
+  /** O enum e o que faz {@code category} virar uniao literal no TypeScript, e nao string. */
+  @Test
+  @DisplayName("category publica o conjunto fechado de familias")
+  void shouldPublishTheTechnologyCategoryEnum() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue("$.components.schemas.Technology.properties.category.enum")
+        .containsExactlyInAnyOrder("language", "framework", "database", "infrastructure", "tool");
+  }
+
   private String fetchApiDocs() {
     ResponseEntity<String> response = restTemplate.getForEntity("/v3/api-docs", String.class);
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);

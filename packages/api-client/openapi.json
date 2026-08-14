@@ -24,6 +24,10 @@
       "description": "Timeline profissional do dono do portfolio"
     },
     {
+      "name": "Project",
+      "description": "Catalogo de projetos com narrativa problema, solucao e resultado"
+    },
+    {
       "name": "Profile",
       "description": "Dados publicos do dono do portfolio"
     },
@@ -49,6 +53,79 @@
                   "items": {
                     "$ref": "#/components/schemas/SkillCategory"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "tags": ["Project"],
+        "summary": "Lista os projetos do catalogo",
+        "description": "Projetos em ordem editorial. Sem a narrativa e sem os enderecos, que sao do detalhe.",
+        "operationId": "listProjects",
+        "responses": {
+          "200": {
+            "description": "Catalogo, possivelmente vazio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{slug}": {
+      "get": {
+        "tags": ["Project"],
+        "summary": "Detalha um projeto pelo slug",
+        "description": "Narrativa completa, enderecos e metricas de um projeto do catalogo.",
+        "operationId": "getProject",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projeto encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Slug fora do formato da URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nao ha projeto com esse slug",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDetail"
                 }
               }
             }
@@ -142,6 +219,192 @@
           }
         },
         "required": ["name", "skills"]
+      },
+      "ProjectSummary": {
+        "type": "object",
+        "description": "Projeto como aparece na listagem e nos cards",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "description": "Identificador da URL publica",
+            "example": "finai"
+          },
+          "title": {
+            "type": "string",
+            "example": "FinAI"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Uma ou duas frases, o texto do card",
+            "example": "Assistente financeiro no Telegram que le texto livre."
+          },
+          "coverImage": {
+            "type": ["string", "null"],
+            "description": "Caminho da imagem de capa; nulo quando nao ha",
+            "example": "/images/projetos/finai.png"
+          },
+          "featured": {
+            "type": "boolean",
+            "description": "Verdadeiro para os projetos em destaque na home",
+            "example": true
+          },
+          "publishedAt": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "Nulo quando nao ha data honesta a declarar",
+            "example": "2026-03-24"
+          },
+          "technologies": {
+            "type": "array",
+            "description": "Tecnologias declaradas, em ordem alfabetica; alimenta o filtro",
+            "items": {
+              "$ref": "#/components/schemas/Technology"
+            }
+          }
+        },
+        "required": [
+          "coverImage",
+          "featured",
+          "publishedAt",
+          "slug",
+          "summary",
+          "technologies",
+          "title"
+        ]
+      },
+      "Technology": {
+        "type": "object",
+        "description": "Tecnologia usada por um projeto",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Spring Boot"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Identificador usado no filtro da listagem",
+            "example": "spring-boot"
+          },
+          "category": {
+            "type": "string",
+            "description": "Familia da tecnologia",
+            "enum": ["language", "framework", "database", "infrastructure", "tool"],
+            "example": "framework"
+          },
+          "iconSlug": {
+            "type": ["string", "null"],
+            "description": "Nulo enquanto nao houver sprite de icones",
+            "example": "spring"
+          }
+        },
+        "required": ["category", "iconSlug", "name", "slug"]
+      },
+      "Slug": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "ProjectDetail": {
+        "type": "object",
+        "description": "Projeto com a narrativa completa",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "description": "Identificador da URL publica",
+            "example": "finai"
+          },
+          "title": {
+            "type": "string",
+            "example": "FinAI"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "problem": {
+            "type": "string",
+            "description": "O que doia antes"
+          },
+          "solution": {
+            "type": "string",
+            "description": "O que foi construido"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "O que mudou, de preferencia com numero"
+          },
+          "repoUrl": {
+            "type": ["string", "null"],
+            "description": "Nulo quando nao ha repositorio publico",
+            "example": "https://github.com/CrySamuel/FinAI-Bot"
+          },
+          "liveUrl": {
+            "type": ["string", "null"],
+            "description": "Nulo quando nao ha nada no ar para visitar",
+            "example": "https://t.me/gestor_crys_bot"
+          },
+          "coverImage": {
+            "type": ["string", "null"],
+            "description": "Caminho da imagem de capa; nulo quando nao ha"
+          },
+          "featured": {
+            "type": "boolean",
+            "example": true
+          },
+          "publishedAt": {
+            "type": ["string", "null"],
+            "format": "date",
+            "description": "Nulo quando nao ha data honesta a declarar",
+            "example": "2026-03-24"
+          },
+          "technologies": {
+            "type": "array",
+            "description": "Tecnologias declaradas, em ordem alfabetica",
+            "items": {
+              "$ref": "#/components/schemas/Technology"
+            }
+          },
+          "metrics": {
+            "type": "array",
+            "description": "Numeros que sustentam o resultado; lista vazia quando nao ha",
+            "items": {
+              "$ref": "#/components/schemas/ProjectMetric"
+            }
+          }
+        },
+        "required": [
+          "coverImage",
+          "featured",
+          "liveUrl",
+          "metrics",
+          "outcome",
+          "problem",
+          "publishedAt",
+          "repoUrl",
+          "slug",
+          "solution",
+          "summary",
+          "technologies",
+          "title"
+        ]
+      },
+      "ProjectMetric": {
+        "type": "object",
+        "description": "Numero que sustenta o resultado de um projeto",
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Economia em um mes"
+          },
+          "value": {
+            "type": "string",
+            "description": "Valor com a unidade, como sera exibido",
+            "example": "R$ 800+"
+          }
+        },
+        "required": ["label", "value"]
       },
       "Profile": {
         "type": "object",
