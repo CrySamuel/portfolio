@@ -9,6 +9,7 @@ import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { getProfile } from '@/lib/api/profile';
 import { fontVariables } from '@/lib/fonts';
 import { MAIN_ID } from '@/lib/navigation';
+import { SITE_URL } from '@/lib/site';
 
 import './globals.css';
 
@@ -29,6 +30,12 @@ import './globals.css';
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
+  // A raiz contra a qual o Next resolve todo endereco de metadata - canonical e
+  // og:image inclusive. Sem ela, a imagem de compartilhamento sai relativa e o
+  // crawler do WhatsApp ou do LinkedIn nao tem contra o que resolve-la: o link
+  // aparece sem imagem. O raciocinio inteiro, e a ordem das quatro fontes, esta
+  // em lib/site.ts.
+  metadataBase: SITE_URL,
   title: 'Crystofer Demetino — Desenvolvedor Backend',
   description:
     'Portfólio de Crystofer Demetino, Desenvolvedor Backend especializado em Java e Spring Boot.',

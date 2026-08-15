@@ -148,6 +148,17 @@ export interface ApiClient {
    * Devolve lista vazia quando nao ha nada cadastrado, e nao um erro.
    */
   listProjects(options?: RequestOptions): Promise<ProjectSummary[]>;
+
+  /**
+   * Um projeto pelo slug, com narrativa, enderecos e metricas.
+   *
+   * Os dois casos de ausencia chegam como `ApiError` e sao distinguiveis pelo
+   * status, porque significam coisas diferentes: **400** e slug fora do formato
+   * da URL - endereco malformado -, e **404** e slug bem formado que nao existe.
+   * Quem chama decide o que fazer com cada um; aqui os dois viram erro, e nao
+   * `null`, para que ignorar o caso exija escrever o `catch`.
+   */
+  getProjectBySlug(slug: string, options?: RequestOptions): Promise<ProjectDetail>;
 }
 
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -225,6 +236,14 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
     listProjects(requestOptions: RequestOptions = {}) {
       return request<ProjectSummary[]>('/api/v1/projects', requestOptions);
+    },
+
+    getProjectBySlug(slug: string, requestOptions: RequestOptions = {}) {
+      // encodeURIComponent mesmo sabendo que slug valido nao tem nada a
+      // escapar: o valor vem da URL do visitante, e concatenar entrada externa
+      // num caminho sem escapar e como se monta um path traversal. Com o
+      // escape, `../profile` chega a API como segmento literal e volta 400.
+      return request<ProjectDetail>(`/api/v1/projects/${encodeURIComponent(slug)}`, requestOptions);
     },
   };
 }
