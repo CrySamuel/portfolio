@@ -35,14 +35,28 @@ import { TechStack } from '@/features/projects/components/TechStack';
  * <p>E a mesma conta que recusou o Radix Dialog no menu mobile. Quando houver
  * uma capa de verdade para exibir, o commit que a trouxer paga os 5 KB sabendo o
  * numero - o campo continua no contrato, esperando.
+ *
+ * @param nivel o nivel do titulo do card. O padrao e {@code 3}, que e o certo na
+ *   home: o {@code h1} e do hero e o {@code h2} e da secao. Na rota
+ *   {@code /projetos} a secao **e** a pagina e assina o {@code h1}, entao os
+ *   cards sobem para {@code h2} - sem isso a pagina pularia de {@code h1} para
+ *   {@code h3}, que e o que a regra {@code heading-order} do axe reprova. O
+ *   tamanho na tela nao muda nos dois casos: nivel e estrutura, nao desenho.
  */
-export function ProjectCard({ project }: { project: ProjectSummary }): ReactNode {
+export function ProjectCard({
+  project,
+  nivel = 3,
+}: {
+  readonly project: ProjectSummary;
+  readonly nivel?: 2 | 3;
+}): ReactNode {
   const { slug, title, summary, technologies } = project;
+  const Titulo = nivel === 2 ? 'h2' : 'h3';
 
   return (
     <li className="h-full">
       <article className="relative flex h-full flex-col gap-3 rounded-lg border border-border bg-surface p-5 transition-colors focus-within:border-border-interactive hover:border-border-interactive">
-        <h3 className="text-h4 text-fg">
+        <Titulo className="text-h4 text-fg">
           {/*
             O pseudo-elemento estica o link sobre o card inteiro. Ele fica no
             <a>, e nao no <article>, para que o nome acessivel continue sendo o
@@ -54,7 +68,7 @@ export function ProjectCard({ project }: { project: ProjectSummary }): ReactNode
           >
             {title}
           </Link>
-        </h3>
+        </Titulo>
 
         <p className="text-body-sm text-fg-muted">{summary}</p>
 

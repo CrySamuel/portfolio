@@ -137,6 +137,17 @@ export interface ApiClient {
    * Devolve lista vazia quando nao ha nada cadastrado, e nao um erro.
    */
   listSkills(options?: RequestOptions): Promise<SkillCategory[]>;
+
+  /**
+   * O catalogo de projetos, em ordem editorial.
+   *
+   * Devolve o resumo de cada um - sem a narrativa e sem os enderecos, que sao do
+   * detalhe. A omissao e do contrato, e a dos enderecos e de acessibilidade: o
+   * card precisa de uma unica area de foco.
+   *
+   * Devolve lista vazia quando nao ha nada cadastrado, e nao um erro.
+   */
+  listProjects(options?: RequestOptions): Promise<ProjectSummary[]>;
 }
 
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -210,6 +221,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
     listSkills(requestOptions: RequestOptions = {}) {
       return request<SkillCategory[]>('/api/v1/skills', requestOptions);
+    },
+
+    listProjects(requestOptions: RequestOptions = {}) {
+      return request<ProjectSummary[]>('/api/v1/projects', requestOptions);
     },
   };
 }
