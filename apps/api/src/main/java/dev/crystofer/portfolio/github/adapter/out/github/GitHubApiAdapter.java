@@ -115,11 +115,32 @@ class GitHubApiAdapter implements GitHubStatsProviderPort {
   }
 
   /**
-   * Os repositorios do perfil, sem os que nao contam.
+   * Um repositorio conta como projeto da vitrine?
    *
-   * <p>Fork sai porque nao e codigo escrito pela pessoa - deixa-lo entrar faria a distribuicao de
-   * linguagens do perfil somar a de outra gente. Arquivado sai da vitrine pelo motivo oposto: ele e
-   * dela, mas nao representa o que ela mantem hoje, e ocuparia lugar de quem representa.
+   * <p>Tres exclusoes, por tres motivos diferentes:
+   *
+   * <ul>
+   *   <li><strong>fork</strong> nao e codigo escrito pela pessoa, e deixa-lo entrar faria a
+   *       distribuicao de linguagens do perfil somar a de outra gente;
+   *   <li><strong>arquivado</strong> e dela, mas nao representa o que ela mantem hoje, e ocuparia
+   *       lugar de quem representa;
+   *   <li><strong>o repositorio de perfil</strong> - aquele cujo nome e igual ao do usuario - nao e
+   *       projeto nenhum: e a convencao do GitHub para o README que aparece no topo do perfil.
+   *       Medido, ele chegava em <em>primeiro</em> na ordem de destaque, porque tem uma estrela e o
+   *       criterio comeca por estrelas.
+   * </ul>
+   *
+   * <p>Metodo estatico e visivel no pacote de proposito: as tres regras sao editoriais e mereciam
+   * teste antes do commit 43, que e quem traz o WireMock e exercita a chamada HTTP inteira.
+   */
+  static boolean contaComoProjeto(GitHubRepositoryResponse repositorio, String username) {
+    return !repositorio.fork()
+        && !repositorio.archived()
+        && !repositorio.name().equalsIgnoreCase(username);
+  }
+
+  /**
+   * Os repositorios do perfil, sem os que nao contam - ver {@link #contaComoProjeto}.
    *
    * <p>A ordenacao pedida e {@code pushed}, e nao {@code updated} como a secao 9.2 escreve. {@code
    * updated_at} muda com edicao de descricao e com mudanca de visibilidade; {@code pushed_at} muda
@@ -144,7 +165,7 @@ class GitHubApiAdapter implements GitHubStatsProviderPort {
       return List.of();
     }
     return resposta.stream()
-        .filter(repositorio -> !repositorio.fork() && !repositorio.archived())
+        .filter(repositorio -> contaComoProjeto(repositorio, username))
         .toList();
   }
 
