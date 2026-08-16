@@ -37,6 +37,7 @@
     <springdoc.version>3.1.0</springdoc.version>
     <archunit.version>1.5.0</archunit.version>
     <testcontainers.version>2.0.5</testcontainers.version>
+    <resilience4j.version>2.3.0</resilience4j.version>
   </properties>
 
   <!--
@@ -203,6 +204,45 @@
     <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
+    </dependency>
+
+    <!--
+      Disjuntor, retentativa e bulkhead (ADR-0008). O artefato ainda se chama
+      spring-boot3 porque nao existe versao para o Boot 4 - a 2.3.0 e a mais
+      nova publicada, e foi lancada contra o Boot 3.
+
+      **Nao e suposicao de que funciona.** O contexto sobe, os aspectos
+      interceptam e o disjuntor abre depois do limiar - as tres coisas estao
+      cobertas por teste, porque anotacao que nao intercepta e a pior das
+      guardas: ela documenta uma protecao que nao existe.
+    -->
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-spring-boot3</artifactId>
+      <version>${resilience4j.version}</version>
+    </dependency>
+
+    <!--
+      Os aspectos do Resilience4j sao AOP, e sem isto nao ha o que os teca.
+      Chamava-se spring-boot-starter-aop ate o Boot 4; o rename acompanha a
+      modularizacao, como aconteceu com starter-web -> starter-webmvc. A forma
+      antiga nem chega a resolver: o Maven recusa o POM por falta de versao,
+      porque o BOM do Boot 4 nao conhece mais aquele nome.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aspectj</artifactId>
+    </dependency>
+
+    <!--
+      Publica as metricas em /actuator/prometheus - inclusive o estado do
+      circuito e o hit ratio do Caffeine, que a Definition of Done do MVP 4 pede
+      observaveis. Sem o registro, o Micrometer coleta e nao ha por onde ler.
+    -->
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <scope>runtime</scope>
     </dependency>
 
     <dependency>

@@ -56,12 +56,67 @@ server:
     mime-types: application/json,application/problem+json,text/plain,text/css,application/javascript
     min-response-size: 1KB
 
+resilience4j:
+  circuitbreaker:
+    instances:
+      github:
+        # Dez chamadas na janela e metade de falha para abrir. Com o cache de 6h
+        # o volume e baixo, entao uma janela grande demoraria dias para reunir
+        # amostra - e o disjuntor so protegeria depois que ja nao importa.
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+
+        # Um minuto fechado para o GitHub, que e mais que o suficiente para uma
+        # instabilidade passageira e menos que o prazo do cache: mesmo com o
+        # circuito aberto, o visitante continua vendo o retrato anterior.
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+
+        # **403, e nao 429.** O GitHub responde 403 quando a cota da hora acaba,
+        # e essa e a armadilha que engana implementacao ingenua: sem registrar o
+        # 403 como falha, o disjuntor nunca abriria justamente no caso mais
+        # provavel de indisponibilidade.
+        record-exceptions:
+          - org.springframework.web.client.RestClientException
+          - java.io.IOException
+        register-health-indicator: false
+
+  retry:
+    instances:
+      github:
+        max-attempts: 3
+        wait-duration: 500ms
+        exponential-backoff-multiplier: 2
+
+        # Repetir 4xx e insistir no erro proprio: requisicao malformada segue
+        # malformada na segunda vez, e a unica consequencia e gastar a cota de
+        # quem esta sendo chamado. So falha de servidor e de rede e retentada.
+        retry-exceptions:
+          - java.io.IOException
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+
+  bulkhead:
+    instances:
+      github:
+        # Um retrato ja gasta ate 22 requisicoes sequenciais. O limite existe
+        # para que dois reaquecimentos simultaneos nao virem 44 chamadas na
+        # mesma janela de cota.
+        max-concurrent-calls: 5
+        max-wait-duration: 0
+
 management:
   endpoints:
     web:
       exposure:
         # Default seguro. O perfil local amplia; producao nunca herda o inverso.
-        include: health,info
+        #
+        # O prometheus entra porque a Definition of Done do MVP 4 exige o estado
+        # do circuito e o hit ratio do cache observaveis. Ele nao expoe conteudo
+        # nem configuracao - so contadores -, e continua atras da mesma origem.
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: never

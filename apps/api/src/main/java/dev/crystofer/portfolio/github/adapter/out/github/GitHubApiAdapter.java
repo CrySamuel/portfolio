@@ -21,6 +21,9 @@ import dev.crystofer.portfolio.github.domain.model.LanguageUsage;
 import dev.crystofer.portfolio.github.domain.port.out.GitHubStatsProviderPort;
 import dev.crystofer.portfolio.shared.config.CacheConfig;
 import dev.crystofer.portfolio.shared.config.properties.GitHubProperties;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 
 /**
  * A implementacao da porta de saida: o GitHub de verdade, por HTTP.
@@ -35,17 +38,30 @@ import dev.crystofer.portfolio.shared.config.properties.GitHubProperties;
  * passageira seria guardada por seis horas e o site mostraria a secao vazia mesmo depois de o
  * GitHub voltar - o oposto do que a cadeia de fallback do ADR-0008 quer.
  *
- * <p><strong>O {@code catch} largo aqui e andaime, e tem prazo.</strong> A porta promete sempre
- * devolver estatisticas, entao alguem precisa cumprir a promessa desde o primeiro commit que a
- * implementa. No commit 42 ele sai e entram {@code @CircuitBreaker}, {@code @Retry} e
- * {@code @Bulkhead} com {@code fallbackMethod}, que e onde o ADR-0008 poe essa responsabilidade.
- * Ate la, qualquer falha - rede, 403 de cota, JSON malformado, invariante de dominio recusando um
- * repositorio estranho - vira o retrato vazio, e o log guarda a causa.
+ * <p><strong>A resiliencia esta nas anotacoes, e nao num {@code catch}.</strong> O andaime do
+ * commit anterior saiu: a retentativa cobre a falha passageira, o disjuntor para de bater na porta
+ * de quem ja caiu, o bulkhead limita chamadas simultaneas e o {@code fallbackMethod} garante a
+ * promessa da porta - sempre devolve estatisticas. Os numeros de cada um vivem no {@code
+ * application.yml}, que e onde se ajustam sem recompilar.
+ *
+ * <p>A ordem em que os aspectos se aninham importa e esta declarada: <strong>o cache fica por
+ * fora</strong> (ver {@code CacheConfig}), entao um acerto de cache nao passa pelo disjuntor. Se
+ * passasse, seis horas de respostas cacheadas contariam como sucesso e limpariam a estatistica de
+ * falha do circuito - que ficaria fechado sobre um GitHub que caiu.
  */
 @Component
 class GitHubApiAdapter implements GitHubStatsProviderPort {
 
   private static final Logger log = LoggerFactory.getLogger(GitHubApiAdapter.class);
+
+  /**
+   * O nome das tres instancias do Resilience4j, que e o mesmo nome nas tres.
+   *
+   * <p>Constante, e nao string repetida: o nome liga a anotacao ao bloco do {@code application.yml}
+   * por texto, e texto que nao casa nao da erro - o Resilience4j cria uma instancia com os valores
+   * padrao dele e segue. O disjuntor existiria com outra configuracao que ninguem escolheu.
+   */
+  private static final String INSTANCIA = "github";
 
   /**
    * O total de contribuicoes do ultimo ano, que <strong>so existe no GraphQL</strong>.
@@ -90,24 +106,39 @@ class GitHubApiAdapter implements GitHubStatsProviderPort {
 
   @Override
   @Cacheable(cacheNames = CacheConfig.GITHUB_STATS, key = "#username", unless = "#result.isEmpty()")
+  @CircuitBreaker(name = INSTANCIA, fallbackMethod = "retratoVazio")
+  @Retry(name = INSTANCIA)
+  @Bulkhead(name = INSTANCIA)
   public GitHubStats fetchStats(String username) {
-    try {
-      GitHubUserResponse user = carregarPerfil(username);
-      List<GitHubRepositoryResponse> repositorios = carregarRepositorios(username);
+    GitHubUserResponse user = carregarPerfil(username);
+    List<GitHubRepositoryResponse> repositorios = carregarRepositorios(username);
 
-      return new GitHubStats(
-          user.login(),
-          user.publicRepos(),
-          carregarContribuicoes(username),
-          carregarLinguagens(user.login(), repositorios),
-          repositorios.stream().map(mapper::toSummary).toList());
-    } catch (Exception falha) {
-      // A mensagem diz o tipo e o texto, e nao a pilha: em operacao normal esta
-      // linha e o unico sinal de que o GitHub caiu, e ela precisa caber num
-      // alerta. A pilha reapareceria a cada revalidacao, seis vezes por dia.
-      log.warn("GitHub indisponivel para {}, devolvendo retrato vazio. causa={}", username, falha);
-      return GitHubStats.empty(username);
-    }
+    return new GitHubStats(
+        user.login(),
+        user.publicRepos(),
+        carregarContribuicoes(username),
+        carregarLinguagens(user.login(), repositorios),
+        repositorios.stream().map(mapper::toSummary).toList());
+  }
+
+  /**
+   * O ultimo degrau da cadeia de fallback do ADR-0008.
+   *
+   * <p>Os degraus anteriores acontecem antes de chegar aqui: cache valido devolve sem executar
+   * nada, e a retentativa cobre a falha passageira. Este metodo e o que sobra quando tudo falhou -
+   * e o que transforma "o GitHub caiu" em "a secao aparece vazia", em vez de em erro na pagina.
+   *
+   * <p><strong>Recebe {@code Throwable}, e nao {@code Exception}</strong>, porque e assim que o
+   * Resilience4j casa o fallback: uma assinatura mais estreita nao e encontrada, o aspecto lanca a
+   * excecao original e a protecao inteira vira decoracao - silenciosamente.
+   *
+   * <p>O log diz o tipo e o texto da causa, e nao a pilha: em operacao normal esta linha e o unico
+   * sinal de que o GitHub caiu, e ela precisa caber num alerta. A pilha reapareceria a cada
+   * reaquecimento, quatro vezes por dia.
+   */
+  GitHubStats retratoVazio(String username, Throwable causa) {
+    log.warn("GitHub indisponivel para {}, devolvendo retrato vazio. causa={}", username, causa);
+    return GitHubStats.empty(username);
   }
 
   private GitHubUserResponse carregarPerfil(String username) {

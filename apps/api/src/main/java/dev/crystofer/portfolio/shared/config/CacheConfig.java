@@ -7,6 +7,7 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 
@@ -27,8 +28,21 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  * dado velho de seis horas e aceitavel, mas dado velho de seis horas <em>que se renova a cada
  * visita</em> nunca seria atualizado num site de trafego constante.
  */
+/*
+ * A ordem do @EnableCaching e o que poe o cache **por fora** do disjuntor.
+ *
+ * <p>Em AOP do Spring, menor numero significa mais externo. Com a maior
+ * precedencia possivel, o interceptador de cache envolve os aspectos do
+ * Resilience4j: um acerto de cache devolve o valor sem executar o metodo, e
+ * portanto sem passar pelo circuito.
+ *
+ * <p>Invertido, seis horas de respostas cacheadas seriam contadas como sucesso
+ * pelo disjuntor e limpariam a estatistica de falha dele - o circuito ficaria
+ * fechado sobre um GitHub que caiu, e a primeira chamada real depois da
+ * expiracao esperaria o timeout inteiro para descobrir isso.
+ */
 @Configuration
-@EnableCaching
+@EnableCaching(order = Ordered.HIGHEST_PRECEDENCE)
 public class CacheConfig {
 
   /** O nome e usado no {@code @Cacheable} do adaptador e nas metricas do actuator. */
