@@ -102,6 +102,29 @@ portfolio:
     # testar nao dependa de variavel de ambiente.
     service-key: ${SERVICE_API_KEY:}
 
+  github:
+    # Perfil publico exibido na secao de estatisticas. Tem default porque e
+    # conteudo, e nao segredo: o portfolio tem um dono so, e o valor esta no
+    # rodape do site desde o commit 15.
+    username: ${GITHUB_USERNAME:CrySamuel}
+
+    # **Opcional, e a diferenca que ele faz e de cota.** Sem token sao 60
+    # requisicoes por hora por IP - e a instancia do Render compartilha IP de
+    # saida; com token, 5.000. Com o cache de 6h o consumo fica em torno de
+    # quatro reaquecimentos por dia, entao o token e margem de seguranca.
+    #
+    # A excecao e o total de contribuicoes: ele so existe no GraphQL, e o
+    # GraphQL do GitHub exige autenticacao. Sem token esse numero e zero, e a
+    # secao simplesmente nao mostra a linha.
+    token: ${GITHUB_TOKEN:}
+
+    # Quantos repositorios trazer, e de quantos deles somar as linguagens byte a
+    # byte. O segundo numero e menor porque cada repositorio custa **uma
+    # requisicao a mais**: com 30 e 20, um reaquecimento gasta 22 chamadas -
+    # dentro do limite anonimo, com folga para uma segunda tentativa.
+    repositories-to-load: 30
+    repositories-for-languages: 20
+
 logging:
   level:
     root: INFO

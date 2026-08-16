@@ -176,14 +176,33 @@
       @ConditionalOnMissingBean com NoClassDefFoundError, uma mensagem que nao
       menciona TestRestTemplate nem RestTemplate.
 
-      Escopo de teste porque a aplicacao ainda nao faz chamada HTTP de saida.
-      Quando o modulo github chegar (MVP 4), o RestClient de producao muda isto
-      para escopo normal.
+      **Saiu do escopo de teste neste commit**, como o comentario anterior
+      previa: o adaptador do GitHub e a primeira chamada HTTP de saida do
+      sistema, e o RestClient agora e codigo de producao.
     -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-restclient</artifactId>
-      <scope>test</scope>
+    </dependency>
+
+    <!--
+      Cache de aplicacao (secao 3.9, nivel L2). O starter traz a abstracao -
+      @EnableCaching, @Cacheable, CacheManager - e nada de implementacao; o
+      Caffeine entra ao lado porque a escolha de motor e nossa.
+
+      Caffeine e nao Redis: com uma instancia da API, cache distribuido nao
+      resolve problema nenhum que exista hoje, e adiciona um servico a manter. A
+      decisao esta registrada na secao 4.1 do plano e a interface e do Spring,
+      entao trocar depois e trocar uma dependencia.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-cache</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
     </dependency>
 
     <dependency>
