@@ -32,13 +32,13 @@ class GitHubStatsTest {
   }
 
   /**
-   * Dois repositorios pequenos podem somar exatamente os mesmos bytes.
+   * Duas linguagens podem acumular exatamente o mesmo peso.
    *
    * <p>Sem o desempate, a legenda trocaria de ordem entre duas revalidacoes sem que nada tivesse
    * mudado.
    */
   @Test
-  @DisplayName("deve desempatar linguagens pelo nome quando os bytes coincidem")
+  @DisplayName("deve desempatar linguagens pelo nome quando os pesos coincidem")
   void shouldBreakLanguageTies_byName() {
     GitHubStats stats =
         stats(
@@ -67,15 +67,15 @@ class GitHubStatsTest {
   }
 
   @Test
-  @DisplayName("deve somar os bytes de todas as linguagens")
-  void shouldSum_languageBytes() {
+  @DisplayName("deve somar os pesos de todas as linguagens")
+  void shouldSum_languageWeights() {
     GitHubStats stats =
         stats(
             List.of(new LanguageUsage("Java", 90_000), new LanguageUsage("Python", 10_000)),
             List.of());
 
-    assertThat(stats.totalLanguageBytes()).isEqualTo(100_000);
-    assertThat(stats.languages().getFirst().shareOf(stats.totalLanguageBytes())).isEqualTo(90.0);
+    assertThat(stats.totalLanguageWeight()).isEqualTo(100_000);
+    assertThat(stats.languages().getFirst().shareOf(stats.totalLanguageWeight())).isEqualTo(90.0);
   }
 
   @Test
@@ -236,7 +236,7 @@ class GitHubStatsTest {
     assertThat(vazio.username()).isEqualTo(USUARIO);
     assertThat(vazio.languages()).isEmpty();
     assertThat(vazio.repositories()).isEmpty();
-    assertThat(vazio.totalLanguageBytes()).isZero();
+    assertThat(vazio.totalLanguageWeight()).isZero();
     assertThat(vazio.highlights(5)).isEmpty();
   }
 

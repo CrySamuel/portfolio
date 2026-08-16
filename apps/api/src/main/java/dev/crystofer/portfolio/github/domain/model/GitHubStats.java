@@ -51,14 +51,14 @@ public record GitHubStats(
       Pattern.compile("^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){0,38}$");
 
   /**
-   * Da linguagem mais usada para a menos, com o nome desempatando.
+   * Da linguagem mais presente para a menos, com o nome desempatando.
    *
    * <p>A ordem e o grafico: a primeira fatia e a maior. O desempate por nome existe porque dois
-   * repositorios pequenos podem somar exatamente os mesmos bytes, e sem ele a legenda trocaria de
+   * repositorios pequenos podem acumular exatamente o mesmo peso, e sem ele a legenda trocaria de
    * ordem entre duas revalidacoes sem que nada tivesse mudado.
    */
   private static final Comparator<LanguageUsage> POR_USO =
-      Comparator.comparingLong(LanguageUsage::bytes)
+      Comparator.comparingLong(LanguageUsage::weight)
           .reversed()
           .thenComparing(LanguageUsage::name, String.CASE_INSENSITIVE_ORDER);
 
@@ -104,13 +104,13 @@ public record GitHubStats(
   }
 
   /**
-   * Soma dos bytes de todas as linguagens - o denominador da fatia de cada uma.
+   * Soma dos pesos de todas as linguagens - o denominador da fatia de cada uma.
    *
    * <p>Vive aqui, e nao em quem desenha o grafico, porque e o unico lugar que conhece o conjunto
    * inteiro. Somar do lado de fora significaria que dois consumidores podem somar diferente.
    */
-  public long totalLanguageBytes() {
-    return languages.stream().mapToLong(LanguageUsage::bytes).sum();
+  public long totalLanguageWeight() {
+    return languages.stream().mapToLong(LanguageUsage::weight).sum();
   }
 
   /**

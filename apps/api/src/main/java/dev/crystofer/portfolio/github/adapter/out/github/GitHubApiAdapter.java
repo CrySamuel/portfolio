@@ -1,6 +1,6 @@
 package dev.crystofer.portfolio.github.adapter.out.github;
 
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -149,17 +149,21 @@ class GitHubApiAdapter implements GitHubStatsProviderPort {
   }
 
   /**
-   * As linguagens somadas byte a byte, custando uma requisicao por repositorio.
+   * As linguagens de cada repositorio, uma requisicao por repositorio.
    *
    * <p>E a parte cara do retrato, e por isso o limite e configuravel e menor que o numero de
    * repositorios carregados. A alternativa barata seria contar o campo {@code language} de cada
    * repositorio - uma requisicao no total -, mas ele so diz a linguagem predominante: um projeto
    * Java com metade de TypeScript apareceria como Java puro, e o grafico viraria uma contagem de
    * repositorios disfarcada de distribuicao de codigo.
+   *
+   * <p><strong>O adaptador coleta e nao soma.</strong> Quem combina os mapas e {@link
+   * LanguageUsage#averagingByRepository(List)}, porque "cada repositorio pesa igual" e regra sobre
+   * como o portfolio se descreve - e nao detalhe de como o GitHub entrega o dado.
    */
   private List<LanguageUsage> carregarLinguagens(
       String owner, List<GitHubRepositoryResponse> repositorios) {
-    Map<String, Long> soma = new LinkedHashMap<>();
+    List<Map<String, Long>> porRepositorio = new ArrayList<>();
 
     for (GitHubRepositoryResponse repositorio :
         repositorios.stream().limit(properties.repositoriesForLanguages()).toList()) {
@@ -170,11 +174,11 @@ class GitHubApiAdapter implements GitHubStatsProviderPort {
               .body(LANGUAGES);
 
       if (bytes != null) {
-        bytes.forEach((linguagem, quantidade) -> soma.merge(linguagem, quantidade, Long::sum));
+        porRepositorio.add(bytes);
       }
     }
 
-    return mapper.toLanguages(soma);
+    return LanguageUsage.averagingByRepository(porRepositorio);
   }
 
   /**

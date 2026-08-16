@@ -1,13 +1,10 @@
 package dev.crystofer.portfolio.github.adapter.out.github.mapper;
 
 import java.time.ZoneOffset;
-import java.util.List;
-import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
 import dev.crystofer.portfolio.github.adapter.out.github.dto.GitHubRepositoryResponse;
-import dev.crystofer.portfolio.github.domain.model.LanguageUsage;
 import dev.crystofer.portfolio.github.domain.model.RepositorySummary;
 
 /**
@@ -15,10 +12,12 @@ import dev.crystofer.portfolio.github.domain.model.RepositorySummary;
  *
  * <p><strong>Escrito a mao, e nao gerado por MapStruct como os outros mappers do projeto.</strong>
  * O MapStruct ganha onde os dois lados tem a mesma forma e o valor esta em o compilador reprovar
- * campo sem origem - e o caso de entidade JPA para dominio. Aqui as formas nao se correspondem: as
- * linguagens chegam como um mapa de nome para bytes que vira uma lista, o instante do push vira
- * data em fuso explicito, e metade dos campos da resposta existe so para ser filtrada. Um mapper
- * gerado precisaria de tantas expressoes escritas a mao que sobraria a anotacao, sem o ganho.
+ * campo sem origem - e o caso de entidade JPA para dominio. Aqui as formas nao se correspondem: o
+ * instante do push vira data em fuso explicito, e metade dos campos da resposta existe so para ser
+ * filtrada.
+ *
+ * <p>As linguagens nao passam por aqui. Combinar os mapas de varios repositorios e regra de negocio
+ * - cada projeto pesa igual -, e ela vive em {@code LanguageUsage.averagingByRepository}.
  */
 @Component
 public class GitHubResponseMapper {
@@ -39,23 +38,5 @@ public class GitHubResponseMapper {
         response.language(),
         response.stargazersCount(),
         response.pushedAt().atZoneSameInstant(ZoneOffset.UTC).toLocalDate());
-  }
-
-  /**
-   * O mapa de linguagens somado de varios repositorios, no formato do dominio.
-   *
-   * <p>Entradas com zero bytes sao descartadas em vez de recusadas. O dominio exige bytes positivos
-   * - zero nao e pouco uso, e ausencia -, e a soma de varios repositorios pode produzir o zero por
-   * um caminho que o GitHub sozinho nao produz. Deixar a excecao subir faria uma linguagem
-   * irrelevante derrubar o retrato inteiro.
-   *
-   * <p>A ordem nao e definida aqui. Quem ordena e {@code GitHubStats}, e repetir a decisao no
-   * mapper criaria um segundo lugar decidindo a mesma coisa.
-   */
-  public List<LanguageUsage> toLanguages(Map<String, Long> bytesPorLinguagem) {
-    return bytesPorLinguagem.entrySet().stream()
-        .filter(entrada -> entrada.getValue() != null && entrada.getValue() > 0)
-        .map(entrada -> new LanguageUsage(entrada.getKey(), entrada.getValue()))
-        .toList();
   }
 }
