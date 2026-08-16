@@ -14,7 +14,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:8080",
+      "url": "http://localhost:8081",
       "description": "Generated server url"
     }
   ],
@@ -30,6 +30,10 @@
     {
       "name": "Profile",
       "description": "Dados publicos do dono do portfolio"
+    },
+    {
+      "name": "GitHub",
+      "description": "Estatisticas do perfil publico, com cache e fallback"
     },
     {
       "name": "Skill",
@@ -152,6 +156,26 @@
           },
           "404": {
             "description": "Nenhum perfil cadastrado - o seed nao foi aplicado"
+          }
+        }
+      }
+    },
+    "/api/v1/github/stats": {
+      "get": {
+        "tags": ["GitHub"],
+        "summary": "Estatisticas do perfil publico no GitHub",
+        "description": "Linguagens, repositorios em destaque e contadores do perfil. Responde 200 mesmo com o GitHub indisponivel, devolvendo o retrato vazio.",
+        "operationId": "getStats",
+        "responses": {
+          "200": {
+            "description": "Retrato do perfil, possivelmente vazio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubStats"
+                }
+              }
+            }
           }
         }
       }
@@ -463,6 +487,102 @@
           }
         },
         "required": ["platform", "url"]
+      },
+      "GitHubStats": {
+        "type": "object",
+        "description": "Estatisticas do perfil publico no GitHub",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "CrySamuel"
+          },
+          "publicRepositories": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Total de repositorios publicos do perfil",
+            "example": 17
+          },
+          "contributionsLastYear": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Contribuicoes no ultimo ano. Vem zero quando nao ha token, porque esse numero so existe no GraphQL do GitHub, que exige autenticacao",
+            "example": 240
+          },
+          "languages": {
+            "type": "array",
+            "description": "Fatias do grafico, da maior para a menor; vazia quando nao ha dado",
+            "items": {
+              "$ref": "#/components/schemas/LanguageShare"
+            }
+          },
+          "repositories": {
+            "type": "array",
+            "description": "Repositorios em destaque; vazia quando nao ha dado",
+            "items": {
+              "$ref": "#/components/schemas/Repository"
+            }
+          }
+        },
+        "required": [
+          "contributionsLastYear",
+          "languages",
+          "publicRepositories",
+          "repositories",
+          "username"
+        ]
+      },
+      "LanguageShare": {
+        "type": "object",
+        "description": "Participacao de uma linguagem no perfil",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Java"
+          },
+          "share": {
+            "type": "number",
+            "format": "double",
+            "description": "Fatia em porcentagem, sem arredondar; a soma das fatias fecha em 100",
+            "example": 36.4
+          }
+        },
+        "required": ["name", "share"]
+      },
+      "Repository": {
+        "type": "object",
+        "description": "Repositorio publico em destaque",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "portfolio"
+          },
+          "description": {
+            "type": ["string", "null"],
+            "description": "Descricao curta; nulo quando nao ha",
+            "example": "Monorepo full-stack com API Java em producao"
+          },
+          "url": {
+            "type": "string",
+            "example": "https://github.com/CrySamuel/portfolio"
+          },
+          "primaryLanguage": {
+            "type": ["string", "null"],
+            "description": "Linguagem predominante; nulo quando o GitHub nao detecta nenhuma",
+            "example": "Java"
+          },
+          "stars": {
+            "type": "integer",
+            "format": "int32",
+            "example": 3
+          },
+          "lastPushedAt": {
+            "type": "string",
+            "format": "date",
+            "description": "Data do ultimo push",
+            "example": "2026-08-15"
+          }
+        },
+        "required": ["description", "lastPushedAt", "name", "primaryLanguage", "stars", "url"]
       },
       "Experience": {
         "type": "object",

@@ -73,6 +73,7 @@ class GitHubStatsServiceTest {
         Duration.ofSeconds(2),
         Duration.ofSeconds(3),
         30,
-        20);
+        20,
+        6);
   }
 }

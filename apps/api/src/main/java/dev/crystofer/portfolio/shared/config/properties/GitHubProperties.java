@@ -30,6 +30,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param readTimeout espera pela resposta (secao 3.10)
  * @param repositoriesToLoad quantos repositorios trazer do perfil
  * @param repositoriesForLanguages de quantos deles somar as linguagens, byte a byte
+ * @param repositoriesToPublish quantos aparecem na resposta da API
  */
 @ConfigurationProperties(prefix = "portfolio.github")
 public record GitHubProperties(
@@ -40,7 +41,8 @@ public record GitHubProperties(
     @DefaultValue("2s") Duration connectTimeout,
     @DefaultValue("3s") Duration readTimeout,
     @DefaultValue("30") int repositoriesToLoad,
-    @DefaultValue("20") int repositoriesForLanguages) {
+    @DefaultValue("20") int repositoriesForLanguages,
+    @DefaultValue("6") int repositoriesToPublish) {
 
   /** O teto do proprio GitHub por pagina; acima disso seria preciso paginar. */
   private static final int MAX_PER_PAGE = 100;
@@ -63,6 +65,12 @@ public record GitHubProperties(
         "portfolio.github.repositories-for-languages",
         0,
         repositoriesToLoad);
+
+    // Publicar mais do que se carrega nao e so inutil: daria a impressao de um
+    // teto que nao existe, e a lista sairia menor que o configurado sem que
+    // nada explicasse por que.
+    requireRange(
+        repositoriesToPublish, "portfolio.github.repositories-to-publish", 1, repositoriesToLoad);
   }
 
   /** Ha token cadastrado? E o que decide se as contribuicoes sao consultadas. */

@@ -81,6 +81,7 @@ class GitHubPropertiesTest {
         Duration.ofSeconds(2),
         Duration.ofSeconds(3),
         repositoriesToLoad,
-        repositoriesForLanguages);
+        repositoriesForLanguages,
+        1);
   }
 }

@@ -366,6 +366,83 @@ class OpenApiContractTest extends AbstractIntegrationTest {
         .containsExactlyInAnyOrder("language", "framework", "database", "infrastructure", "tool");
   }
 
+  @Test
+  @DisplayName("as estatisticas do GitHub sao publicadas como application/json")
+  void shouldPublishJsonMediaType_forTheGitHubRoute() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathMapValue("$.paths./api/v1/github/stats.get.responses.200.content")
+        .containsOnlyKeys("application/json");
+  }
+
+  /**
+   * O retrato do GitHub e um objeto, e nao um array.
+   *
+   * <p>E a unica leitura da API com essa forma, porque e a unica que nao e colecao: um perfil tem
+   * um retrato so. As outras tres publicam array na raiz.
+   */
+  @Test
+  @DisplayName("a rota do GitHub publica o objeto GitHubStats, e nao um array")
+  void shouldPublishAnObject_forTheGitHubRoute() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue(
+            "$.paths./api/v1/github/stats.get.responses.200.content.application/json.schema.$ref")
+        .isEqualTo("#/components/schemas/GitHubStats");
+  }
+
+  @Test
+  @DisplayName("todo campo do retrato do GitHub e required")
+  void shouldDeclareRequiredFields_forTheGitHubStatsSchema() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue("$.components.schemas.GitHubStats.required")
+        .containsExactlyInAnyOrder(
+            "username", "publicRepositories", "contributionsLastYear", "languages", "repositories");
+  }
+
+  /**
+   * Os dois nulaveis do repositorio precisam da uniao com {@code null}.
+   *
+   * <p>Sao casos reais - repositorio sem descricao e comum, e repositorio so com arquivos de
+   * configuracao nao tem linguagem detectada. Sem a uniao, o cliente TypeScript prometeria {@code
+   * string} onde a API manda {@code null}.
+   */
+  @Test
+  @DisplayName("descricao e linguagem do repositorio dizem no tipo que podem vir nulas")
+  void shouldDeclareNullableFields_forTheRepositorySchema() {
+    String body = fetchApiDocs();
+
+    for (String nulavel : new String[] {"description", "primaryLanguage"}) {
+      assertThat(json.from(body))
+          .extractingJsonPathArrayValue(
+              "$.components.schemas.Repository.properties." + nulavel + ".type")
+          .as("o nulavel %s do repositorio precisa publicar a uniao com null", nulavel)
+          .containsExactly("string", "null");
+    }
+  }
+
+  /**
+   * O peso interno das linguagens nao aparece no contrato.
+   *
+   * <p>Ele e uma unidade do dominio - um milhao de pontos por repositorio - e publicar isso
+   * obrigaria o cliente a somar tudo e dividir para chegar a fatia que este lado ja calculou. O que
+   * sai e a porcentagem.
+   */
+  @Test
+  @DisplayName("a fatia da linguagem e publicada como porcentagem, sem o peso interno")
+  void shouldPublishShareAndNotWeight() {
+    String body = fetchApiDocs();
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue("$.components.schemas.LanguageShare.required")
+        .containsExactlyInAnyOrder("name", "share")
+        .doesNotContain("weight", "bytes");
+  }
+
   private String fetchApiDocs() {
     ResponseEntity<String> response = restTemplate.getForEntity("/v3/api-docs", String.class);
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
