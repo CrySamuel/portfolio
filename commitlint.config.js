@@ -49,5 +49,23 @@ module.exports = {
     'subject-empty': [2, 'never'],
     'header-max-length': [2, 'always', 72],
     'body-max-line-length': [2, 'always', 100],
+
+    // Promovido de aviso a erro depois da **quinta** ocorrencia.
+    //
+    // O parser de Conventional Commits le `palavra:` em inicio de linha como
+    // trailer. Quando a quebra de linha do corpo joga um dois-pontos para o
+    // comeco - "diferente: o nome do repositorio vem do GitHub" -, aquilo vira
+    // rodape e o commitlint reclama da linha em branco que falta antes dele.
+    //
+    // No nivel 1 isso e um aviso: o commit passa, a mensagem entra no historico
+    // torta, e depois de publicada nao ha conserto - corrigi-la exigiria
+    // reescrever a historia, que a secao 17.3.4 proibe. Aconteceu no commit 16,
+    // no d9ab5a2 e mais tres vezes, sempre pelo mesmo caminho: a varredura
+    // manual (`grep -nE "^[A-Za-z0-9_-]+:"`) depende de alguem lembrar dela.
+    //
+    // Guarda que avisa e nao barra nao e guarda. No nivel 2 o hook recusa o
+    // commit, a mensagem e reescrita antes de existir, e a regra deixa de
+    // depender de memoria.
+    'footer-leading-blank': [2, 'always'],
   },
 };
