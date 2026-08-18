@@ -37,8 +37,8 @@
     <springdoc.version>3.1.0</springdoc.version>
     <archunit.version>1.5.0</archunit.version>
     <testcontainers.version>2.0.5</testcontainers.version>
-    <resilience4j.version>2.3.0</resilience4j.version>
-    <wiremock.version>3.13.1</wiremock.version>
+    <resilience4j.version>2.4.0</resilience4j.version>
+    <wiremock.version>3.13.2</wiremock.version>
   </properties>
 
   <!--
