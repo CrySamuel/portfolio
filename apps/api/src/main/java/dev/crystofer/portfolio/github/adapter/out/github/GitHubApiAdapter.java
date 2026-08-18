@@ -48,6 +48,15 @@ import io.github.resilience4j.retry.annotation.Retry;
  * fora</strong> (ver {@code CacheConfig}), entao um acerto de cache nao passa pelo disjuntor. Se
  * passasse, seis horas de respostas cacheadas contariam como sucesso e limpariam a estatistica de
  * falha do circuito - que ficaria fechado sobre um GitHub que caiu.
+ *
+ * <p><strong>E pela mesma ordem que o {@code fallbackMethod} mora no {@code @Retry}, e nao no
+ * {@code @CircuitBreaker}.</strong> O Resilience4j aninha a retentativa <em>por fora</em> do
+ * disjuntor. Com o fallback no disjuntor, o retrato vazio era devolvido antes de a excecao chegar a
+ * retentativa - que via uma chamada bem-sucedida e nunca retentava coisa alguma. As {@code
+ * max-attempts: 3} e a lista {@code retry-exceptions} do {@code application.yml} descreviam um
+ * comportamento que nao existia, e foi o teste do 500 que mostrou: uma requisicao onde a
+ * configuracao prometia tres. <strong>O fallback pertence ao aspecto de fora</strong>, que e o
+ * unico ponto de onde se ve a cadeia inteira ja esgotada.
  */
 @Component
 class GitHubApiAdapter implements GitHubStatsProviderPort {
@@ -106,8 +115,8 @@ class GitHubApiAdapter implements GitHubStatsProviderPort {
 
   @Override
   @Cacheable(cacheNames = CacheConfig.GITHUB_STATS, key = "#username", unless = "#result.isEmpty()")
-  @CircuitBreaker(name = INSTANCIA, fallbackMethod = "retratoVazio")
-  @Retry(name = INSTANCIA)
+  @CircuitBreaker(name = INSTANCIA)
+  @Retry(name = INSTANCIA, fallbackMethod = "retratoVazio")
   @Bulkhead(name = INSTANCIA)
   public GitHubStats fetchStats(String username) {
     GitHubUserResponse user = carregarPerfil(username);
