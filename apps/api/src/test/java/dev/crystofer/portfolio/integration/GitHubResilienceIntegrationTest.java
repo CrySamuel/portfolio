@@ -11,6 +11,7 @@ import org.springframework.test.context.TestPropertySource;
 import dev.crystofer.portfolio.github.domain.port.out.GitHubStatsProviderPort;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * O disjuntor age de verdade - e nao apenas existe.
@@ -43,6 +44,8 @@ class GitHubResilienceIntegrationTest extends AbstractIntegrationTest {
   @Autowired private GitHubStatsProviderPort provider;
 
   @Autowired private CircuitBreakerRegistry registry;
+
+  @Autowired private MeterRegistry medidores;
 
   @BeforeEach
   void fecharCircuito() {
@@ -103,5 +106,41 @@ class GitHubResilienceIntegrationTest extends AbstractIntegrationTest {
 
     assertThat(stats.isEmpty()).isTrue();
     assertThat(circuito.getState()).isEqualTo(CircuitBreaker.State.OPEN);
+  }
+
+  /**
+   * O estado do circuito e observavel, e nao apenas correto.
+   *
+   * <p><strong>Esta guarda existe porque a ausencia ja aconteceu, e em producao.</strong> As
+   * autoconfiguracoes de metrica do Resilience4j carregam e desistem em silencio sob o Boot 4, por
+   * ordem de bean - o {@code /actuator/prometheus} responde 200, publica o cache do Caffeine e
+   * simplesmente nao tem nenhuma familia {@code resilience4j_*}. Nada reprova e nada avisa. Ver
+   * {@code ResilienceMetricsConfig}, que declara os publicadores a mao.
+   *
+   * <p>O teste procura o medidor no registro, e nao o texto no endpoint: o que se quer garantir e
+   * que o publicador esteja ligado, e a exposicao do endpoint e outra decisao, de perfil.
+   *
+   * <p><strong>A chamada no inicio nao e enfeite.</strong> As instancias do Resilience4j nascem no
+   * primeiro uso, e os contadores da retentativa nascem com elas - sem esta linha, o teste passaria
+   * ou reprovaria conforme a ordem em que o JUnit executasse os metodos da classe, que e a
+   * armadilha da secao 4.21 noutra roupa. Ela falha, como toda chamada desta classe, e uma falha so
+   * nao abre o circuito.
+   */
+  @Test
+  @DisplayName("deve publicar o estado do circuito como metrica")
+  void shouldPublishCircuitStateAsMetric() {
+    provider.fetchStats(USUARIO);
+
+    assertThat(medidores.find("resilience4j.circuitbreaker.state").tag("name", "github").gauge())
+        .as("o publicador de metrica do disjuntor precisa estar ligado")
+        .isNotNull();
+
+    // meters(), e nao counters(): o Resilience4j publica este medidor como
+    // FunctionCounter, que le do proprio registro dele, e Search.counters() so
+    // devolve Counter. A pergunta aqui e se o medidor existe, e nao qual a
+    // implementacao dele no Micrometer.
+    assertThat(medidores.find("resilience4j.retry.calls").tag("name", "github").meters())
+        .as("as tentativas por resultado precisam ser observaveis")
+        .isNotEmpty();
   }
 }

@@ -224,6 +224,24 @@
     </dependency>
 
     <!--
+      **Sem isto o estado do circuito nao existe como metrica.** A
+      autoconfiguracao do Resilience4j so registra os medidores quando este
+      artefato esta no classpath, e ele nao vem junto do starter - a ausencia
+      nao da erro nem aviso, e o /actuator/prometheus simplesmente nao tem
+      nenhuma familia resilience4j_*.
+
+      Medido em producao antes de entrar: 319 linhas no dump, com as metricas
+      de cache do Caffeine presentes e nenhuma do disjuntor. A Definition of
+      Done do MVP 4 exige as duas, e a metade que faltava era justamente a que
+      permite enxergar um circuito aberto sem abrir o log da plataforma.
+    -->
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-micrometer</artifactId>
+      <version>${resilience4j.version}</version>
+    </dependency>
+
+    <!--
       Os aspectos do Resilience4j sao AOP, e sem isto nao ha o que os teca.
       Chamava-se spring-boot-starter-aop ate o Boot 4; o rename acompanha a
       modularizacao, como aconteceu com starter-web -> starter-webmvc. A forma
