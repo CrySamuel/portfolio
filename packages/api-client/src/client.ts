@@ -56,6 +56,33 @@ export type TechnologyCategory = Technology['category'];
 /** Um numero que sustenta o resultado de um projeto. O valor carrega a unidade. */
 export type ProjectMetric = components['schemas']['ProjectMetric'];
 
+/**
+ * O retrato do perfil publico no GitHub.
+ *
+ * Chega **sempre**, inclusive com o GitHub fora do ar: a API responde 200 com o
+ * retrato vazio - listas vazias e contadores em zero - em vez de erro, que e o
+ * ADR-0008 aparecendo na borda. Quem consome desenha o estado vazio; nao ha
+ * caminho de excecao a tratar.
+ */
+export type GitHubStats = components['schemas']['GitHubStats'];
+
+/**
+ * A fatia de uma linguagem, em porcentagem ja calculada.
+ *
+ * O peso interno do dominio nao vem junto de proposito: ele e uma unidade que so
+ * significa algo la dentro, e publica-lo obrigaria o cliente a somar e dividir
+ * para chegar a este mesmo numero - com dois clientes podendo somar diferente.
+ */
+export type LanguageShare = components['schemas']['LanguageShare'];
+
+/**
+ * Um repositorio em destaque.
+ *
+ * `description` e `primaryLanguage` sao `string | null`, e os dois casos
+ * acontecem de verdade no perfil real - o tipo obriga quem desenha a tratar.
+ */
+export type Repository = components['schemas']['Repository'];
+
 /** Resposta que nao foi 2xx, ou que nao chegou. */
 export class ApiError extends Error {
   /** `0` quando a requisicao nem chegou a ter resposta (rede, timeout). */
@@ -159,6 +186,19 @@ export interface ApiClient {
    * `null`, para que ignorar o caso exija escrever o `catch`.
    */
   getProjectBySlug(slug: string, options?: RequestOptions): Promise<ProjectDetail>;
+
+  /**
+   * O retrato do GitHub, com linguagens e repositorios em destaque.
+   *
+   * <strong>E a unica leitura sem caminho de erro.</strong> As outras podem
+   * responder 404 ou 400; esta responde 200 sempre, inclusive quando o GitHub
+   * esta fora - devolvendo o retrato vazio. Quem consome nao escreve `catch`:
+   * escreve o estado vazio.
+   *
+   * As linguagens vem da maior fatia para a menor, e os repositorios em ordem de
+   * destaque. Nenhuma das duas deve ser reordenada aqui - a ordem e do dominio.
+   */
+  getGitHubStats(options?: RequestOptions): Promise<GitHubStats>;
 }
 
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -244,6 +284,10 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
       // num caminho sem escapar e como se monta um path traversal. Com o
       // escape, `../profile` chega a API como segmento literal e volta 400.
       return request<ProjectDetail>(`/api/v1/projects/${encodeURIComponent(slug)}`, requestOptions);
+    },
+
+    getGitHubStats(requestOptions: RequestOptions = {}) {
+      return request<GitHubStats>('/api/v1/github/stats', requestOptions);
     },
   };
 }

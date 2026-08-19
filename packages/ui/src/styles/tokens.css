@@ -171,6 +171,36 @@
     visibilidade sobre qualquer superficie, clara ou escura.
   */
   --focus-ring: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-accent);
+
+  /* -----------------------------------------------------------------------
+     Paleta categorica do grafico de linguagens (commit 44)
+
+     Fica **fora do @theme** de proposito. O Tailwind 4 so emite a variavel de
+     tema que alguma classe usa, inclusive quando ela e referenciada por var()
+     em CSS proprio - e aqui nenhuma classe as usa, porque a cor de cada fatia
+     e escolhida por indice em tempo de render. Dentro do @theme elas seriam
+     removidas do CSS gerado e o var() resolveria para nada, que e a armadilha
+     da secao 4.45: cor que nao existe nao da erro, vira heranca.
+
+     Os seis tons foram **validados por script**, e nao escolhidos a olho: banda
+     de luminosidade, piso de croma, separacao entre pares adjacentes sob as tres
+     formas de daltonismo e contraste contra a superficie. Ordem fixa - a fatia
+     1 e sempre esta cor, independentemente de quantas linguagens existem, para
+     que o grafico nao se repinte quando o perfil muda.
+
+     As cores de estado (success, warning, danger) sao reservadas e nao entram
+     aqui: "linguagem numero 4" nao e um alerta.
+     ----------------------------------------------------------------------- */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #008300;
+
+  /* A cauda agrupada nao e uma identidade, e sim a ausencia de uma: tom neutro,
+     que e o que a distingue das seis linguagens nomeadas. */
+  --chart-rest: #6a6a74;
 }
 
 /* -------------------------------------------------------------------------
@@ -202,4 +232,19 @@
   --color-success: #0e7247; /*  5.97:1 - AA */
   --color-warning: #8f5100; /*  6.28:1 - AA */
   --color-danger: #c42a2f; /*  5.65:1 - AA */
+
+  /* Os mesmos seis tons, re-escalonados para a superficie clara - nao invertidos.
+     Validados pelo mesmo script contra #ffffff, que e o fundo real onde a barra
+     e desenhada. Tres deles ficam abaixo de 3:1 de contraste com a superficie -
+     #1baf7a em 2,82, #eda100 em 2,17 e #e87ba4 em 2,69 -, e e por isso que a
+     legenda escreve nome e porcentagem de cada fatia: a identidade nunca pode
+     depender so da cor. */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
+
+  --chart-rest: #82828b;
 }

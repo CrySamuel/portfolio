@@ -12,6 +12,13 @@ export interface NavItem {
   readonly label: string;
 }
 
+// A secao do GitHub **nao** entra aqui, e a ausencia foi medida. Ela e a unica
+// da home que some quando um terceiro esta fora do ar (ver GitHubSection), e um
+// item de navbar apontando para ela viraria ancora morta justamente no cenario
+// de falha - conferido: com o GitHub inalcancavel, `#github` fica sem alvo no
+// documento. A navbar descreve a estrutura da pagina, e essa descricao precisa
+// ser verdadeira sempre. A seccao mantem o `id`, entao link direto continua
+// funcionando.
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'sobre', label: 'Sobre' },
   { id: 'projetos', label: 'Projetos' },
