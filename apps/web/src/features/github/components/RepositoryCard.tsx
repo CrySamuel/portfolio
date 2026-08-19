@@ -1,3 +1,4 @@
+import { Badge } from '@portfolio/ui';
 import type { Repository } from '@portfolio/api-client';
 import type { ReactNode } from 'react';
 
@@ -25,10 +26,16 @@ const FORMATO_DE_DATA = new Intl.DateTimeFormat('pt-BR', {
  *
  * <p><strong>O card e desenhado para sobreviver a `description` nula, porque
  * hoje ela e nula nos seis.</strong> O contrato declara o campo como
- * {@code string | null} e o perfil real nao preenche nenhum: um card que
- * dependesse da descricao ficaria com um buraco em todos eles. O que sustenta o
+ * {@code string | null} e o perfil real nao preenche nenhum. O que sustenta o
  * card e o que sempre existe - nome, linguagem predominante e data do ultimo
  * push.
+ *
+ * <p><strong>Nao ha buraco, e isso foi medido antes de tentar consertar um.</strong>
+ * A suspeita era que o {@code mt-auto} deixasse um vao entre o titulo e o rodape.
+ * Ele nao deixa: sem descricao <em>nenhum</em> card tem o que empurrar, os seis
+ * ficam com a mesma altura de 104px e o vao entre titulo e rodape e de 8px - o
+ * card e compacto, e nao oco. O que faltava era peso de sinal, nao preenchimento,
+ * e e por isso que a linguagem virou selo em vez de ganhar texto de enchimento.
  *
  * <p><strong>As estrelas so aparecem quando ha alguma.</strong> "0 estrelas" nao
  * e informacao, e desenhar o zero em seis cards seguidos transforma um dado
@@ -78,11 +85,25 @@ export function RepositoryCard({ repository }: { repository: Repository }): Reac
           descricoes de tamanhos diferentes - ou sem descricao nenhuma, que e o
           caso de hoje.
         */}
-        <dl className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 pt-2 text-caption text-fg-subtle">
+        <dl className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 pt-2 text-caption text-fg-subtle">
           {primaryLanguage === null ? null : (
             <div className="flex items-center gap-1.5">
               <dt className="sr-only">Linguagem predominante</dt>
-              <dd>{primaryLanguage}</dd>
+              {/*
+                Selo, e nao texto solto, e a razao foi medida. Sem descricao - o
+                caso dos seis repositorios de hoje -, a linguagem e a unica
+                informacao do card alem do nome, e estava no menor tamanho e na
+                cor mais fraca da escala. Como selo ela vira o que se le ao
+                varrer a grade: quatro Java e dois Python aparecem de relance, e
+                a leitura conversa com a barra de linguagens logo acima.
+
+                Variante `outline`, e nao `accent`: linguagem predominante e uma
+                etiqueta, e nao um destaque - o mesmo criterio que manteve o
+                nivel `basic` fora do selo aceso no SkillCard.
+              */}
+              <dd>
+                <Badge variant="outline">{primaryLanguage}</Badge>
+              </dd>
             </div>
           )}
 
