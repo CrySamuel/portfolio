@@ -7,6 +7,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
@@ -119,6 +120,34 @@ class GitHubApiAdapter implements GitHubStatsProviderPort {
   @Retry(name = INSTANCIA, fallbackMethod = "retratoVazio")
   @Bulkhead(name = INSTANCIA)
   public GitHubStats fetchStats(String username) {
+    return montarRetrato(username);
+  }
+
+  /**
+   * O reaquecimento, que difere do anterior em uma anotacao e em tudo.
+   *
+   * <p><strong>{@code @CachePut} no lugar de {@code @Cacheable}</strong>: o metodo executa
+   * <em>sempre</em> e o resultado substitui a entrada. E o que faz o agendado de cinco horas
+   * significar alguma coisa - com {@code @Cacheable} ele encontraria a entrada de seis horas ainda
+   * viva, receberia um acerto e nao buscaria nada.
+   *
+   * <p><strong>Substituir depois, em vez de invalidar antes.</strong> Um {@code @CacheEvict}
+   * seguido de busca deixaria o cache vazio durante a tentativa, e uma falha nesse intervalo
+   * apagaria o retrato anterior - exatamente o que a cadeia do ADR-0008 existe para evitar. Aqui a
+   * entrada velha so sai quando ha uma nova, e o {@code unless} garante que retrato vazio nunca
+   * substitua um retrato bom.
+   */
+  @Override
+  @CachePut(cacheNames = CacheConfig.GITHUB_STATS, key = "#username", unless = "#result.isEmpty()")
+  @CircuitBreaker(name = INSTANCIA)
+  @Retry(name = INSTANCIA, fallbackMethod = "retratoVazio")
+  @Bulkhead(name = INSTANCIA)
+  public GitHubStats refreshStats(String username) {
+    return montarRetrato(username);
+  }
+
+  /** O retrato em si, sem cache e sem resiliencia - os dois moram nas anotacoes acima. */
+  private GitHubStats montarRetrato(String username) {
     GitHubUserResponse user = carregarPerfil(username);
     List<GitHubRepositoryResponse> repositorios = carregarRepositorios(username);
 

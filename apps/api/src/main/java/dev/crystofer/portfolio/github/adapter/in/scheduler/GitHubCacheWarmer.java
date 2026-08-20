@@ -20,6 +20,12 @@ import dev.crystofer.portfolio.github.domain.port.in.GetGitHubStatsUseCase;
  * deixaria uma janela em que a proxima visita paga o custo das 22 requisicoes. Cinco horas contra
  * seis dao uma hora de folga, e o custo dessa folga e uma chamada a mais por dia.
  *
+ * <p><strong>E por isso que ele chama {@code refreshGitHubStats}, e nao {@code
+ * getGitHubStats}.</strong> A folga de uma hora tem um efeito colateral obvio depois de dito:
+ * quando o reaquecimento passa, a entrada <em>ainda esta viva</em>. Uma leitura comum receberia um
+ * acerto de cache e nao buscaria nada - o componente inteiro viraria um log a cada cinco horas. O
+ * reaquecimento e uma operacao propria justamente porque a intencao dele e oposta a de ler.
+ *
  * <p>Nao ha tratamento de erro aqui, e nao e esquecimento: o caso de uso nao lanca. Se o GitHub
  * estiver fora, o retrato vazio simplesmente nao entra no cache - o {@code unless} do adaptador
  * cuida disso - e a entrada anterior continua servindo ate a proxima tentativa.
@@ -44,7 +50,7 @@ class GitHubCacheWarmer {
    */
   @Scheduled(initialDelay = 60_000, fixedDelay = 5 * 60 * 60 * 1_000)
   void reaquecer() {
-    var stats = getGitHubStats.getGitHubStats();
+    var stats = getGitHubStats.refreshGitHubStats();
     log.info(
         "Cache do GitHub reaquecido para {}: {} repositorios, {} linguagens",
         stats.username(),

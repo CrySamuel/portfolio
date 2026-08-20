@@ -30,4 +30,21 @@ public interface GitHubStatsProviderPort {
    * @return as estatisticas, possivelmente vazias quando a origem esta indisponivel
    */
   GitHubStats fetchStats(String username);
+
+  /**
+   * O mesmo retrato, buscado <strong>sem consultar o que ja esta guardado</strong>.
+   *
+   * <p>Existe porque {@link #fetchStats(String)} nao serve para reaquecer: a entrada guardada ainda
+   * esta viva quando o reaquecimento passa - de proposito, para nao haver janela sem retrato -,
+   * entao aquela chamada receberia um acerto e nao buscaria nada. Um componente que promete
+   * reaquecer e recebe acerto e um componente que nao faz nada.
+   *
+   * <p>Falha aqui <strong>preserva</strong> o retrato anterior, e nao o apaga: quem chama continua
+   * servindo o que tinha ate a proxima tentativa. E por isso que a operacao substitui a entrada
+   * depois de ter sucesso, em vez de invalida-la antes de tentar.
+   *
+   * @param username perfil publico a consultar
+   * @return as estatisticas recem-buscadas, possivelmente vazias
+   */
+  GitHubStats refreshStats(String username);
 }

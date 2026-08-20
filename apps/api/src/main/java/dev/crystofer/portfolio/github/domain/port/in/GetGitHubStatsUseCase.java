@@ -22,4 +22,18 @@ public interface GetGitHubStatsUseCase {
    * @return as estatisticas do dono do portfolio, possivelmente vazias
    */
   GitHubStats getGitHubStats();
+
+  /**
+   * Busca de novo e substitui o que estiver guardado.
+   *
+   * <p><strong>E uma operacao diferente de ler, e nao um detalhe de implementacao.</strong> Quem le
+   * aceita o retrato guardado - e o que torna a leitura barata. Quem reaquece quer justamente o
+   * contrario: ir a origem mesmo havendo entrada viva, porque o objetivo dele e que a proxima
+   * leitura encontre algo novo. Sao intencoes opostas, e por isso duas operacoes.
+   *
+   * <p>Nao lanca, pela mesma razao da outra: o pior desfecho e o retrato anterior seguir servindo.
+   *
+   * @return as estatisticas recem-buscadas, possivelmente vazias
+   */
+  GitHubStats refreshGitHubStats();
 }

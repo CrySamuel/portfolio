@@ -36,4 +36,9 @@ class GitHubStatsService implements GetGitHubStatsUseCase {
   public GitHubStats getGitHubStats() {
     return provider.fetchStats(properties.username());
   }
+
+  @Override
+  public GitHubStats refreshGitHubStats() {
+    return provider.refreshStats(properties.username());
+  }
 }

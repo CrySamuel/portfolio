@@ -3,6 +3,7 @@ package dev.crystofer.portfolio.integration;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.moreThanOrExactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
@@ -70,7 +71,7 @@ class GitHubWireMockTest extends AbstractIntegrationTest {
   @DynamicPropertySource
   static void apontarParaODuble(DynamicPropertyRegistry registry) {
     registry.add("portfolio.github.base-url", GITHUB::baseUrl);
-    registry.add("portfolio.github.read-timeout", () -> "300ms");
+    registry.add("portfolio.github.read-timeout", () -> "1s");
     registry.add("resilience4j.retry.instances.github.wait-duration", () -> "1ms");
     registry.add(
         "resilience4j.circuitbreaker.instances.github.wait-duration-in-open-state", () -> "200ms");
@@ -84,6 +85,8 @@ class GitHubWireMockTest extends AbstractIntegrationTest {
   @Autowired private CircuitBreakerRegistry registry;
 
   @Autowired private CacheManager cacheManager;
+
+  @Autowired private dev.crystofer.portfolio.github.domain.port.in.GetGitHubStatsUseCase useCase;
 
   @BeforeEach
   void limparEstado() {
@@ -179,7 +182,7 @@ class GitHubWireMockTest extends AbstractIntegrationTest {
                 aResponse()
                     .withStatus(200)
                     .withHeader("Content-Type", "application/json")
-                    .withFixedDelay(1_500)
+                    .withFixedDelay(3_000)
                     .withBody("{\"login\":\"CrySamuel\",\"public_repos\":17}")));
     stubRepositorios();
     stubLinguagens("portfolio", "{\"Java\": 100}");
@@ -250,6 +253,42 @@ class GitHubWireMockTest extends AbstractIntegrationTest {
 
     assertThat(provider.fetchStats(USUARIO).isEmpty()).isFalse();
     assertThat(circuito.getState()).isEqualTo(CircuitBreaker.State.CLOSED);
+  }
+
+  /**
+   * O reaquecimento agendado precisa <strong>reaquecer</strong>, e nao encontrar a entrada viva.
+   *
+   * <p>O aquecedor roda a cada cinco horas e o cache dura seis. A entrada esta viva quando ele
+   * passa - e de proposito, para nao haver janela sem retrato -, entao uma chamada que atravesse o
+   * {@code @Cacheable} recebe um acerto e <strong>nao busca nada</strong>. O componente ficaria
+   * documentando uma protecao que so acontece no primeiro minuto depois do boot.
+   *
+   * <p>O dublê e quem conta: com o cache quente, um reaquecimento de verdade produz uma segunda
+   * requisicao ao perfil. Sem ele, produz zero.
+   */
+  @Test
+  @DisplayName("deve buscar de novo no reaquecimento, mesmo com a entrada do cache viva")
+  void shouldRefetch_whenWarmingWithLiveCacheEntry() {
+    stubPerfil();
+    stubRepositorios();
+    stubLinguagens("portfolio", "{\"Java\": 100}");
+    stubLinguagens("finai", "{\"Python\": 100}");
+
+    assertThat(useCase.getGitHubStats().isEmpty()).isFalse();
+
+    // O diario e zerado aqui, e nao no inicio: o que este teste afirma e que o
+    // reaquecimento **vai a origem**, e nao quantas requisicoes a leitura
+    // anterior custou. Contar o total tornaria a assercao refem de uma
+    // retentativa qualquer no aquecimento da JVM - foi o que aconteceu, e o
+    // teste reprovava sozinho e passava na classe inteira.
+    GITHUB.resetRequests();
+
+    useCase.refreshGitHubStats();
+
+    // Pelo menos uma, e nao exatamente uma: o que separa reaquecer de nao
+    // reaquecer e zero contra um. Exigir exatamente um voltaria a medir
+    // retentativa, que e outro assunto e ja tem teste proprio.
+    GITHUB.verify(moreThanOrExactly(1), getRequestedFor(urlPathEqualTo(PERFIL)));
   }
 
   private static void stubPerfil() {
