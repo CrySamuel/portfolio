@@ -35,6 +35,16 @@ on:
 permissions:
   contents: read
 
+# **Execucao "cancelled" aqui e o funcionamento correto, e nao defeito.** Com o
+# laco de 55 minutos e o cron pedindo a cada dez, a execucao nova sempre chega
+# antes de a anterior terminar - e o cancelamento e justamente como ela assume o
+# posto sem deixar intervalo descoberto. Medido: uma execucao ficou 22,7 minutos
+# de pe e saiu quando a seguinte comecou, contra os ~3 minutos das execucoes de
+# ping unico.
+#
+# A alternativa - enfileirar em vez de cancelar - deixaria a nova esperando o
+# laco antigo acabar, o que soma atraso em vez de cobertura. Quem le este
+# historico deve procurar `failure`, e nao `cancelled`.
 concurrency:
   group: keep-alive
   cancel-in-progress: true
