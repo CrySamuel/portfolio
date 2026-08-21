@@ -2,9 +2,22 @@ name: keep-alive
 
 # Janela de 10:00 as 01:59 UTC, ou seja 07:00 as 22:59 em Brasilia.
 #
-# O intervalo e de dez minutos porque o Render hiberna com quinze sem trafego -
-# a margem cobre o atraso com que o GitHub costuma disparar agendamentos, que
-# pode passar de cinco minutos em horario de pico.
+# **Quem mantem a cadencia e o laco dentro do script, e nao este cron.** A
+# premissa original - "dez minutos cobrem o atraso do GitHub" - estava errada por
+# uma ordem de grandeza: medido em seis execucoes, o `*/10` e entregue a cada
+# **42 a 57 minutos**, contra a hibernacao de quinze. Cada execucao dava um ping
+# so, entao o servico dormia entre uma passagem e a outra e o keep-alive nao
+# cumpria o que promete.
+#
+# Agora cada execucao fica de pe **55 minutos**, pingando a cada cinco. O cron
+# continua em `*/10` de proposito: agendamento no plano gratuito e **descartado**
+# sob carga, e não enfileirado, entao pedir com frequencia e o que garante que
+# alguma tentativa passe. O `concurrency` abaixo faz a execucao nova substituir a
+# que estava em laco, o que mantem sempre exatamente uma viva.
+#
+# Repositorio publico tem minutos de Actions ilimitados, entao o laco nao custa
+# cota de CI. O que ele consome e hora de instancia do Render, e por isso o
+# script para sozinho ao sair da janela - ver o cabecalho dele para a conta.
 #
 # Fora da janela o servico dorme, e e isso que mantem o consumo em ~487 das 750
 # horas mensais do plano gratuito. Ver o cabecalho de infra/scripts/keep-alive.sh
@@ -28,9 +41,11 @@ concurrency:
 
 jobs:
   ping:
-    name: acordar a api
+    name: manter a api acordada
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # Maior que os 55 minutos do laco, com folga para o cold start do primeiro
+    # ping. Menor nao adiantaria: o job seria morto no meio do laco.
+    timeout-minutes: 60
 
     # A variavel e cadastrada em Settings > Secrets and variables > Actions >
     # Variables, com o nome API_BASE_URL e a URL publica do Render. Nao e
@@ -44,5 +59,5 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Acordar a API
-        run: ./infra/scripts/keep-alive.sh "${{ vars.API_BASE_URL }}"
+      - name: Manter a API acordada por 55 minutos
+        run: ./infra/scripts/keep-alive.sh "${{ vars.API_BASE_URL }}" 55
