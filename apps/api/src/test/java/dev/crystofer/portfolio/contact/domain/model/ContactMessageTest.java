@@ -120,16 +120,11 @@ class ContactMessageTest {
   }
 
   /**
-   * O hash e conferido no formato, e o motivo esta no tipo da coluna.
+   * Os quatro jeitos de o hash estar errado.
    *
-   * <p>{@code CHAR(64)} no PostgreSQL <strong>preenche com espacos</strong> o que for mais curto.
-   * Um hash truncado entraria e voltaria diferente do que foi gravado, e a comparacao entre
-   * remetentes passaria a falhar em silencio - so perceptivel numa auditoria, que e justamente
-   * quando ninguem quer descobrir isso.
-   */
-  /**
-   * Os quatro jeitos de o hash estar errado, e {@code @MethodSource} porque valor de anotacao
-   * precisa ser constante de compilacao - {@code "a".repeat(63)} nao e.
+   * <p>{@code @MethodSource} e nao {@code @ValueSource} porque valor de anotacao precisa ser
+   * constante de compilacao, e {@code "a".repeat(63)} nao e - o compilador recusa com "expression
+   * not allowed as annotation value".
    */
   static Stream<Arguments> hashesInvalidos() {
     return Stream.of(
@@ -139,6 +134,14 @@ class ContactMessageTest {
         arguments("um caractere a mais", "a".repeat(65)));
   }
 
+  /**
+   * O hash e conferido no formato, e o motivo esta no tipo da coluna.
+   *
+   * <p>{@code CHAR(64)} no PostgreSQL <strong>preenche com espacos</strong> o que for mais curto.
+   * Um hash truncado entraria e voltaria diferente do que foi gravado, e a comparacao entre
+   * remetentes passaria a falhar em silencio - so perceptivel numa auditoria, que e justamente
+   * quando ninguem quer descobrir isso.
+   */
   @ParameterizedTest(name = "hash invalido: {0}")
   @MethodSource("hashesInvalidos")
   @DisplayName("deve recusar hash que nao seja 64 caracteres hexadecimais")
