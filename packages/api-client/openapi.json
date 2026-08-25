@@ -28,6 +28,10 @@
       "description": "Catalogo de projetos com narrativa problema, solucao e resultado"
     },
     {
+      "name": "Contato",
+      "description": "Recebimento de mensagens do formulario"
+    },
+    {
       "name": "Profile",
       "description": "Dados publicos do dono do portfolio"
     },
@@ -41,6 +45,35 @@
     }
   ],
   "paths": {
+    "/api/v1/contact": {
+      "post": {
+        "tags": ["Contato"],
+        "summary": "Envia uma mensagem de contato",
+        "description": "A mensagem e persistida antes de qualquer tentativa de envio de e-mail, entao ela nao se perde se o provedor estiver fora do ar.",
+        "operationId": "enviar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Mensagem aceita e enfileirada para notificacao"
+          },
+          "400": {
+            "description": "Corpo invalido"
+          },
+          "429": {
+            "description": "Limite de mensagens por hora excedido"
+          }
+        }
+      }
+    },
     "/api/v1/skills": {
       "get": {
         "tags": ["Skill"],
@@ -206,6 +239,42 @@
   },
   "components": {
     "schemas": {
+      "ContactRequest": {
+        "type": "object",
+        "description": "Mensagem enviada pelo formulario de contato",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Fulana de Tal",
+            "maxLength": 120,
+            "minLength": 0
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "fulana@exemplo.com",
+            "maxLength": 254,
+            "minLength": 0
+          },
+          "subject": {
+            "type": "string",
+            "example": "Vaga de backend",
+            "maxLength": 150,
+            "minLength": 0
+          },
+          "message": {
+            "type": "string",
+            "example": "Vi o portfolio e gostaria de conversar.",
+            "maxLength": 5000,
+            "minLength": 0
+          },
+          "website": {
+            "type": "string",
+            "description": "Campo-armadilha, invisivel no formulario. Deve chegar vazio; preenchido, a mensagem e descartada em silencio."
+          }
+        },
+        "required": ["email", "message", "name", "subject"]
+      },
       "Skill": {
         "type": "object",
         "properties": {

@@ -2,8 +2,10 @@ package dev.crystofer.portfolio.shared.error;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
@@ -51,6 +53,35 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     problem.setTitle("Recurso nao encontrado");
     problem.setType(ProblemTypes.de("resource-not-found"));
     return problem;
+  }
+
+  /**
+   * Limite de mensagens excedido.
+   *
+   * <p><strong>O {@code Retry-After} e o que separa um 429 util de um 429 que so diz
+   * "nao".</strong> Com ele, quem consome sabe quando tentar de novo e um cliente automatizado para
+   * de bater na porta ate la; sem ele, a unica estrategia possivel e insistir - que e justamente o
+   * comportamento que o limite existe para conter.
+   *
+   * <p>O cabecalho vai em segundos, e nao em data. As duas formas sao validas pelo RFC 9110, e a
+   * relativa nao depende de o relogio do cliente estar certo.
+   *
+   * <p>{@code WARN} e nao {@code ERROR}: excesso de envio e resposta prevista do protocolo, e nao
+   * falha do servidor. Subir o nivel aqui treinaria quem le o log a ignorar {@code ERROR} - a mesma
+   * razao ja registrada no tratador de 404.
+   */
+  @ExceptionHandler(RateLimitExceededException.class)
+  ResponseEntity<ProblemDetail> handleRateLimit(RateLimitExceededException exception) {
+    log.warn("Limite de mensagens excedido; proxima em {}s", exception.retryAfterSeconds());
+
+    var problem =
+        ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage());
+    problem.setTitle("Too Many Requests");
+    problem.setType(ProblemTypes.de("rate-limit-exceeded"));
+
+    return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+        .header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.retryAfterSeconds()))
+        .body(problem);
   }
 
   /**

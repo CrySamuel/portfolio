@@ -39,6 +39,7 @@
     <testcontainers.version>2.0.5</testcontainers.version>
     <resilience4j.version>2.3.0</resilience4j.version>
     <wiremock.version>3.13.1</wiremock.version>
+    <bucket4j.version>8.14.0</bucket4j.version>
   </properties>
 
   <!--
@@ -324,6 +325,36 @@
       <artifactId>wiremock-standalone</artifactId>
       <version>${wiremock.version}</version>
       <scope>test</scope>
+    </dependency>
+
+    <!--
+      Bean Validation, e a ausencia dela ate aqui nao era descuido: nenhum
+      endpoint aceitava corpo. O primeiro que aceita chega agora.
+
+      **Sem este starter, @NotBlank e @Size nao fazem nada e nao avisam.** A
+      anotacao compila, o Spring nao encontra provedor, e a validacao
+      simplesmente nao acontece - foi o defeito que o Music Style API tinha e que
+      o levou a sair do curriculo, porque o README afirmava a garantia que o pom
+      nao sustentava.
+    -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+
+    <!--
+      Limite de taxa em memoria para o formulario de contato. O artefato traz
+      "jdk17" no nome porque a partir da 8.10 o projeto separou builds por versao
+      de plataforma - o antigo bucket4j-core ainda existe, mas parou numa linha
+      anterior.
+
+      Escopo de compilacao, e nao de teste: ao contrario do WireMock, isto roda
+      em producao.
+    -->
+    <dependency>
+      <groupId>com.bucket4j</groupId>
+      <artifactId>bucket4j_jdk17-core</artifactId>
+      <version>${bucket4j.version}</version>
     </dependency>
 
     <dependency>
