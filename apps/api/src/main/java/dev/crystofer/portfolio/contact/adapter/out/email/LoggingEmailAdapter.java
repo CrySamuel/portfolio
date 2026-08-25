@@ -2,7 +2,6 @@ package dev.crystofer.portfolio.contact.adapter.out.email;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import dev.crystofer.portfolio.contact.domain.model.ContactMessage;
 import dev.crystofer.portfolio.contact.domain.port.out.SendContactEmailPort;
@@ -10,21 +9,15 @@ import dev.crystofer.portfolio.contact.domain.port.out.SendContactEmailPort;
 /**
  * Escreve a notificacao no log, em vez de envia-la.
  *
- * <p><strong>E a unica implementacao que existe hoje, e isso e uma limitacao declarada e nao um
- * atalho.</strong> O provedor de verdade exige credencial que ainda nao foi cadastrada; escrever o
- * adaptador dele agora produziria codigo que ninguem consegue exercitar - e este projeto ja decidiu
- * que guarda nao verificada nao vale como guarda.
- *
- * <p>Enquanto ele for o unico, a cadeia inteira funciona e e testavel: a mensagem e gravada, o
- * evento dispara depois do commit, o desfecho vira {@code SENT} e o reprocessamento tem o que
- * procurar quando um envio falha. O que falta e so o ultimo salto.
+ * <p><strong>E o que roda quando nao ha credencial configurada</strong> - em desenvolvimento e na
+ * suite de testes, onde exigir segredo para a aplicacao subir tornaria o projeto impossivel de
+ * clonar e rodar. Quem escolhe entre ele e o provedor de verdade e o {@link EmailConfig}.
  *
  * <p><strong>Ele reporta sucesso, e esse e o risco a ter em mente.</strong> Em producao, com este
  * adaptador ativo, toda mensagem seria marcada como entregue sem sair. E por isso o log e {@code
  * warn} e nao {@code info}: a linha existe para ser encontrada por quem procurar "por que o e-mail
  * nao chegou", e um {@code info} se perderia no volume.
  */
-@Component
 class LoggingEmailAdapter implements SendContactEmailPort {
 
   private static final Logger log = LoggerFactory.getLogger(LoggingEmailAdapter.class);
