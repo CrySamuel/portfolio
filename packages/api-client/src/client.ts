@@ -83,17 +83,46 @@ export type LanguageShare = components['schemas']['LanguageShare'];
  */
 export type Repository = components['schemas']['Repository'];
 
+/**
+ * O corpo de `POST /api/v1/contact`.
+ *
+ * <strong>O unico tipo deste pacote que descreve o que entra</strong>, e nao o
+ * que sai. Os outros sao formas que a API produz; este e uma forma que ela
+ * aceita, entao quem erra o formato aqui e este lado - e o compilador diz antes
+ * de a requisicao existir.
+ *
+ * `website` e o campo-armadilha, opcional no contrato de proposito: ele existe
+ * para chegar vazio. Preenchido, a API responde 202 e nao grava nada - o
+ * silencio e a defesa, e esta descrito no controlador.
+ */
+export type ContactSubmission = components['schemas']['ContactRequest'];
+
 /** Resposta que nao foi 2xx, ou que nao chegou. */
 export class ApiError extends Error {
   /** `0` quando a requisicao nem chegou a ter resposta (rede, timeout). */
   readonly status: number;
   readonly url: string;
 
-  constructor(status: number, url: string, message: string, options?: { cause?: unknown }) {
+  /**
+   * Segundos ate a proxima tentativa, quando a resposta traz `Retry-After`.
+   *
+   * <p>`null` quando o cabecalho nao veio - que e o caso de tudo o que nao e
+   * 429. Guarda-lo aqui e o que separa um "tente de novo" vago de uma frase com
+   * numero: quem desenha a tela nao tem acesso a resposta, so a este erro.
+   */
+  readonly retryAfterSeconds: number | null;
+
+  constructor(
+    status: number,
+    url: string,
+    message: string,
+    options?: { cause?: unknown; retryAfterSeconds?: number | null },
+  ) {
     super(message, options);
     this.name = 'ApiError';
     this.status = status;
     this.url = url;
+    this.retryAfterSeconds = options?.retryAfterSeconds ?? null;
   }
 }
 
@@ -127,6 +156,20 @@ export interface RequestOptions {
    * obrigaria a escolher entre falhar o build e travar a pagina.
    */
   readonly timeoutMs?: number;
+
+  /**
+   * Cabecalhos so desta chamada, somados aos fixos do cliente.
+   *
+   * Existe por um caso concreto: o limite de taxa do contato conta por
+   * `X-Forwarded-For`, e quem fala com a API e o servidor do site, nao o
+   * visitante. Sem repassar a origem, todos os visitantes dividiriam o mesmo
+   * balde de cinco mensagens por hora - o limite valeria para o site inteiro em
+   * vez de para cada remetente.
+   *
+   * Colisao com um cabecalho fixo do cliente e resolvida a favor daqui: o fixo
+   * e o padrao, este e a excecao declarada na chamada.
+   */
+  readonly headers?: Readonly<Record<string, string>>;
 
   readonly next?: {
     readonly revalidate?: number | false;
@@ -199,6 +242,45 @@ export interface ApiClient {
    * destaque. Nenhuma das duas deve ser reordenada aqui - a ordem e do dominio.
    */
   getGitHubStats(options?: RequestOptions): Promise<GitHubStats>;
+
+  /**
+   * Envia uma mensagem do formulario de contato.
+   *
+   * <p><strong>A unica escrita deste cliente</strong>, e a assimetria com as
+   * leituras e deliberada em dois pontos.
+   *
+   * <p><strong>Nao retenta.</strong> As leituras retentam porque repetir um GET
+   * nao muda nada do outro lado; repetir um POST pode gravar a mesma mensagem
+   * duas vezes e disparar dois e-mails. E o caso do erro de rede em particular:
+   * um `ApiError` de status 0 nao distingue "nao chegou" de "chegou e a resposta
+   * se perdeu", entao a tentativa seguinte e um palpite com efeito colateral. A
+   * promessa de que a mensagem nao se perde e da API - ela persiste antes de
+   * tentar enviar o e-mail -, e nao de uma segunda tentativa daqui.
+   *
+   * <p><strong>Espera mais.</strong> Sem retentativa, o unico amortecedor contra
+   * a hibernacao do plano gratuito e o tempo de uma tentativa so. Quem chama
+   * passa um `timeoutMs` maior; o padrao curto do cliente foi calibrado para
+   * leitura com visitante esperando, e aqui o visitante ja apertou um botao.
+   *
+   * <p>Resolve com `void`: a API responde <strong>202 sem corpo</strong>, porque
+   * mensagem de contato nao tem representacao publica para devolver.
+   *
+   * <p>O <strong>429</strong> chega como `ApiError` com `retryAfterSeconds`
+   * preenchido; o <strong>400</strong>, com o `detail` do Problem Details.
+   */
+  submitContact(message: ContactSubmission, options?: RequestOptions): Promise<void>;
+}
+
+/**
+ * O corpo de uma escrita, embrulhado.
+ *
+ * <p>Um objeto de um campo so, e nao o valor cru, porque `undefined` e um corpo
+ * legitimo em JSON e precisa ser distinguivel de "esta e uma leitura". Sem o
+ * embrulho, `request(path, options, undefined)` seria ambiguo - e a ambiguidade
+ * decidiria entre GET e POST.
+ */
+interface Corpo {
+  readonly valor: unknown;
 }
 
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -223,40 +305,68 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
   const raiz = baseUrl.replace(/\/+$/, '');
 
-  async function request<T>(path: string, requestOptions: RequestOptions): Promise<T> {
+  async function request<T>(
+    path: string,
+    requestOptions: RequestOptions,
+    corpo?: Corpo,
+  ): Promise<T> {
     const url = `${raiz}${path}`;
+
+    // Escrita nao retenta - ver o javadoc de submitContact. O numero fica em
+    // zero em vez de o laco ganhar um `if`, para que exista **um** caminho de
+    // requisicao e nao dois que precisem concordar.
+    const maximoDeRetentativas = corpo === undefined ? retries : 0;
 
     for (let tentativa = 0; ; tentativa++) {
       try {
-        return await executar<T>(url, requestOptions);
+        return await executar<T>(url, requestOptions, corpo);
       } catch (cause) {
         // Cancelamento pedido por quem chamou nao e falha a ser contornada.
         if (requestOptions.signal?.aborted === true) throw cause;
-        if (tentativa >= retries || !ehTemporario(cause)) throw cause;
+        if (tentativa >= maximoDeRetentativas || !ehTemporario(cause)) throw cause;
 
         await espera(BASE_BACKOFF_MS * 2 ** tentativa);
       }
     }
   }
 
-  async function executar<T>(url: string, requestOptions: RequestOptions): Promise<T> {
+  async function executar<T>(
+    url: string,
+    requestOptions: RequestOptions,
+    corpo?: Corpo,
+  ): Promise<T> {
     let resposta: Response;
 
     try {
       resposta = await fetch(url, {
-        headers: { Accept: 'application/json', ...headers },
+        headers: {
+          Accept: 'application/json',
+          ...(corpo === undefined ? {} : { 'Content-Type': 'application/json' }),
+          ...headers,
+          // Por ultimo: o cabecalho da chamada vence o fixo do cliente.
+          ...requestOptions.headers,
+        },
         signal: sinal(requestOptions.timeoutMs ?? timeoutMs, requestOptions.signal),
-        // Espalhado condicionalmente: com exactOptionalPropertyTypes ligado,
+        // Espalhados condicionalmente: com exactOptionalPropertyTypes ligado,
         // passar `next: undefined` nao e o mesmo que nao passar `next`.
         ...(requestOptions.next ? { next: requestOptions.next } : {}),
+        ...(corpo === undefined ? {} : { method: 'POST', body: JSON.stringify(corpo.valor) }),
       });
     } catch (cause) {
       throw new ApiError(0, url, `Falha de rede ao chamar ${url}`, { cause });
     }
 
     if (!resposta.ok) {
-      throw new ApiError(resposta.status, url, await descrever(resposta, url));
+      throw new ApiError(resposta.status, url, await descrever(resposta, url), {
+        retryAfterSeconds: segundosAteRetentar(resposta),
+      });
     }
+
+    // 202 e 204 nao trazem corpo, e `resposta.json()` num corpo vazio lanca
+    // SyntaxError - um erro de parse no lugar de um sucesso. Quem chama uma
+    // escrita ja declara `Promise<void>`, entao o undefined que sai daqui e o
+    // valor certo com o tipo certo.
+    if (semCorpo(resposta)) return undefined as T;
 
     return (await resposta.json()) as T;
   }
@@ -288,6 +398,14 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
     getGitHubStats(requestOptions: RequestOptions = {}) {
       return request<GitHubStats>('/api/v1/github/stats', requestOptions);
+    },
+
+    submitContact(message: ContactSubmission, requestOptions: RequestOptions = {}) {
+      // `undefined` e nao `void` como argumento de tipo: `void` ali e o que a
+      // regra no-invalid-void-type reprova, com razao - ele descreve "sem valor
+      // de retorno", nao um valor. O metodo continua prometendo `Promise<void>`
+      // na interface, e `Promise<undefined>` satisfaz isso.
+      return request<undefined>('/api/v1/contact', requestOptions, { valor: message });
     },
   };
 }
@@ -331,6 +449,40 @@ function sinal(timeoutMs: number, doChamador?: AbortSignal): AbortSignal {
   // Um sinal novo por tentativa: reaproveitar o anterior faria a segunda
   // tentativa nascer ja cancelada.
   return doChamador ? AbortSignal.any([porTempo, doChamador]) : porTempo;
+}
+
+/**
+ * O `Retry-After` em segundos, quando ele veio e faz sentido.
+ *
+ * <p>O RFC 9110 permite duas formas: um numero de segundos ou uma data HTTP.
+ * Esta API sempre manda a primeira, e so ela e lida - interpretar a data
+ * exigiria confiar no relogio de quem recebe, e um relogio adiantado
+ * produziria um "tente em -40s" que a tela nao sabe desenhar.
+ */
+function segundosAteRetentar(resposta: Response): number | null {
+  const cabecalho = resposta.headers.get('Retry-After');
+  if (cabecalho === null) return null;
+
+  const segundos = Number(cabecalho);
+  return Number.isInteger(segundos) && segundos >= 0 ? segundos : null;
+}
+
+/**
+ * A resposta veio sem corpo?
+ *
+ * <p>O status decide primeiro, porque 204 e 205 <em>proibem</em> corpo. Os
+ * outros dois testes cobrem o 202 desta API, que responde vazio por escolha e
+ * nao por regra do protocolo - e sao dois porque nenhum sozinho basta: nem todo
+ * servidor manda `Content-Length` numa resposta vazia, e a ausencia de
+ * `Content-Type` e o que sobra quando nao ha o que tipar.
+ */
+function semCorpo(resposta: Response): boolean {
+  return (
+    resposta.status === 204 ||
+    resposta.status === 205 ||
+    resposta.headers.get('Content-Length') === '0' ||
+    resposta.headers.get('Content-Type') === null
+  );
 }
 
 function espera(ms: number): Promise<void> {

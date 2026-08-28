@@ -6,12 +6,22 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "env": ["API_URL", "SERVICE_API_KEY"]
+      "env": [
+        "API_URL",
+        "SERVICE_API_KEY",
+        "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+        "TURNSTILE_SECRET_KEY"
+      ]
     },
     "dev": {
       "cache": false,
       "persistent": true,
-      "env": ["API_URL", "SERVICE_API_KEY"],
+      "env": [
+        "API_URL",
+        "SERVICE_API_KEY",
+        "NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+        "TURNSTILE_SECRET_KEY"
+      ],
       "dependsOn": ["^build"]
     },
     "lint": {

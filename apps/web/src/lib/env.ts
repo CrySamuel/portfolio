@@ -42,6 +42,41 @@ const schema = z.object({
       TAMANHO_MINIMO_DA_CHAVE,
       `precisa ter ao menos ${String(TAMANHO_MINIMO_DA_CHAVE)} caracteres (openssl rand -base64 32)`,
     ),
+
+  /**
+   * A Site Key do Turnstile — **pública por construção**.
+   *
+   * O prefixo `NEXT_PUBLIC_` está certo aqui e é o inverso exato do caso acima:
+   * a chave precisa chegar ao navegador, porque é ela que o widget imprime no
+   * HTML. Marcá-la como segredo não a protegeria de nada e apenas impediria o
+   * widget de existir.
+   *
+   * Ela é lida **aqui**, num módulo `server-only`, e desce até o formulário como
+   * prop. A alternativa — o Client Component ler `process.env.NEXT_PUBLIC_…`
+   * direto — funcionaria, e é justamente por funcionar sem validação nenhuma que
+   * não foi escolhida: uma variável esquecida no painel viraria `undefined`, o
+   * widget não renderizaria e o formulário passaria a recusar toda mensagem
+   * enviada, em produção, sem nada no log dizendo por quê.
+   */
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z
+    .string({ error: 'é obrigatória — sai do painel do Turnstile, junto da Secret Key' })
+    .min(1, 'não pode ser vazia'),
+
+  /**
+   * A Secret Key do Turnstile — **nunca** com prefixo `NEXT_PUBLIC_`.
+   *
+   * É com ela que o servidor pergunta à Cloudflare se um token vale. Publicá-la
+   * no bundle permitiria a qualquer um forjar a resposta da verificação, o que
+   * é o mesmo que não ter Turnstile — com o custo de parecer que tem.
+   *
+   * Não há mínimo de tamanho como na `SERVICE_API_KEY`: aquele valor é gerado
+   * por nós e o piso é uma escolha nossa; este é emitido pela Cloudflare, e
+   * inventar um formato esperado aqui reprovaria o dia em que eles mudassem o
+   * deles.
+   */
+  TURNSTILE_SECRET_KEY: z
+    .string({ error: 'é obrigatória — sai do painel do Turnstile e não pode passar por conversa' })
+    .min(1, 'não pode ser vazia'),
 });
 
 const resultado = schema.safeParse(process.env);

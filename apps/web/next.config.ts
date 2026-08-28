@@ -17,10 +17,22 @@ const isDev = process.env.NODE_ENV === 'development';
  * O `unsafe-inline` do script-src nao e desleixo, e o preco medido: o HTML
  * pre-renderizado tem 11 scripts inline - os dados de flight do App Router e o
  * anti-FOUC do next-themes -, nenhum deles com conteudo estavel o bastante para
- * hash. Hoje o site nao tem formulario, entrada de usuario nem script de
- * terceiro, entao nao existe caminho por onde um atacante injete o inline que a
- * diretiva autorizaria. O raciocinio inteiro esta no ADR-0012, com prazo de
- * reavaliacao no MVP 5, que e quando o formulario de contato chega.
+ * hash. O raciocinio inteiro esta no ADR-0012.
+ *
+ * **A reavaliacao que o ADR-0012 marcou para o MVP 5 aconteceu aqui, e a
+ * conclusao continua a mesma - por um motivo e nao por inercia.** O commit 49
+ * trouxe as duas coisas que faltavam para a pergunta ficar seria: entrada de
+ * usuario e script de terceiro. O que nao mudou foi o custo do nonce, que segue
+ * desligando o ISR - e o formulario vive na home, que e exatamente a rota
+ * pre-renderizada que o ADR-0006 protege do cold start. Uma politica por rota
+ * tampouco ajuda: nao ha rota nova a proteger.
+ *
+ * O que mudou e a superficie, e ela foi medida em vez de suposta. O texto que o
+ * visitante digita volta para a tela em `defaultValue` de <input>, ou seja como
+ * atributo escapado pelo React - nunca como HTML. As mensagens recebidas nao
+ * sao renderizadas em lugar nenhum do site: elas vao para o banco e para um
+ * e-mail. Nao existe caminho por onde entrada de usuario vire script inline
+ * nesta pagina, que era a condicao registrada no ADR.
  *
  * As demais diretivas nao dependem de nonce e valem integralmente - sao elas
  * que barram clickjacking (`frame-ancestors`), injecao de <base>
@@ -32,7 +44,19 @@ const contentSecurityPolicy = [
   // 'unsafe-eval' so em desenvolvimento: o React usa eval para reconstruir a
   // pilha de erro do servidor no navegador. Producao nao precisa, e deixar a
   // diretiva condicional impede que a conveniencia do dev vaze para o site.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
+  // challenges.cloudflare.com entra pelo Turnstile do formulario de contato, e
+  // e a primeira origem de terceiro desta politica. Sao tres diretivas para um
+  // widget so, e cada uma cobre uma peca diferente: o script que a pagina
+  // carrega, o iframe que ele monta e as requisicoes que esse script faz para
+  // buscar o desafio. Faltando qualquer uma, o widget nao aparece - e um
+  // formulario sem widget passa a recusar toda mensagem enviada.
+  `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ''}`,
+  'frame-src https://challenges.cloudflare.com',
+  // connect-src precisa existir explicitamente: sem ela, o `default-src 'self'`
+  // e quem responde, e ele nao conhece a Cloudflare. `'self'` fica junto porque
+  // declarar a diretiva substitui o default por completo - listar so o terceiro
+  // barraria as requisicoes do proprio site.
+  "connect-src 'self' https://challenges.cloudflare.com",
   // O next-themes injeta um <style> em tempo de execucao para desligar
   // transicoes durante a troca de tema (`disableTransitionOnChange`). Sem
   // 'unsafe-inline' o navegador bloqueia essa injecao e a troca volta a

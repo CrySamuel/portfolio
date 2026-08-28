@@ -3,6 +3,7 @@ export {
   createApiClient,
   type ApiClient,
   type ApiClientOptions,
+  type ContactSubmission,
   type Experience,
   type GitHubStats,
   type LanguageShare,

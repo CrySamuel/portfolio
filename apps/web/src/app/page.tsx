@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { AboutSection } from '@/features/about/components/AboutSection';
+import { ContactSection } from '@/features/contact/components/ContactSection';
 import { GitHubSection } from '@/features/github/components/GitHubSection';
 import { HeroSection } from '@/features/hero/components/HeroSection';
 import { ProjectsSection } from '@/features/projects/components/ProjectsSection';
@@ -35,6 +36,7 @@ export default function HomePage(): ReactNode {
       <ProjectsSection />
       <SkillsSection />
       <GitHubSection />
+      <ContactSection />
     </>
   );
 }

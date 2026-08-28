@@ -2928,6 +2928,36 @@ A medição que fecha o quadro: o HTML pré-renderizado da home tem **11 scripts
 - **`'unsafe-inline'` em `style-src` é requisito de funcionamento, não conveniência.** O next-themes injeta um `<style>` em tempo de execução para desligar transições durante a troca de tema; bloqueá-lo faria as cores voltarem a interpolar no meio da troca, que é exatamente o mecanismo por trás dos dois falsos positivos de contraste investigados no MVP 1.
 - **Uma política única para todas as rotas** não distingue a home pré-renderizada de uma rota dinâmica futura. Quando a distinção passar a importar — de novo, MVP 5 —, ela terá de ser introduzida.
 
+#### Reavaliação no MVP 5 — feita no commit 49, e a decisão não muda
+
+Este ADR marcou o próprio prazo: *"isso muda no MVP 5, que traz o formulário de contato, o Turnstile da Cloudflare e, com ele, `script-src` e `frame-src` apontando para `challenges.cloudflare.com`"*. O commit 49 chegou, e as duas coisas que faltavam para a pergunta ficar séria existem agora: **entrada de usuário** e **script de terceiro**.
+
+**O que mudou na política.** Três diretivas, e cada uma cobre uma peça diferente do mesmo widget — o script que a página carrega, o `<iframe>` que ele monta, e as requisições que esse script faz para buscar o desafio:
+
+```
+script-src  'self' 'unsafe-inline' https://challenges.cloudflare.com
+frame-src   https://challenges.cloudflare.com
+connect-src 'self' https://challenges.cloudflare.com
+```
+
+⚠️ `connect-src` precisa ser declarada de propósito: sem ela quem responde é o `default-src 'self'`, que não conhece a Cloudflare. E `'self'` entra junto porque declarar a diretiva **substitui** o default por inteiro — listar só o terceiro barraria as requisições do próprio site. Sem qualquer uma das três o widget não aparece, e formulário sem widget passa a recusar toda mensagem enviada.
+
+⚠️ **`frame-src` deixa de permitir a própria origem, e isso foi observado em funcionamento:** uma tentativa de embutir a home num `<iframe>` durante a verificação foi bloqueada pela política. O site não emoldura nada de si mesmo, então a restrição não custa nada — mas quem for embutir algo no futuro precisa mexer aqui.
+
+**O que não mudou, e o motivo é o mesmo de antes.** O nonce continua desligando o ISR, e o formulário vive **na home** — exatamente a rota pré-renderizada que o [ADR-0006](#adr-0006-hospedagem-em-vercel-e-render) protege do cold start do Render. A saída de "uma política por rota", registrada acima como consequência negativa, também não ajuda aqui: ela existiria para poupar a home, e é a home que tem o formulário.
+
+**A condição que tornava o `'unsafe-inline'` aceitável foi reexaminada, não repetida.** O texto original apoiava-se em "o site não tem formulário, não aceita entrada de usuário". A primeira metade caiu; a segunda merece a medida:
+
+| Por onde a entrada de usuário passa | O que acontece com ela |
+|---|---|
+| Volta para a tela depois de uma recusa | `defaultValue` de `<input>` — atributo escapado pelo React, nunca HTML |
+| Mensagens recebidas | Vão para o banco e para um e-mail. **Não são renderizadas em lugar nenhum do site** |
+| Campos do formulário | Lidos como texto (`typeof valor === 'string'`), validados por Zod no servidor |
+
+Não existe caminho por onde entrada de usuário vire script inline nesta página — que era a condição registrada. **O que muda é a margem:** antes não havia entrada nenhuma, e agora há uma que é segura por construção. A diferença entre "impossível" e "seguro enquanto ninguém renderizar isso como HTML" é real, e é ela que mantém o item na tabela de dívidas em vez de encerrá-lo.
+
+**Novo prazo:** commit 52, junto do hash do `style-src`. É quando Playwright e axe entram no CI e passa a existir verificação automatizada capaz de pegar uma quebra de hidratação ou de política em silêncio — que é a única coisa que faltava para a alternativa dos hashes deixar de ser perigosa.
+
 ---
 ---
 
