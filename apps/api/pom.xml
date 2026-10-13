@@ -37,7 +37,7 @@
     <springdoc.version>3.1.0</springdoc.version>
     <archunit.version>1.5.0</archunit.version>
     <testcontainers.version>2.0.5</testcontainers.version>
-    <resilience4j.version>2.3.0</resilience4j.version>
+    <resilience4j.version>2.4.0</resilience4j.version>
     <wiremock.version>3.13.1</wiremock.version>
     <bucket4j.version>8.14.0</bucket4j.version>
   </properties>
@@ -209,36 +209,26 @@
     </dependency>
 
     <!--
-      Disjuntor, retentativa e bulkhead (ADR-0008). O artefato ainda se chama
-      spring-boot3 porque nao existe versao para o Boot 4 - a 2.3.0 e a mais
-      nova publicada, e foi lancada contra o Boot 3.
+      Disjuntor, retentativa e bulkhead (ADR-0008), no modulo feito para o
+      Boot 4. Ate a 2.3.0 so existia o spring-boot3, e ele rodava aqui por
+      tolerancia; a partir da 2.4.0 um verificador transforma a
+      incompatibilidade em falha de boot, e a suite inteira de integracao erra
+      com "only compatible with Spring Boot 3.x".
+
+      O modulo novo traz o resilience4j-micrometer como dependencia propria e
+      ordena as autoconfiguracoes de metrica depois das do actuator do Boot 4.
+      Os dois motivos que obrigavam a declarar os publicadores a mao deixaram
+      de existir.
 
       **Nao e suposicao de que funciona.** O contexto sobe, os aspectos
-      interceptam e o disjuntor abre depois do limiar - as tres coisas estao
-      cobertas por teste, porque anotacao que nao intercepta e a pior das
-      guardas: ela documenta uma protecao que nao existe.
+      interceptam, o disjuntor abre depois do limiar e o estado dele aparece
+      como metrica - as quatro coisas estao cobertas por teste, porque anotacao
+      que nao intercepta e a pior das guardas: ela documenta uma protecao que
+      nao existe.
     -->
     <dependency>
       <groupId>io.github.resilience4j</groupId>
-      <artifactId>resilience4j-spring-boot3</artifactId>
-      <version>${resilience4j.version}</version>
-    </dependency>
-
-    <!--
-      **Sem isto o estado do circuito nao existe como metrica.** A
-      autoconfiguracao do Resilience4j so registra os medidores quando este
-      artefato esta no classpath, e ele nao vem junto do starter - a ausencia
-      nao da erro nem aviso, e o /actuator/prometheus simplesmente nao tem
-      nenhuma familia resilience4j_*.
-
-      Medido em producao antes de entrar: 319 linhas no dump, com as metricas
-      de cache do Caffeine presentes e nenhuma do disjuntor. A Definition of
-      Done do MVP 4 exige as duas, e a metade que faltava era justamente a que
-      permite enxergar um circuito aberto sem abrir o log da plataforma.
-    -->
-    <dependency>
-      <groupId>io.github.resilience4j</groupId>
-      <artifactId>resilience4j-micrometer</artifactId>
+      <artifactId>resilience4j-spring-boot4</artifactId>
       <version>${resilience4j.version}</version>
     </dependency>
 

@@ -16,12 +16,12 @@ import io.micrometer.core.instrument.MeterRegistry;
 /**
  * O disjuntor age de verdade - e nao apenas existe.
  *
- * <p><strong>Este teste existe por uma duvida concreta.</strong> O Resilience4j mais novo publicado
- * e o {@code resilience4j-spring-boot3}, feito para o Spring Boot 3, e esta aplicacao roda o Boot
- * 4. O contexto subir nao prova nada: se a autoconfiguracao nao registrasse os aspectos, as
- * anotacoes do adaptador ficariam ali documentando uma protecao inexistente, e a unica forma de
- * descobrir seria em producao, no dia em que o GitHub caisse. Anotacao que nao intercepta e a pior
- * das guardas.
+ * <p><strong>Este teste nasceu de uma duvida concreta, e ela continua valendo.</strong> Ele foi
+ * escrito quando o unico Resilience4j publicado era o {@code resilience4j-spring-boot3}, rodando
+ * sobre o Boot 4 por tolerancia; hoje e o modulo do Boot 4. Nos dois casos o contexto subir nao
+ * prova nada: se a autoconfiguracao nao registrasse os aspectos, as anotacoes do adaptador ficariam
+ * ali documentando uma protecao inexistente, e a unica forma de descobrir seria em producao, no dia
+ * em que o GitHub caisse. Anotacao que nao intercepta e a pior das guardas.
  *
  * <p>O GitHub e apontado para uma porta onde nao ha ninguem, entao toda chamada falha por conexao
  * recusada - falha de rede de verdade, e nao um dublê que devolve excecao. Os cenarios ricos - 403
@@ -111,11 +111,14 @@ class GitHubResilienceIntegrationTest extends AbstractIntegrationTest {
   /**
    * O estado do circuito e observavel, e nao apenas correto.
    *
-   * <p><strong>Esta guarda existe porque a ausencia ja aconteceu, e em producao.</strong> As
-   * autoconfiguracoes de metrica do Resilience4j carregam e desistem em silencio sob o Boot 4, por
-   * ordem de bean - o {@code /actuator/prometheus} responde 200, publica o cache do Caffeine e
-   * simplesmente nao tem nenhuma familia {@code resilience4j_*}. Nada reprova e nada avisa. Ver
-   * {@code ResilienceMetricsConfig}, que declara os publicadores a mao.
+   * <p><strong>Esta guarda existe porque a ausencia ja aconteceu, e em producao.</strong> No modulo
+   * do Boot 3 as autoconfiguracoes de metrica se ordenavam depois das classes do actuator do Boot
+   * 3, que no Boot 4 mudaram de pacote; referencia que nao resolve e ignorada, elas rodavam antes
+   * do registro existir e desistiam em silencio - o {@code /actuator/prometheus} respondia 200,
+   * publicava o cache do Caffeine e nao tinha nenhuma familia {@code resilience4j_*}. Os
+   * publicadores chegaram a ser declarados a mao por isso. O modulo do Boot 4 aponta para os
+   * pacotes certos e a declaracao manual saiu - e e esta guarda, quebrada de proposito desligando
+   * cada publicador, que diz que a autoconfiguracao assumiu o trabalho.
    *
    * <p>O teste procura o medidor no registro, e nao o texto no endpoint: o que se quer garantir e
    * que o publicador esteja ligado, e a exposicao do endpoint e outra decisao, de perfil.
