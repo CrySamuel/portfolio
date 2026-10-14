@@ -2,7 +2,12 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
 import { carregarProjeto, slugsDoCatalogo, type Parametros } from '@/app/projetos/[slug]/projeto';
+import { DEGRAUS_DA_LISTAGEM } from '@/app/projetos/trilha';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { codigoFonte, grafo, trilha } from '@/components/seo/structured-data';
 import { ProjectDetail } from '@/features/projects/components/ProjectDetail';
+import { getProfile } from '@/lib/api/profile';
+import { metadataDaPagina } from '@/lib/metadata';
 
 /**
  * Os slugs que o build pre-renderiza - ver {@link slugsDoCatalogo}, que explica
@@ -41,33 +46,42 @@ export function generateStaticParams(): Promise<{ slug: string }[]> {
  */
 export async function generateMetadata({ params }: Parametros): Promise<Metadata> {
   const { slug } = await params;
-  const projeto = await carregarProjeto(slug);
+  const [projeto, perfil] = await Promise.all([carregarProjeto(slug), getProfile()]);
 
-  return {
-    title: projeto.title,
-    description: projeto.summary,
-    alternates: { canonical: `/projetos/${projeto.slug}` },
-    openGraph: {
-      type: 'article',
-      title: projeto.title,
-      description: projeto.summary,
-      // Espalhado condicionalmente porque a data e nulavel no contrato e
-      // exactOptionalPropertyTypes esta ligado: passar `publishedTime: undefined`
-      // nao e o mesmo que nao passar a chave.
-      ...(projeto.publishedAt === null ? {} : { publishedTime: projeto.publishedAt }),
-    },
-  };
+  return metadataDaPagina(perfil, {
+    titulo: projeto.title,
+    descricao: projeto.summary,
+    caminho: `/projetos/${projeto.slug}`,
+    artigo: { publicadoEm: projeto.publishedAt },
+  });
 }
 
 /**
  * A pagina de um projeto.
  *
- * <p>Uma linha, como a listagem: quem sabe desenhar o detalhe e a feature, e a
- * rota so resolve o endereco. O que este arquivo carrega e a traducao do slug em
- * conteudo - e, quando nao ha conteudo, a 404 ao lado.
+ * <p>Uma linha de conteudo, como a listagem: quem sabe desenhar o detalhe e a
+ * feature, e a rota so resolve o endereco. O que este arquivo carrega e a
+ * traducao do slug em conteudo - e, quando nao ha conteudo, a 404 ao lado.
+ *
+ * <p>Os dados estruturados descrevem o projeto como codigo-fonte e a posicao
+ * dele no site, e saem do mesmo projeto que a pagina desenha.
  */
 export default async function ProjetoPage({ params }: Parametros): Promise<ReactNode> {
   const { slug } = await params;
+  const [projeto, perfil] = await Promise.all([carregarProjeto(slug), getProfile()]);
 
-  return <ProjectDetail project={await carregarProjeto(slug)} />;
+  return (
+    <>
+      <JsonLd
+        dados={grafo(
+          codigoFonte(projeto, perfil),
+          trilha([
+            ...DEGRAUS_DA_LISTAGEM,
+            { nome: projeto.title, caminho: `/projetos/${projeto.slug}` },
+          ]),
+        )}
+      />
+      <ProjectDetail project={projeto} />
+    </>
+  );
 }

@@ -1,7 +1,12 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
+import { DEGRAUS_DA_LISTAGEM } from '@/app/projetos/trilha';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { grafo, trilha } from '@/components/seo/structured-data';
 import { ProjectsSection } from '@/features/projects/components/ProjectsSection';
+import { getProfile } from '@/lib/api/profile';
+import { metadataDaPagina } from '@/lib/metadata';
 
 /**
  * O catalogo inteiro, com o filtro por tecnologia.
@@ -20,12 +25,23 @@ import { ProjectsSection } from '@/features/projects/components/ProjectsSection'
  * lista, pela mesma razao ja registrada para a home: o segmento de idioma entra
  * no commit 51, com o roteador e o middleware juntos.
  */
-export const metadata: Metadata = {
-  title: 'Projetos',
-  description:
-    'Projetos com o problema que resolviam, o que foi construído e o resultado que veio depois.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return metadataDaPagina(await getProfile(), {
+    titulo: 'Projetos',
+    descricao:
+      'Projetos com o problema que resolviam, o que foi construído e o resultado que veio depois.',
+    caminho: '/projetos',
+    // Nao ha opengraph-image neste segmento, e o da raiz nao chega ate aqui
+    // por heranca - ver metadataDaPagina.
+    cartaoDoSite: true,
+  });
+}
 
 export default function ProjetosPage(): ReactNode {
-  return <ProjectsSection variante="catalogo" />;
+  return (
+    <>
+      <JsonLd dados={grafo(trilha(DEGRAUS_DA_LISTAGEM))} />
+      <ProjectsSection variante="catalogo" />
+    </>
+  );
 }

@@ -8,6 +8,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { getProfile } from '@/lib/api/profile';
 import { fontVariables } from '@/lib/fonts';
+import { descricaoDoSite, tituloDoSite } from '@/lib/metadata';
 import { MAIN_ID } from '@/lib/navigation';
 import { SITE_URL } from '@/lib/site';
 
@@ -29,17 +30,55 @@ import './globals.css';
  */
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  // A raiz contra a qual o Next resolve todo endereco de metadata - canonical e
-  // og:image inclusive. Sem ela, a imagem de compartilhamento sai relativa e o
-  // crawler do WhatsApp ou do LinkedIn nao tem contra o que resolve-la: o link
-  // aparece sem imagem. O raciocinio inteiro, e a ordem das quatro fontes, esta
-  // em lib/site.ts.
-  metadataBase: SITE_URL,
-  title: 'Crystofer Demetino — Desenvolvedor Backend',
-  description:
-    'Portfólio de Crystofer Demetino, Desenvolvedor Backend especializado em Java e Spring Boot.',
-};
+/**
+ * O que toda rota herda: a raiz dos enderecos, o titulo padrao com o template
+ * das demais, e o Open Graph de base.
+ *
+ * <p>O template e o que faltava ate aqui: a aba da pagina de um projeto mostrava
+ * so "FinAI", sem dizer de quem era o site. Agora toda rota com titulo proprio
+ * sai como "FinAI | Crystofer Demetino", e a home - que nao tem titulo proprio -
+ * fica com o padrao.
+ *
+ * <p>O canonical nao mora aqui, e a razao esta em {@code metadataDaPagina}: no
+ * layout ele seria herdado por toda rota que esquecesse o seu.
+ *
+ * <p>A chamada ao perfil nao custa uma segunda requisicao - o mesmo {@code cache}
+ * do React que o corpo do layout usa logo abaixo.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const perfil = await getProfile();
+  const titulo = tituloDoSite(perfil);
+  const descricao = descricaoDoSite(perfil);
+
+  return {
+    // A raiz contra a qual o Next resolve todo endereco de metadata - canonical
+    // e og:image inclusive. Sem ela, a imagem de compartilhamento sai relativa e
+    // o crawler do WhatsApp ou do LinkedIn nao tem contra o que resolve-la: o
+    // link aparece sem imagem. O raciocinio inteiro, e a ordem das quatro
+    // fontes, esta em lib/site.ts.
+    metadataBase: SITE_URL,
+    title: { default: titulo, template: `%s | ${perfil.fullName}` },
+    description: descricao,
+    applicationName: perfil.fullName,
+    authors: [{ name: perfil.fullName, url: '/' }],
+    creator: perfil.fullName,
+    openGraph: {
+      type: 'website',
+      siteName: perfil.fullName,
+      locale: 'pt_BR',
+      title: titulo,
+      description: descricao,
+    },
+    twitter: { card: 'summary_large_image' },
+    // Indexavel e seguivel e o padrao sem a meta; o que ela acrescenta e a
+    // permissao para a miniatura grande e o trecho sem limite no resultado.
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
+    },
+  };
+}
 
 /**
  * Duas metas, uma por preferencia de sistema: e o que tinge a barra do

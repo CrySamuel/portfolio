@@ -22,8 +22,11 @@ import 'server-only';
  *
  * <ol>
  *   <li>{@code SITE_URL} - cadastrada a mao, e a unica que sobrevive a troca de
- *       hospedagem. E a que o commit 50 vai exigir, quando o sitemap e o
- *       {@code robots.txt} passarem a depender dela;
+ *       hospedagem. O sitemap e o {@code robots.txt} dependem dela desde o
+ *       commit 50, e mesmo assim ela continua opcional: enquanto o site morar
+ *       no subdominio da Vercel, a fonte seguinte da o mesmo endereco, e
+ *       exigi-la seria um passo manual sem efeito. Passa a ser necessaria no
+ *       dia do dominio proprio;
  *   <li>{@code VERCEL_PROJECT_PRODUCTION_URL} - o dominio de producao do
  *       projeto, estavel entre deploys;
  *   <li>{@code VERCEL_URL} - o endereco daquele deploy especifico. Funciona,
