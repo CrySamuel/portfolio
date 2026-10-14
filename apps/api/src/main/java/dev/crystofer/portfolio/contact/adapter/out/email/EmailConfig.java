@@ -13,6 +13,7 @@ import org.springframework.web.client.RestClient;
 
 import dev.crystofer.portfolio.contact.domain.port.out.SendContactEmailPort;
 import dev.crystofer.portfolio.shared.config.properties.EmailProperties;
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * Escolhe por onde a notificacao sai.
@@ -39,15 +40,16 @@ class EmailConfig {
   private static final Logger log = LoggerFactory.getLogger(EmailConfig.class);
 
   @Bean
-  SendContactEmailPort sendContactEmailPort(EmailProperties properties) {
+  SendContactEmailPort sendContactEmailPort(EmailProperties properties, MeterRegistry medidores) {
     if (!properties.configured()) {
       log.warn(
           "Sem credencial de e-mail: nenhuma notificacao sera enviada de verdade."
               + " As mensagens continuam sendo gravadas.");
-      return new LoggingEmailAdapter();
+      return new MeteredEmailAdapter(new LoggingEmailAdapter(), "log", medidores);
     }
 
-    return new ResendEmailAdapter(clienteDoProvedor(properties), properties);
+    return new MeteredEmailAdapter(
+        new ResendEmailAdapter(clienteDoProvedor(properties), properties), "resend", medidores);
   }
 
   /**
