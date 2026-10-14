@@ -224,9 +224,14 @@ export function ContactForm({
         {enviado ? (
           <div className="flex flex-col gap-2 rounded-lg border border-success/40 bg-surface p-6">
             <p className="text-h4 text-fg">Mensagem enviada.</p>
+            {/*
+              A frase só afirma o que o 202 garante: a mensagem está gravada. O
+              aviso por e-mail sai depois da resposta, numa thread própria, e pode
+              falhar e ser reenviado minutos depois — dizer que ele "saiu" seria
+              prometer o que ainda não aconteceu.
+            */}
             <p className="text-body text-fg-muted">
-              Ela já está guardada e a notificação saiu para o meu e-mail. Respondo no endereço que
-              você deixou.
+              Ela já está guardada. Respondo no endereço que você deixou.
             </p>
           </div>
         ) : null}
