@@ -70,6 +70,7 @@ Um tech lead que abrir o repositório encontra: arquitetura hexagonal, ADRs, tes
 | Renderização | SSG + ISR com revalidação por tag | [ADR-0007](#adr-0007-ssg-com-isr-e-revalidação-por-tag) |
 | Resiliência externa | Resilience4j: circuit breaker + retry + fallback | [ADR-0008](#adr-0008-resiliência-na-integração-com-o-github) |
 | Cabeçalhos de segurança | CSP estática, sem nonce, para preservar o ISR | [ADR-0012](#adr-0012-csp-estática-sem-nonce-emenda-a-seção-24) |
+| Idiomas | Conteúdo bilíngue no banco, idioma por `Accept-Language`, pt-BR sem prefixo de URL | [ADR-0013](#adr-0013-conteúdo-bilíngue-no-banco-com-o-idioma-negociado-por-accept-language) |
 
 ---
 ---
@@ -2957,6 +2958,42 @@ connect-src 'self' https://challenges.cloudflare.com
 Não existe caminho por onde entrada de usuário vire script inline nesta página — que era a condição registrada. **O que muda é a margem:** antes não havia entrada nenhuma, e agora há uma que é segura por construção. A diferença entre "impossível" e "seguro enquanto ninguém renderizar isso como HTML" é real, e é ela que mantém o item na tabela de dívidas em vez de encerrá-lo.
 
 **Novo prazo:** commit 52, junto do hash do `style-src`. É quando Playwright e axe entram no CI e passa a existir verificação automatizada capaz de pegar uma quebra de hidratação ou de política em silêncio — que é a única coisa que faltava para a alternativa dos hashes deixar de ser perigosa.
+
+### ADR-0013: Conteúdo bilíngue no banco, com o idioma negociado por `Accept-Language`
+
+**Status:** Aceito. Detalha a [F11](#f11--internacionalização), emenda a [seção 3.7](#37-modelo-de-dados) com seis tabelas e a [seção 11.4](#114-urls-e-estrutura-semântica) quanto à forma das URLs.
+
+**Contexto.** A F11 pede o site em pt-BR e en-US, e o plano trata o assunto como problema do front: o commit 51 traz o next-intl e os arquivos de mensagens. Isso resolve a **interface** — rótulos, botões, títulos de seção. Não resolve o **conteúdo**: bio, timeline, competências e projetos vêm da API, de um banco que só tem português ([ADR-0004](#adr-0004-postgresql-como-fonte-de-verdade-do-conteúdo)).
+
+Traduzir só a interface publicaria uma versão em inglês com os menus em inglês e todo o texto que importa em português. O leitor que justifica a existência da versão em inglês — o recrutador de vaga internacional ou remota — receberia exatamente a página que menos serve a ele.
+
+A medição do que há para traduzir delimita o tamanho do problema: o perfil (cargo, bio, local), duas experiências (cargo, descrição, destaques), quatro categorias de competência e **uma** competência — as demais são nomes próprios, como Java e PostgreSQL —, dois projetos e suas quatro métricas.
+
+**Decisão.**
+
+1. **Uma tabela de tradução por entidade com texto exibido:** `profile_translation`, `experience_translation`, `skill_category_translation`, `skill_translation`, `project_translation` e `project_metric_translation`. A chave é o par (entidade, idioma), e o idioma aceita só `en-US`, por `CHECK` — acrescentar um idioma é migração, e portanto decisão deliberada, não dado inserido.
+2. **O português continua onde está, como idioma base.** Nenhuma coluna existente muda de lugar: seeds, testes e a leitura em português seguem iguais, e o caminho do português não ganha consulta.
+3. **Reserva por linha.** Sem tradução para uma linha, a API devolve o português daquela linha; campo nulável — o local do perfil — cai para o original quando a tradução não o traz. Conteúdo novo entra em português e passa a aparecer em inglês quando a tradução chega: ele nunca some.
+4. **O idioma é negociado pelo `Accept-Language`**, com preferências e pesos (RFC 4647). Ausente, malformado ou sem idioma suportado, a resposta sai em pt-BR. Ela declara o que entregou em `Content-Language` e responde com `Vary: Accept-Language` — e o segundo é obrigatório, não cortesia: as respostas são `Cache-Control: public`, e um cache compartilhado sem o `Vary` serviria a versão de um idioma a quem pediu a do outro.
+5. **URLs:** pt-BR sem prefixo, como hoje; en-US em `/en-US`, com os caminhos traduzidos (`/en-US/projects/finai`). Os endereços já distribuídos — no currículo, no LinkedIn, nos cartões compartilhados — continuam válidos.
+
+**Alternativas descartadas**
+
+- *Colunas por idioma* (`bio_en`, `title_en`) — menos tabelas, e com dois idiomas funcionaria. O custo é estrutural e cresce com o idioma seguinte: toda tabela ganha colunas, e toda consulta passa a escolher coluna pelo idioma.
+- *`jsonb` com as traduções dentro da própria linha* — perde exatamente o que o banco garante hoje: `NOT NULL`, limite de tamanho e `CHECK`. O resumo do projeto tem 280 caracteres por causa do cartão de compartilhamento; a tradução dele, num `jsonb`, poderia ter dois mil sem que nada reprovasse.
+- *Todo o texto em tabelas de tradução, inclusive o português* — o modelo mais simétrico, e o que mais move: exigiria uma migração tirando o texto das quatro tabelas de conteúdo, e reescrever os quatro seeds e as suítes de schema, para chegar ao mesmo resultado na leitura.
+- *Idioma por parâmetro de URL* (`?lang=en-US`) — explícito e simples de cachear, mas reinventa um cabeçalho que o HTTP já tem para isso e que caches, CDNs e o próprio Spring entendem. O que o parâmetro pouparia é o `Vary`, e ele custa uma linha.
+- *Prefixo também para o português* (`/pt-BR/...`) — simétrico, como a seção 11.4 desenhava, e quebraria todo link já distribuído no dia da publicação.
+- *Tradução automática na API* — o texto do portfólio é a voz do dono, e tradução de máquina sem revisão é o oposto do que um avaliador procura. O inglês entra por seed, revisado por quem assina.
+
+**Consequências positivas.** A versão em inglês sai inteira, e não só a moldura. O contrato da API é retrocompatível — o cabeçalho é opcional, e quem não o manda recebe exatamente o que recebia. Acrescentar um terceiro idioma é ampliar um `CHECK` e escrever linhas de seed; o código de leitura não muda.
+
+**Consequências negativas (aceitas).**
+
+- **Seis tabelas para dois idiomas é verboso**, e a escolha é consciente pelo mesmo motivo da hexagonal: o entregável é um modelo defensável, não o mínimo que funciona hoje.
+- **A reserva por linha esconde tradução faltando.** Um projeto novo sem tradução aparece em português no meio da página em inglês, sem erro nenhum. A guarda é um teste que exige tradução para toda linha do seed — tradução faltando passa a reprovar o build em vez de aparecer em produção.
+- **`Content-Language` declara o idioma pedido** mesmo quando alguma linha caiu para a reserva: o cabeçalho descreve a resposta, e não cada campo dela.
+- **Tradução é conteúdo mantido em dobro.** Editar a bio passa a ser editar duas linhas, e a guarda acima só pega a ausência, não a defasagem entre as duas versões.
 
 ---
 ---
