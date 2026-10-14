@@ -9,6 +9,7 @@ import dev.crystofer.portfolio.profile.adapter.out.persistence.mapper.ProfilePer
 import dev.crystofer.portfolio.profile.adapter.out.persistence.repository.ProfileJpaRepository;
 import dev.crystofer.portfolio.profile.domain.model.Profile;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadProfilePort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Implementa {@link LoadProfilePort} com JPA.
@@ -39,7 +40,9 @@ public class ProfilePersistenceAdapter implements LoadProfilePort {
    */
   @Override
   @Transactional(readOnly = true)
-  public Optional<Profile> loadProfile() {
-    return repository.findFirstByOrderByIdAsc().map(mapper::toDomain);
+  public Optional<Profile> loadProfile(ContentLanguage idioma) {
+    return repository
+        .findFirstByOrderByIdAsc()
+        .map(perfil -> mapper.toDomain(perfil.traduzidoPara(idioma)));
   }
 }

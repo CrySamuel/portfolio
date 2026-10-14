@@ -3,6 +3,7 @@ package dev.crystofer.portfolio.profile.domain.port.out;
 import java.util.Optional;
 
 import dev.crystofer.portfolio.profile.domain.model.Profile;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Porta de saida: carregar o perfil de onde quer que ele esteja guardado.
@@ -22,7 +23,10 @@ import dev.crystofer.portfolio.profile.domain.model.Profile;
 public interface LoadProfilePort {
 
   /**
+   * O perfil no idioma pedido. Onde a origem nao tiver o texto naquele idioma, vem o do idioma
+   * padrao - a reserva e da porta, e nao de quem chama (ADR-0013).
+   *
    * @return o perfil, ou vazio se ainda nao houver linha na origem
    */
-  Optional<Profile> loadProfile();
+  Optional<Profile> loadProfile(ContentLanguage idioma);
 }

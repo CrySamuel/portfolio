@@ -1,6 +1,7 @@
 package dev.crystofer.portfolio.profile.domain.port.in;
 
 import dev.crystofer.portfolio.profile.domain.model.Profile;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Porta de entrada: obter o perfil publico.
@@ -15,8 +16,11 @@ import dev.crystofer.portfolio.profile.domain.model.Profile;
  * Devolver Optional aqui empurraria para cada chamador a decisao de o que fazer com um sistema
  * quebrado, e cada um decidiria diferente. Quem traduz a ausencia em erro e a camada de aplicacao,
  * uma vez.
+ *
+ * <p>O idioma e parametro, e nao estado: o mesmo caso de uso atende o portugues e o ingles na mesma
+ * instancia, e quem sabe qual foi pedido e o adaptador de entrada (ADR-0013).
  */
 public interface GetProfileUseCase {
 
-  Profile getProfile();
+  Profile getProfile(ContentLanguage idioma);
 }

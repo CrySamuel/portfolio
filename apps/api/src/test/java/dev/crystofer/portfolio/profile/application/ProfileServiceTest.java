@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.crystofer.portfolio.profile.domain.model.Profile;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadProfilePort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 import dev.crystofer.portfolio.shared.error.ResourceNotFoundException;
 
 /** Sem Spring: a porta e um duble, entao o caso de uso roda em milissegundos (secao 13.6). */
@@ -28,11 +29,11 @@ class ProfileServiceTest {
   void shouldReturnProfile_whenSourceHasOne() {
     // given
     var esperado = umPerfil();
-    given(loadProfilePort.loadProfile()).willReturn(Optional.of(esperado));
+    given(loadProfilePort.loadProfile(ContentLanguage.PT_BR)).willReturn(Optional.of(esperado));
     var service = new ProfileService(loadProfilePort);
 
     // when
-    var obtido = service.getProfile();
+    var obtido = service.getProfile(ContentLanguage.PT_BR);
 
     // then
     assertThat(obtido).isEqualTo(esperado);
@@ -42,11 +43,11 @@ class ProfileServiceTest {
   @DisplayName("deve traduzir origem vazia em erro, e nao propagar o Optional")
   void shouldThrow_whenSourceIsEmpty() {
     // given
-    given(loadProfilePort.loadProfile()).willReturn(Optional.empty());
+    given(loadProfilePort.loadProfile(ContentLanguage.PT_BR)).willReturn(Optional.empty());
     var service = new ProfileService(loadProfilePort);
 
     // when
-    var thrown = catchThrowable(service::getProfile);
+    var thrown = catchThrowable(() -> service.getProfile(ContentLanguage.PT_BR));
 
     // then
     assertThat(thrown)
@@ -58,11 +59,11 @@ class ProfileServiceTest {
   @DisplayName("deve manter fora da mensagem publica qualquer detalhe de infraestrutura")
   void shouldNotLeakInternals_whenResourceIsMissing() {
     // given
-    given(loadProfilePort.loadProfile()).willReturn(Optional.empty());
+    given(loadProfilePort.loadProfile(ContentLanguage.PT_BR)).willReturn(Optional.empty());
     var service = new ProfileService(loadProfilePort);
 
     // when
-    var thrown = catchThrowable(service::getProfile);
+    var thrown = catchThrowable(() -> service.getProfile(ContentLanguage.PT_BR));
 
     // then
     assertThat(thrown.getMessage())

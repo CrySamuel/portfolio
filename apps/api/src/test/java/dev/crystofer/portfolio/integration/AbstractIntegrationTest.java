@@ -103,6 +103,15 @@ public abstract class AbstractIntegrationTest {
     return restTemplate.exchange(path, HttpMethod.GET, new HttpEntity<>(headers), tipo);
   }
 
+  /** GET autenticado pedindo um idioma, como o BFF do Next pede (ADR-0013). */
+  protected <T> ResponseEntity<T> getComChaveEmIdioma(
+      String path, String acceptLanguage, Class<T> tipo) {
+    var headers = new HttpHeaders();
+    headers.set(ServiceKeyAuthFilter.HEADER, CHAVE_DE_SERVICO);
+    headers.set(HttpHeaders.ACCEPT_LANGUAGE, acceptLanguage);
+    return restTemplate.exchange(path, HttpMethod.GET, new HttpEntity<>(headers), tipo);
+  }
+
   /**
    * Acesso direto ao banco, para preparar e conferir estado.
    *

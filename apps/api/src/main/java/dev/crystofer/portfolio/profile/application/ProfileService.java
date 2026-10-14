@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import dev.crystofer.portfolio.profile.domain.model.Profile;
 import dev.crystofer.portfolio.profile.domain.port.in.GetProfileUseCase;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadProfilePort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 import dev.crystofer.portfolio.shared.error.ResourceNotFoundException;
 
 /**
@@ -39,9 +40,9 @@ public class ProfileService implements GetProfileUseCase {
    * de uma resposta publica (secao 2.4).
    */
   @Override
-  public Profile getProfile() {
+  public Profile getProfile(ContentLanguage idioma) {
     return loadProfilePort
-        .loadProfile()
+        .loadProfile(idioma)
         .orElseThrow(() -> new ResourceNotFoundException("profile", "Perfil nao encontrado"));
   }
 }

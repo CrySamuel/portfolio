@@ -85,6 +85,27 @@ public final class ProfileFixtures {
    * Apagar as duas tabelas a mao seria mais explicito e testaria menos - do jeito que esta, um
    * cascade perdido numa migracao futura deixa linha orfa e a contagem denuncia.
    */
+  public static final String HEADLINE_EN = "Test headline";
+
+  public static final String BIO_EN = "Test bio, written for the ProfileIntegrationTest.";
+  public static final String LOCATION_EN = "Remote · Brazil";
+
+  /**
+   * Traduz para en-US o perfil que estiver na tabela - o de teste, depois de {@link
+   * #replaceWithTestProfile}. O local pode vir nulo, que e o caso em que a traducao fica com o do
+   * original.
+   */
+  public static void translateProfile(JdbcTemplate jdbcTemplate, String location) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO profile_translation (profile_id, locale, headline, bio, location)
+        SELECT id, 'en-US', ?, ?, ? FROM profile
+        """,
+        HEADLINE_EN,
+        BIO_EN,
+        location);
+  }
+
   public static void empty(JdbcTemplate jdbcTemplate) {
     jdbcTemplate.update("DELETE FROM profile");
   }

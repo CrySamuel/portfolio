@@ -17,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.json.BasicJsonTester;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -146,6 +147,135 @@ class ProfileIntegrationTest extends AbstractIntegrationTest {
    * aplicacao. Um {@code findFirst} que devolvesse linha errada, ou uma consulta que estourasse em
    * vez de vir vazia, passaria pela fatia e falharia aqui.
    */
+  /**
+   * O perfil em ingles, pedido como o BFF pede, contra o banco de verdade (ADR-0013).
+   *
+   * <p>O que se afirma e a fronteira exata da traducao: cargo, bio e local mudam; nome, links e
+   * disponibilidade nao, porque nao sao texto traduzivel. E a resposta declara o idioma e varia por
+   * ele - sem o {@code Vary}, a CDN serviria esta versao a quem pedisse portugues.
+   */
+  @Test
+  @DisplayName("deve servir o perfil traduzido quando o ingles e pedido")
+  void shouldServeTranslatedProfile_whenEnglishIsRequested() {
+    // given
+    ProfileFixtures.replaceWithTestProfile(jdbcTemplate);
+    ProfileFixtures.translateProfile(jdbcTemplate, ProfileFixtures.LOCATION_EN);
+
+    // when
+    ResponseEntity<String> response =
+        getComChaveEmIdioma(ENDPOINT, "en-US,en;q=0.9,pt-BR;q=0.8", String.class);
+
+    // then
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_LANGUAGE)).isEqualTo("en-US");
+    assertThat(response.getHeaders().getVary()).contains(HttpHeaders.ACCEPT_LANGUAGE);
+
+    String body = response.getBody();
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue("$.headline")
+        .isEqualTo(ProfileFixtures.HEADLINE_EN);
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue("$.bio")
+        .isEqualTo(ProfileFixtures.BIO_EN);
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue("$.location")
+        .isEqualTo(ProfileFixtures.LOCATION_EN);
+    assertThat(json.from(body))
+        .extractingJsonPathStringValue("$.fullName")
+        .isEqualTo(ProfileFixtures.FULL_NAME);
+  }
+
+  /**
+   * Sem traducao, o ingles cai para o portugues - e nao para 404 nem para campos vazios. E a
+   * reserva por linha do ADR-0013: conteudo novo aparece em portugues na pagina em ingles ate a
+   * traducao chegar, mas nunca some.
+   */
+  @Test
+  @DisplayName("deve servir o portugues quando falta a traducao pedida")
+  void shouldFallBackToPortuguese_whenTranslationIsMissing() {
+    // given
+    ProfileFixtures.replaceWithTestProfile(jdbcTemplate);
+
+    // when
+    ResponseEntity<String> response = getComChaveEmIdioma(ENDPOINT, "en-US", String.class);
+
+    // then
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(json.from(response.getBody()))
+        .extractingJsonPathStringValue("$.headline")
+        .isEqualTo(ProfileFixtures.HEADLINE);
+  }
+
+  /** O local e nulavel nos dois lados, e e o unico campo com reserva propria. */
+  @Test
+  @DisplayName("deve manter o local do original quando a traducao nao traz um")
+  void shouldKeepOriginalLocation_whenTranslationHasNone() {
+    // given
+    ProfileFixtures.replaceWithTestProfile(jdbcTemplate);
+    ProfileFixtures.translateProfile(jdbcTemplate, null);
+
+    // when
+    ResponseEntity<String> response = getComChaveEmIdioma(ENDPOINT, "en-US", String.class);
+
+    // then
+    assertThat(json.from(response.getBody()))
+        .extractingJsonPathStringValue("$.location")
+        .isEqualTo(ProfileFixtures.LOCATION);
+    assertThat(json.from(response.getBody()))
+        .extractingJsonPathStringValue("$.headline")
+        .isEqualTo(ProfileFixtures.HEADLINE_EN);
+  }
+
+  /**
+   * Os dois idiomas tem ETags diferentes, e e isso que impede o {@code 304} errado: um cliente que
+   * guardou a versao em portugues e pergunta pela em ingles com o {@code If-None-Match} antigo
+   * precisa receber o corpo novo, e nao "nada mudou".
+   */
+  @Test
+  @DisplayName("deve dar etags diferentes a cada idioma")
+  void shouldGiveEachLanguageItsOwnEtag() {
+    // given
+    ProfileFixtures.replaceWithTestProfile(jdbcTemplate);
+    ProfileFixtures.translateProfile(jdbcTemplate, ProfileFixtures.LOCATION_EN);
+
+    // when
+    var portugues = getComChaveEmIdioma(ENDPOINT, "pt-BR", String.class);
+    var ingles = getComChaveEmIdioma(ENDPOINT, "en-US", String.class);
+
+    // then
+    assertThat(portugues.getHeaders().getETag()).isNotNull();
+    assertThat(ingles.getHeaders().getETag())
+        .isNotNull()
+        .isNotEqualTo(portugues.getHeaders().getETag());
+  }
+
+  /**
+   * O portugues continua numa consulta so, e o ingles custa exatamente uma a mais - a das
+   * traducoes, que so e lida quando o idioma pede. E a promessa do ADR-0013 de que o caminho
+   * original nao muda, medida em vez de afirmada.
+   */
+  @Test
+  @DisplayName("deve gastar uma consulta a mais so quando o idioma nao e o padrao")
+  void shouldSpendOneExtraQuery_onlyForTranslatedLanguage() {
+    // given
+    ProfileFixtures.replaceWithTestProfile(jdbcTemplate);
+    ProfileFixtures.translateProfile(jdbcTemplate, ProfileFixtures.LOCATION_EN);
+    Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+
+    // when
+    statistics.clear();
+    getComChaveEmIdioma(ENDPOINT, "pt-BR", String.class);
+    long consultasEmPortugues = statistics.getPrepareStatementCount();
+
+    statistics.clear();
+    getComChaveEmIdioma(ENDPOINT, "en-US", String.class);
+    long consultasEmIngles = statistics.getPrepareStatementCount();
+
+    // then
+    assertThat(consultasEmPortugues).isEqualTo(1);
+    assertThat(consultasEmIngles).isEqualTo(2);
+  }
+
   @Test
   @DisplayName("deve responder 404 em problem+json quando o banco nao tem perfil")
   void shouldReturnProblemDetail_whenDatabaseHasNoProfile() {

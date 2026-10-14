@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.json.BasicJsonTester;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -441,6 +443,36 @@ class OpenApiContractTest extends AbstractIntegrationTest {
         .extractingJsonPathArrayValue("$.components.schemas.LanguageShare.required")
         .containsExactlyInAnyOrder("name", "share")
         .doesNotContain("weight", "bytes");
+  }
+
+  /**
+   * O idioma e parte do contrato (ADR-0013), e nao so do comportamento.
+   *
+   * <p>Sem o parametro publicado, o cabecalho funcionaria e seria invisivel: o cliente gerado nao
+   * saberia que pode pedir, e o BFF so o mandaria se alguem lembrasse. O {@code Content-Language}
+   * publicado e o que diz a quem le o documento que a resposta varia - e que o cache precisa do
+   * {@code Vary}. Opcional, porque quem nao pede recebe portugues, como sempre recebeu.
+   */
+  @ParameterizedTest(name = "{0}")
+  @ValueSource(strings = {"/api/v1/profile"})
+  @DisplayName("as rotas de conteudo publicam o Accept-Language e o Content-Language")
+  void shouldPublishLanguageNegotiation_forContentRoutes(String rota) {
+    String body = fetchApiDocs();
+    String operacao = "$.paths." + rota + ".get";
+    String parametro = operacao + ".parameters[?(@.name == 'Accept-Language')]";
+
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue(parametro + ".in")
+        .as("o Accept-Language de %s precisa ser publicado como cabecalho", rota)
+        .containsExactly("header");
+    assertThat(json.from(body))
+        .extractingJsonPathArrayValue(parametro + ".required")
+        .as("o Accept-Language de %s precisa ser opcional", rota)
+        .doesNotContain(true);
+    assertThat(json.from(body))
+        .extractingJsonPathMapValue(operacao + ".responses.200.headers")
+        .as("a resposta de %s precisa declarar o Content-Language", rota)
+        .containsKey("Content-Language");
   }
 
   private String fetchApiDocs() {

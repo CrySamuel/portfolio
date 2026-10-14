@@ -3,16 +3,21 @@ package dev.crystofer.portfolio.profile.adapter.in.web;
 import java.time.Duration;
 
 import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import dev.crystofer.portfolio.profile.adapter.in.web.dto.ProfileResponse;
 import dev.crystofer.portfolio.profile.adapter.in.web.mapper.ProfileWebMapper;
 import dev.crystofer.portfolio.profile.domain.port.in.GetProfileUseCase;
+import dev.crystofer.portfolio.shared.web.LanguageNegotiation;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -67,13 +72,23 @@ public class ProfileController {
   @Operation(
       summary = "Devolve o perfil publico",
       description = "Nome, headline, bio, disponibilidade e perfis externos, em ordem de exibicao.")
-  @ApiResponse(responseCode = "200", description = "Perfil encontrado")
+  @ApiResponse(
+      responseCode = "200",
+      description = "Perfil encontrado",
+      headers =
+          @Header(
+              name = HttpHeaders.CONTENT_LANGUAGE,
+              description = LanguageNegotiation.DESCRICAO_DO_IDIOMA_ENTREGUE))
   @ApiResponse(
       responseCode = "404",
       description = "Nenhum perfil cadastrado - o seed nao foi aplicado",
       content = @io.swagger.v3.oas.annotations.media.Content)
-  public ResponseEntity<ProfileResponse> getProfile() {
-    var profile = getProfileUseCase.getProfile();
-    return ResponseEntity.ok().cacheControl(CACHE).body(mapper.toResponse(profile));
+  public ResponseEntity<ProfileResponse> getProfile(
+      @Parameter(description = LanguageNegotiation.DESCRICAO_DO_PEDIDO, example = "en-US")
+          @RequestHeader(name = HttpHeaders.ACCEPT_LANGUAGE, required = false)
+          String acceptLanguage) {
+    var idioma = LanguageNegotiation.negociar(acceptLanguage);
+    var profile = getProfileUseCase.getProfile(idioma);
+    return LanguageNegotiation.responder(idioma, CACHE, mapper.toResponse(profile));
   }
 }

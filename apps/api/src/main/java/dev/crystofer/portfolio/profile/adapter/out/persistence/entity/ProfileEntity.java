@@ -3,7 +3,9 @@ package dev.crystofer.portfolio.profile.adapter.out.persistence.entity;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -13,6 +15,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Linha de {@code profile}, com os links associados.
@@ -67,6 +71,17 @@ public class ProfileEntity {
   @OrderBy("displayOrder ASC")
   private List<SocialLinkEntity> socialLinks = new ArrayList<>();
 
+  /**
+   * O texto do perfil nos outros idiomas (ADR-0013).
+   *
+   * <p>LAZY, e e isso que mantem o caminho do portugues exatamente como era: a colecao so e lida
+   * quando {@link #traduzidoPara} precisa dela, e no idioma padrao ela nunca e tocada - nenhuma
+   * consulta a mais.
+   */
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(name = "profile_translation", joinColumns = @JoinColumn(name = "profile_id"))
+  private List<ProfileTranslation> translations = new ArrayList<>();
+
   /** Exigido pelo Hibernate. Protegido para que ninguem o use por engano. */
   protected ProfileEntity() {}
 
@@ -120,5 +135,44 @@ public class ProfileEntity {
 
   public List<SocialLinkEntity> getSocialLinks() {
     return socialLinks;
+  }
+
+  public List<ProfileTranslation> getTranslations() {
+    return translations;
+  }
+
+  /**
+   * Este perfil com o texto no idioma pedido, ou ele mesmo.
+   *
+   * <p><strong>A traducao acontece aqui, antes do mapper, e e por isso que o mapper e o dominio nao
+   * mudaram.</strong> O que sai e uma copia com o texto trocado - nunca gerenciada pelo Hibernate,
+   * nunca gravada, valida so durante a conversao para o dominio. O MapStruct converte a copia como
+   * converteria o original, e o {@code Profile} que nasce dela passa pelas mesmas invariantes: um
+   * cargo traduzido em branco e recusado igual ao original em branco.
+   *
+   * <p>A reserva e por linha: sem traducao para o idioma, volta o proprio perfil, em portugues. O
+   * local e a excecao por campo, porque e nulavel nos dois lados: traducao sem local fica com o do
+   * original.
+   */
+  public ProfileEntity traduzidoPara(ContentLanguage idioma) {
+    if (idioma.isPadrao()) {
+      return this;
+    }
+
+    return translations.stream()
+        .filter(traducao -> traducao.getLocale().equals(idioma.tag()))
+        .findFirst()
+        .map(
+            traducao ->
+                new ProfileEntity(
+                    id,
+                    fullName,
+                    traducao.getHeadline(),
+                    traducao.getBio(),
+                    traducao.getLocation() == null ? location : traducao.getLocation(),
+                    resumeUrl,
+                    availableForWork,
+                    socialLinks))
+        .orElse(this);
   }
 }
