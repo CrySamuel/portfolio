@@ -121,6 +121,7 @@ export function ContactForm({
   const formulario = useRef<HTMLFormElement>(null);
   const caixaDoWidget = useRef<HTMLDivElement>(null);
   const idDoWidget = useRef<string | undefined>(undefined);
+  const enviado = estado.estado === 'enviado';
 
   /*
     Monta o widget depois da hidratação — ver SCRIPT_DO_TURNSTILE para o defeito
@@ -131,8 +132,16 @@ export function ContactForm({
     script executar, e quem decide essa ordem aqui é o React: ele iça o
     <script> no mesmo commit em que roda este efeito. Apostar em quem chega
     primeiro é o mesmo tipo de corrida que acabou de ser removida.
+
+    `enviado` está nas dependências porque a caixa do widget mora dentro do
+    <form>, e o <form> sai da tela no sucesso enquanto este componente fica.
+    Sem isso a limpeza só rodaria quando a seção inteira desmontasse: o
+    Turnstile ficaria com um widget cujo nó já não existe e avisaria no
+    console, a cada verificação dele, que não o encontra.
   */
   useEffect(() => {
+    if (enviado) return;
+
     const alvo = caixaDoWidget.current;
     if (alvo === null) return;
 
@@ -171,7 +180,7 @@ export function ContactForm({
       if (idDoWidget.current !== undefined) window.turnstile?.remove(idDoWidget.current);
       idDoWidget.current = undefined;
     };
-  }, [turnstileSiteKey]);
+  }, [turnstileSiteKey, enviado]);
 
   /*
     Duas coisas depois de uma recusa, e as duas só existem com script.
@@ -212,7 +221,7 @@ export function ContactForm({
   return (
     <div>
       <div aria-live="polite">
-        {estado.estado === 'enviado' ? (
+        {enviado ? (
           <div className="flex flex-col gap-2 rounded-lg border border-success/40 bg-surface p-6">
             <p className="text-h4 text-fg">Mensagem enviada.</p>
             <p className="text-body text-fg-muted">
@@ -243,7 +252,7 @@ export function ContactForm({
         vez, agora no caminho feliz. Quem quiser escrever de novo recarrega; o
         limite é de cinco por hora de qualquer forma.
       */}
-      {estado.estado === 'enviado' ? null : (
+      {enviado ? null : (
         <form ref={formulario} action={enviar} className="flex flex-col gap-5">
           {CAMPOS.map((campo) => (
             <Campo
