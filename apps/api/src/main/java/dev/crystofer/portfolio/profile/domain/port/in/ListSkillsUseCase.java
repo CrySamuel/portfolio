@@ -1,6 +1,7 @@
 package dev.crystofer.portfolio.profile.domain.port.in;
 
 import dev.crystofer.portfolio.profile.domain.model.SkillCatalog;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Porta de entrada: listar as competencias agrupadas por categoria.
@@ -14,5 +15,5 @@ import dev.crystofer.portfolio.profile.domain.model.SkillCatalog;
  */
 public interface ListSkillsUseCase {
 
-  SkillCatalog listSkills();
+  SkillCatalog listSkills(ContentLanguage idioma);
 }

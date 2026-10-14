@@ -80,9 +80,27 @@
         "summary": "Lista as competencias agrupadas por categoria",
         "description": "Categorias em ordem editorial; dentro de cada uma, competencias do maior nivel para o menor. Categoria sem competencia nao aparece.",
         "operationId": "listSkills",
+        "parameters": [
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "description": "Idioma preferido do conteudo, no formato do Accept-Language (RFC 4647). Existem pt-BR e en-US; en casa com en-US. Ausente, malformado ou sem idioma suportado: pt-BR.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "en-US"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Catalogo, possivelmente vazio",
+            "headers": {
+              "Content-Language": {
+                "description": "Idioma do conteudo entregue: pt-BR ou en-US. A resposta varia pelo Accept-Language.",
+                "style": "simple"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -237,9 +255,27 @@
         "summary": "Lista a timeline profissional",
         "description": "Passagens em ordem cronologica decrescente. Data de saida nula significa cargo atual.",
         "operationId": "listExperiences",
+        "parameters": [
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "description": "Idioma preferido do conteudo, no formato do Accept-Language (RFC 4647). Existem pt-BR e en-US; en casa com en-US. Ausente, malformado ou sem idioma suportado: pt-BR.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "en-US"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Timeline, possivelmente vazia",
+            "headers": {
+              "Content-Language": {
+                "description": "Idioma do conteudo entregue: pt-BR ou en-US. A resposta varia pelo Accept-Language.",
+                "style": "simple"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {

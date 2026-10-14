@@ -15,6 +15,7 @@ import dev.crystofer.portfolio.profile.domain.model.Proficiency;
 import dev.crystofer.portfolio.profile.domain.model.Skill;
 import dev.crystofer.portfolio.profile.domain.model.SkillCategory;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadSkillPort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /** Sem Spring: a porta e um duble, entao o caso de uso roda em milissegundos. */
 @ExtendWith(MockitoExtension.class)
@@ -34,11 +35,12 @@ class SkillServiceTest {
     // given
     var segunda = umaCategoria("Bancos de Dados", 1);
     var primeira = umaCategoria("Linguagens", 0);
-    given(loadSkillPort.loadSkillCategories()).willReturn(List.of(segunda, primeira));
+    given(loadSkillPort.loadSkillCategories(ContentLanguage.PT_BR))
+        .willReturn(List.of(segunda, primeira));
     var service = new SkillService(loadSkillPort);
 
     // when
-    var catalogo = service.listSkills();
+    var catalogo = service.listSkills(ContentLanguage.PT_BR);
 
     // then
     assertThat(catalogo.categories())
@@ -50,11 +52,11 @@ class SkillServiceTest {
   @DisplayName("deve devolver catalogo vazio, e nao erro, quando a origem nao tem categorias")
   void shouldReturnEmptyCatalog_whenSourceHasNone() {
     // given
-    given(loadSkillPort.loadSkillCategories()).willReturn(List.of());
+    given(loadSkillPort.loadSkillCategories(ContentLanguage.PT_BR)).willReturn(List.of());
     var service = new SkillService(loadSkillPort);
 
     // when
-    var catalogo = service.listSkills();
+    var catalogo = service.listSkills(ContentLanguage.PT_BR);
 
     // then
     assertThat(catalogo.isEmpty()).isTrue();

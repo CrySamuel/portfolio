@@ -1,6 +1,7 @@
 package dev.crystofer.portfolio.profile.adapter.in.web;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -43,7 +44,7 @@ class ExperienceControllerTest {
   @DisplayName("deve devolver a timeline como array json, na ordem que o dominio estabeleceu")
   void shouldReturnTimelineAsArray_whenUseCaseSucceeds() throws Exception {
     // given
-    given(listExperiencesUseCase.listExperiences()).willReturn(umaTimeline());
+    given(listExperiencesUseCase.listExperiences(any())).willReturn(umaTimeline());
 
     // when / then
     mockMvc
@@ -72,7 +73,7 @@ class ExperienceControllerTest {
   @DisplayName("deve publicar endDate como null explicito no cargo atual")
   void shouldPublishExplicitNullEndDate_whenRoleIsCurrent() throws Exception {
     // given
-    given(listExperiencesUseCase.listExperiences()).willReturn(umaTimeline());
+    given(listExperiencesUseCase.listExperiences(any())).willReturn(umaTimeline());
 
     // when / then
     mockMvc
@@ -90,7 +91,7 @@ class ExperienceControllerTest {
   @DisplayName("deve responder 200 com array vazio quando nao ha passagens")
   void shouldReturnEmptyArray_whenTimelineIsEmpty() throws Exception {
     // given
-    given(listExperiencesUseCase.listExperiences()).willReturn(Timeline.empty());
+    given(listExperiencesUseCase.listExperiences(any())).willReturn(Timeline.empty());
 
     // when / then
     mockMvc
@@ -104,7 +105,7 @@ class ExperienceControllerTest {
   @DisplayName("deve declarar o mesmo frescor de cache do perfil")
   void shouldSetCacheControl_whenResponding() throws Exception {
     // given
-    given(listExperiencesUseCase.listExperiences()).willReturn(umaTimeline());
+    given(listExperiencesUseCase.listExperiences(any())).willReturn(umaTimeline());
 
     // when / then
     mockMvc
@@ -120,7 +121,8 @@ class ExperienceControllerTest {
     // given
     var semDestaques =
         new Experience("Acme", "Dev", LocalDate.of(2024, 1, 1), null, "Descricao", List.of());
-    given(listExperiencesUseCase.listExperiences()).willReturn(new Timeline(List.of(semDestaques)));
+    given(listExperiencesUseCase.listExperiences(any()))
+        .willReturn(new Timeline(List.of(semDestaques)));
 
     // when / then
     mockMvc

@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.crystofer.portfolio.profile.domain.model.Experience;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadExperiencePort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /** Sem Spring: a porta e um duble, entao o caso de uso roda em milissegundos (secao 13.6). */
 @ExtendWith(MockitoExtension.class)
@@ -33,11 +34,12 @@ class ExperienceServiceTest {
     // given
     var antiga = umaExperiencia("Antiga", 2018);
     var recente = umaExperiencia("Recente", 2024);
-    given(loadExperiencePort.loadExperiences()).willReturn(List.of(antiga, recente));
+    given(loadExperiencePort.loadExperiences(ContentLanguage.PT_BR))
+        .willReturn(List.of(antiga, recente));
     var service = new ExperienceService(loadExperiencePort);
 
     // when
-    var timeline = service.listExperiences();
+    var timeline = service.listExperiences(ContentLanguage.PT_BR);
 
     // then
     assertThat(timeline.experiences()).containsExactly(recente, antiga);
@@ -55,11 +57,11 @@ class ExperienceServiceTest {
   @DisplayName("deve devolver timeline vazia, e nao erro, quando a origem nao tem passagens")
   void shouldReturnEmptyTimeline_whenSourceHasNone() {
     // given
-    given(loadExperiencePort.loadExperiences()).willReturn(List.of());
+    given(loadExperiencePort.loadExperiences(ContentLanguage.PT_BR)).willReturn(List.of());
     var service = new ExperienceService(loadExperiencePort);
 
     // when
-    var timeline = service.listExperiences();
+    var timeline = service.listExperiences(ContentLanguage.PT_BR);
 
     // then
     assertThat(timeline.isEmpty()).isTrue();

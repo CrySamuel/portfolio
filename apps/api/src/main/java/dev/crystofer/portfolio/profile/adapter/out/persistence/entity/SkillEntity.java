@@ -1,11 +1,22 @@
 package dev.crystofer.portfolio.profile.adapter.out.persistence.entity;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+
+import org.hibernate.annotations.BatchSize;
+
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Linha de {@code skill}.
@@ -48,6 +59,15 @@ public class SkillEntity {
   @Column(name = "years_of_experience")
   private Short yearsOfExperience;
 
+  /**
+   * O nome nos outros idiomas, quando ele muda - e quase nunca muda: Java e PostgreSQL se chamam
+   * assim em qualquer idioma. {@code @BatchSize} pela mesma razao das traducoes da categoria.
+   */
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(name = "skill_translation", joinColumns = @JoinColumn(name = "skill_id"))
+  @BatchSize(size = 64)
+  private List<NameTranslation> translations = new ArrayList<>();
+
   /** Exigido pelo Hibernate. Protegido para que ninguem o use por engano. */
   protected SkillEntity() {}
 
@@ -73,5 +93,22 @@ public class SkillEntity {
 
   public Short getYearsOfExperience() {
     return yearsOfExperience;
+  }
+
+  public List<NameTranslation> getTranslations() {
+    return translations;
+  }
+
+  /** Esta competencia com o nome no idioma pedido, ou ela mesma, quando o nome nao muda. */
+  public SkillEntity traduzidoPara(ContentLanguage idioma) {
+    if (idioma.isPadrao()) {
+      return this;
+    }
+
+    return translations.stream()
+        .filter(traducao -> traducao.getLocale().equals(idioma.tag()))
+        .findFirst()
+        .map(traducao -> new SkillEntity(id, traducao.getName(), proficiency, yearsOfExperience))
+        .orElse(this);
   }
 }

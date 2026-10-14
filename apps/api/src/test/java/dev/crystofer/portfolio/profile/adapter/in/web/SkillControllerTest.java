@@ -1,6 +1,7 @@
 package dev.crystofer.portfolio.profile.adapter.in.web;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -40,7 +41,7 @@ class SkillControllerTest {
   @DisplayName("deve devolver as categorias como array json, com as competencias dentro")
   void shouldReturnGroupedCategories_whenUseCaseSucceeds() throws Exception {
     // given
-    given(listSkillsUseCase.listSkills()).willReturn(umCatalogo());
+    given(listSkillsUseCase.listSkills(any())).willReturn(umCatalogo());
 
     // when / then
     mockMvc
@@ -64,7 +65,7 @@ class SkillControllerTest {
   @DisplayName("deve publicar o nivel como codigo minusculo")
   void shouldPublishLowercaseProficiency() throws Exception {
     // given
-    given(listSkillsUseCase.listSkills()).willReturn(umCatalogo());
+    given(listSkillsUseCase.listSkills(any())).willReturn(umCatalogo());
 
     // when / then
     mockMvc
@@ -84,7 +85,7 @@ class SkillControllerTest {
   @DisplayName("deve publicar yearsOfExperience como null explicito quando nao ha numero")
   void shouldPublishExplicitNullYears_whenAbsent() throws Exception {
     // given
-    given(listSkillsUseCase.listSkills()).willReturn(umCatalogo());
+    given(listSkillsUseCase.listSkills(any())).willReturn(umCatalogo());
 
     // when / then
     mockMvc
@@ -96,7 +97,7 @@ class SkillControllerTest {
   @DisplayName("deve responder 200 com array vazio quando nao ha competencias")
   void shouldReturnEmptyArray_whenCatalogIsEmpty() throws Exception {
     // given
-    given(listSkillsUseCase.listSkills()).willReturn(SkillCatalog.empty());
+    given(listSkillsUseCase.listSkills(any())).willReturn(SkillCatalog.empty());
 
     // when / then
     mockMvc
@@ -110,7 +111,7 @@ class SkillControllerTest {
   @DisplayName("deve declarar o mesmo frescor de cache dos outros endpoints")
   void shouldSetCacheControl_whenResponding() throws Exception {
     // given
-    given(listSkillsUseCase.listSkills()).willReturn(umCatalogo());
+    given(listSkillsUseCase.listSkills(any())).willReturn(umCatalogo());
 
     // when / then
     mockMvc
@@ -124,7 +125,7 @@ class SkillControllerTest {
   @DisplayName("nao deve publicar a ordem editorial como campo")
   void shouldNotPublishDisplayOrder() throws Exception {
     // given
-    given(listSkillsUseCase.listSkills()).willReturn(umCatalogo());
+    given(listSkillsUseCase.listSkills(any())).willReturn(umCatalogo());
 
     // when / then
     mockMvc.perform(get("/api/v1/skills")).andExpect(jsonPath("$[0].displayOrder").doesNotExist());

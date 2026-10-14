@@ -9,17 +9,23 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import jakarta.persistence.EntityManagerFactory;
+
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.json.BasicJsonTester;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 
 import dev.crystofer.portfolio.profile.domain.model.Experience;
 import dev.crystofer.portfolio.profile.domain.port.in.ListExperiencesUseCase;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadExperiencePort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 import dev.crystofer.portfolio.support.fixtures.ExperienceFixtures;
 
 /**
@@ -53,6 +59,8 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
   @Autowired ListExperiencesUseCase listExperiencesUseCase;
 
   @Autowired DataSource dataSource;
+
+  @Autowired EntityManagerFactory entityManagerFactory;
 
   /**
    * Tabela vazia antes, seed de producao depois.
@@ -90,7 +98,7 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
         "[\"Reduziu a latência em 40%\", \"Migrou o deploy para contêiner\"]");
 
     // when
-    var experiences = loadExperiencePort.loadExperiences();
+    var experiences = loadExperiencePort.loadExperiences(ContentLanguage.PT_BR);
 
     // then
     assertThat(experiences).hasSize(1);
@@ -109,7 +117,7 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
         """);
 
     // when
-    var experiences = loadExperiencePort.loadExperiences();
+    var experiences = loadExperiencePort.loadExperiences(ContentLanguage.PT_BR);
 
     // then
     assertThat(experiences.getFirst().highlights()).isEmpty();
@@ -123,7 +131,7 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
     inserir("Antiga", "Dev", "2018-01-01", "2020-12-31", "[]");
 
     // when
-    var timeline = listExperiencesUseCase.listExperiences();
+    var timeline = listExperiencesUseCase.listExperiences(ContentLanguage.PT_BR);
 
     // then
     assertThat(timeline.findCurrent()).map(Experience::company).contains("Acme");
@@ -148,7 +156,7 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
     inserir("Recente", "Dev", "2024-02-01", null, "[]");
 
     // when
-    var timeline = listExperiencesUseCase.listExperiences();
+    var timeline = listExperiencesUseCase.listExperiences(ContentLanguage.PT_BR);
 
     // then
     assertThat(timeline.experiences())
@@ -160,7 +168,7 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
   @DisplayName("deve devolver timeline vazia quando a tabela esta vazia")
   void shouldReturnEmptyTimeline_whenTableIsEmpty() {
     // when
-    var timeline = listExperiencesUseCase.listExperiences();
+    var timeline = listExperiencesUseCase.listExperiences(ContentLanguage.PT_BR);
 
     // then
     assertThat(timeline.isEmpty()).isTrue();
@@ -295,6 +303,107 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
 
   private List<String> listarEmpresas() {
     return jdbcTemplate.queryForList("SELECT company FROM experience", String.class);
+  }
+
+  /**
+   * A timeline em ingles, com uma passagem traduzida e outra nao (ADR-0013).
+   *
+   * <p>As duas metades da reserva por linha na mesma resposta: a passagem com traducao sai em
+   * ingles, a sem traducao sai em portugues, e nenhuma some. Empresa e datas nao mudam - nao sao
+   * texto traduzivel.
+   */
+  @Test
+  @DisplayName("deve servir cada passagem no idioma que ela tiver")
+  void shouldServeEachPositionInTheLanguageItHas() {
+    // given
+    long atual = inserirComId("Empresa Atual", "Desenvolvedor Backend", "2022-08-01", null);
+    inserirComId("Empresa Antiga", "Desenvolvedor Junior", "2019-02-01", "2021-07-31");
+    traduzir(atual, "Backend Developer", "[\"Moved the deploy to containers\"]");
+
+    // when
+    var response = getComChaveEmIdioma("/api/v1/experiences", "en-US", String.class);
+
+    // then
+    assertThat(response.getHeaders().getFirst(HttpHeaders.CONTENT_LANGUAGE)).isEqualTo("en-US");
+    var corpo = response.getBody();
+    assertThat(json.from(corpo))
+        .extractingJsonPathStringValue("$[0].role")
+        .isEqualTo("Backend Developer");
+    assertThat(json.from(corpo))
+        .extractingJsonPathStringValue("$[0].highlights[0]")
+        .isEqualTo("Moved the deploy to containers");
+    assertThat(json.from(corpo))
+        .extractingJsonPathStringValue("$[0].company")
+        .isEqualTo("Empresa Atual");
+    assertThat(json.from(corpo))
+        .extractingJsonPathStringValue("$[0].startDate")
+        .isEqualTo("2022-08-01");
+    assertThat(json.from(corpo))
+        .extractingJsonPathStringValue("$[1].role")
+        .isEqualTo("Desenvolvedor Junior");
+  }
+
+  /**
+   * O numero de consultas nao cresce com a timeline, e e o {@code @BatchSize} que garante isso.
+   *
+   * <p>Medido com uma passagem e com tres: o ingles gasta duas consultas nos dois casos - a da
+   * lista e a das traducoes da lista inteira. Sem o lote, seriam uma mais uma por passagem, e a
+   * diferenca so apareceria com tamanhos diferentes: com uma passagem so, N+1 e 2, igual. E por
+   * isso que o teste mede os dois (secao 4.39).
+   */
+  @Test
+  @DisplayName("deve gastar as mesmas consultas com uma passagem e com tres")
+  void shouldKeepQueryCount_whenTimelineGrows() {
+    // given
+    Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+    long primeira = inserirComId("Empresa A", "Cargo A", "2020-01-01", "2020-12-31");
+    traduzir(primeira, "Role A", "[]");
+
+    statistics.clear();
+    getComChaveEmIdioma("/api/v1/experiences", "en-US", String.class);
+    long comUma = statistics.getPrepareStatementCount();
+
+    traduzir(inserirComId("Empresa B", "Cargo B", "2021-01-01", "2021-12-31"), "Role B", "[]");
+    traduzir(inserirComId("Empresa C", "Cargo C", "2022-01-01", null), "Role C", "[]");
+
+    // when
+    statistics.clear();
+    getComChaveEmIdioma("/api/v1/experiences", "en-US", String.class);
+    long comTres = statistics.getPrepareStatementCount();
+
+    statistics.clear();
+    getComChaveEmIdioma("/api/v1/experiences", "pt-BR", String.class);
+    long emPortugues = statistics.getPrepareStatementCount();
+
+    // then
+    assertThat(comUma).isEqualTo(2);
+    assertThat(comTres).isEqualTo(2);
+    assertThat(emPortugues).isEqualTo(1);
+  }
+
+  private long inserirComId(String company, String role, String start, String end) {
+    Long id =
+        jdbcTemplate.queryForObject(
+            INSERIR.strip() + " RETURNING id",
+            Long.class,
+            company,
+            role,
+            start,
+            end,
+            "Descricao",
+            "[]");
+    return id;
+  }
+
+  private void traduzir(long experiencia, String role, String highlightsJson) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO experience_translation (experience_id, locale, role, description, highlights)
+        VALUES (?, 'en-US', ?, 'Description', ?::jsonb)
+        """,
+        experiencia,
+        role,
+        highlightsJson);
   }
 
   private void inserir(

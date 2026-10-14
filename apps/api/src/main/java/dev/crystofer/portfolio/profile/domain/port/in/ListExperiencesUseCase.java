@@ -1,6 +1,7 @@
 package dev.crystofer.portfolio.profile.domain.port.in;
 
 import dev.crystofer.portfolio.profile.domain.model.Timeline;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Porta de entrada: listar a timeline profissional.
@@ -18,5 +19,5 @@ import dev.crystofer.portfolio.profile.domain.model.Timeline;
  */
 public interface ListExperiencesUseCase {
 
-  Timeline listExperiences();
+  Timeline listExperiences(ContentLanguage idioma);
 }

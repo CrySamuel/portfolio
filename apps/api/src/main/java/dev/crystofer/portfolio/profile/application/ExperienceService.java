@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import dev.crystofer.portfolio.profile.domain.model.Timeline;
 import dev.crystofer.portfolio.profile.domain.port.in.ListExperiencesUseCase;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadExperiencePort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Orquestra a leitura da timeline.
@@ -28,7 +29,7 @@ public class ExperienceService implements ListExperiencesUseCase {
   }
 
   @Override
-  public Timeline listExperiences() {
-    return new Timeline(loadExperiencePort.loadExperiences());
+  public Timeline listExperiences(ContentLanguage idioma) {
+    return new Timeline(loadExperiencePort.loadExperiences(idioma));
   }
 }

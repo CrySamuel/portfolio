@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import dev.crystofer.portfolio.profile.domain.model.SkillCatalog;
 import dev.crystofer.portfolio.profile.domain.port.in.ListSkillsUseCase;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadSkillPort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Orquestra a leitura das competencias.
@@ -26,7 +27,7 @@ public class SkillService implements ListSkillsUseCase {
   }
 
   @Override
-  public SkillCatalog listSkills() {
-    return new SkillCatalog(loadSkillPort.loadSkillCategories());
+  public SkillCatalog listSkills(ContentLanguage idioma) {
+    return new SkillCatalog(loadSkillPort.loadSkillCategories(idioma));
   }
 }

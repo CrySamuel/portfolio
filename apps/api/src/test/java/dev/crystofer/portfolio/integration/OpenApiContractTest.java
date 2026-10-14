@@ -454,7 +454,7 @@ class OpenApiContractTest extends AbstractIntegrationTest {
    * {@code Vary}. Opcional, porque quem nao pede recebe portugues, como sempre recebeu.
    */
   @ParameterizedTest(name = "{0}")
-  @ValueSource(strings = {"/api/v1/profile"})
+  @ValueSource(strings = {"/api/v1/profile", "/api/v1/experiences", "/api/v1/skills"})
   @DisplayName("as rotas de conteudo publicam o Accept-Language e o Content-Language")
   void shouldPublishLanguageNegotiation_forContentRoutes(String rota) {
     String body = fetchApiDocs();

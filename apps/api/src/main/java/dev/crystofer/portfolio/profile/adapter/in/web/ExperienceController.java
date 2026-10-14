@@ -4,16 +4,21 @@ import java.time.Duration;
 import java.util.List;
 
 import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import dev.crystofer.portfolio.profile.adapter.in.web.dto.ExperienceResponse;
 import dev.crystofer.portfolio.profile.adapter.in.web.mapper.ExperienceWebMapper;
 import dev.crystofer.portfolio.profile.domain.port.in.ListExperiencesUseCase;
+import dev.crystofer.portfolio.shared.web.LanguageNegotiation;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -65,9 +70,19 @@ public class ExperienceController {
       summary = "Lista a timeline profissional",
       description =
           "Passagens em ordem cronologica decrescente. Data de saida nula significa cargo atual.")
-  @ApiResponse(responseCode = "200", description = "Timeline, possivelmente vazia")
-  public ResponseEntity<List<ExperienceResponse>> listExperiences() {
-    var timeline = listExperiencesUseCase.listExperiences();
-    return ResponseEntity.ok().cacheControl(CACHE).body(mapper.toResponse(timeline.experiences()));
+  @ApiResponse(
+      responseCode = "200",
+      description = "Timeline, possivelmente vazia",
+      headers =
+          @Header(
+              name = HttpHeaders.CONTENT_LANGUAGE,
+              description = LanguageNegotiation.DESCRICAO_DO_IDIOMA_ENTREGUE))
+  public ResponseEntity<List<ExperienceResponse>> listExperiences(
+      @Parameter(description = LanguageNegotiation.DESCRICAO_DO_PEDIDO, example = "en-US")
+          @RequestHeader(name = HttpHeaders.ACCEPT_LANGUAGE, required = false)
+          String acceptLanguage) {
+    var idioma = LanguageNegotiation.negociar(acceptLanguage);
+    var timeline = listExperiencesUseCase.listExperiences(idioma);
+    return LanguageNegotiation.responder(idioma, CACHE, mapper.toResponse(timeline.experiences()));
   }
 }

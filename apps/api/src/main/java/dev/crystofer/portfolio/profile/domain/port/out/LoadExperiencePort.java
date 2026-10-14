@@ -3,6 +3,7 @@ package dev.crystofer.portfolio.profile.domain.port.out;
 import java.util.List;
 
 import dev.crystofer.portfolio.profile.domain.model.Experience;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Porta de saida: carregar as passagens de onde quer que estejam guardadas.
@@ -25,5 +26,5 @@ public interface LoadExperiencePort {
   /**
    * @return as passagens registradas, possivelmente vazia
    */
-  List<Experience> loadExperiences();
+  List<Experience> loadExperiences(ContentLanguage idioma);
 }

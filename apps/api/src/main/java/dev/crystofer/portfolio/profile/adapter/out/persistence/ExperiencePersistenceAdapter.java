@@ -9,6 +9,7 @@ import dev.crystofer.portfolio.profile.adapter.out.persistence.mapper.Experience
 import dev.crystofer.portfolio.profile.adapter.out.persistence.repository.ExperienceJpaRepository;
 import dev.crystofer.portfolio.profile.domain.model.Experience;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadExperiencePort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Implementa {@link LoadExperiencePort} com JPA.
@@ -38,7 +39,9 @@ public class ExperiencePersistenceAdapter implements LoadExperiencePort {
    */
   @Override
   @Transactional(readOnly = true)
-  public List<Experience> loadExperiences() {
-    return repository.findAllByOrderByStartDateDesc().stream().map(mapper::toDomain).toList();
+  public List<Experience> loadExperiences(ContentLanguage idioma) {
+    return repository.findAllByOrderByStartDateDesc().stream()
+        .map(experiencia -> mapper.toDomain(experiencia.traduzidoPara(idioma)))
+        .toList();
   }
 }

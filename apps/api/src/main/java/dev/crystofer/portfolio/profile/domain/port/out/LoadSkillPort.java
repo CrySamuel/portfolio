@@ -3,6 +3,7 @@ package dev.crystofer.portfolio.profile.domain.port.out;
 import java.util.List;
 
 import dev.crystofer.portfolio.profile.domain.model.SkillCategory;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Porta de saida: carregar as categorias com suas competencias.
@@ -18,5 +19,5 @@ public interface LoadSkillPort {
   /**
    * @return as categorias registradas, possivelmente vazia
    */
-  List<SkillCategory> loadSkillCategories();
+  List<SkillCategory> loadSkillCategories(ContentLanguage idioma);
 }

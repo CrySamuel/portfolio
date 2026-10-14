@@ -1,17 +1,25 @@
 package dev.crystofer.portfolio.profile.adapter.out.persistence.entity;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Linha de {@code experience}.
@@ -68,6 +76,20 @@ public class ExperienceEntity {
   @Column(nullable = false)
   private List<String> highlights;
 
+  /**
+   * O texto da passagem nos outros idiomas (ADR-0013).
+   *
+   * <p>{@code @BatchSize} porque a timeline e uma lista: sem ele, cada passagem buscaria a propria
+   * traducao numa consulta, e o ingles viraria N+1 - o defeito que o adaptador de projetos ja pagou
+   * uma vez. Com ele, as traducoes da lista inteira chegam numa consulta so.
+   */
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(
+      name = "experience_translation",
+      joinColumns = @JoinColumn(name = "experience_id"))
+  @BatchSize(size = 32)
+  private List<ExperienceTranslation> translations = new ArrayList<>();
+
   /** Exigido pelo Hibernate. Protegido para que ninguem o use por engano. */
   protected ExperienceEntity() {}
 
@@ -120,5 +142,34 @@ public class ExperienceEntity {
 
   public List<String> getHighlights() {
     return highlights;
+  }
+
+  public List<ExperienceTranslation> getTranslations() {
+    return translations;
+  }
+
+  /**
+   * Esta passagem com o texto no idioma pedido, ou ela mesma - o mesmo contrato de {@link
+   * ProfileEntity#traduzidoPara}: copia nunca gerenciada, reserva por linha, mapper intocado.
+   */
+  public ExperienceEntity traduzidoPara(ContentLanguage idioma) {
+    if (idioma.isPadrao()) {
+      return this;
+    }
+
+    return translations.stream()
+        .filter(traducao -> traducao.getLocale().equals(idioma.tag()))
+        .findFirst()
+        .map(
+            traducao ->
+                new ExperienceEntity(
+                    id,
+                    company,
+                    traducao.getRole(),
+                    startDate,
+                    endDate,
+                    traducao.getDescription(),
+                    traducao.getHighlights()))
+        .orElse(this);
   }
 }

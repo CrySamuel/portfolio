@@ -9,6 +9,7 @@ import dev.crystofer.portfolio.profile.adapter.out.persistence.mapper.SkillPersi
 import dev.crystofer.portfolio.profile.adapter.out.persistence.repository.SkillCategoryJpaRepository;
 import dev.crystofer.portfolio.profile.domain.model.SkillCategory;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadSkillPort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Implementa {@link LoadSkillPort} com JPA.
@@ -34,7 +35,9 @@ public class SkillPersistenceAdapter implements LoadSkillPort {
    */
   @Override
   @Transactional(readOnly = true)
-  public List<SkillCategory> loadSkillCategories() {
-    return repository.findAllByOrderByDisplayOrderAsc().stream().map(mapper::toDomain).toList();
+  public List<SkillCategory> loadSkillCategories(ContentLanguage idioma) {
+    return repository.findAllByOrderByDisplayOrderAsc().stream()
+        .map(categoria -> mapper.toDomain(categoria.traduzidoPara(idioma)))
+        .toList();
   }
 }

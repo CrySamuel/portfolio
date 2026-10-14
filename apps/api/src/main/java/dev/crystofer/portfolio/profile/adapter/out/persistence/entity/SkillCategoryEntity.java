@@ -3,7 +3,9 @@ package dev.crystofer.portfolio.profile.adapter.out.persistence.entity;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -13,6 +15,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+
+import org.hibernate.annotations.BatchSize;
+
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Linha de {@code skill_category}, com as competencias associadas.
@@ -62,6 +68,17 @@ public class SkillCategoryEntity {
   @OrderBy("name ASC")
   private List<SkillEntity> skills = new ArrayList<>();
 
+  /**
+   * O nome da categoria nos outros idiomas (ADR-0013). {@code @BatchSize} porque o catalogo e uma
+   * lista: as traducoes de todas as categorias chegam numa consulta, e nao numa por categoria.
+   */
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(
+      name = "skill_category_translation",
+      joinColumns = @JoinColumn(name = "category_id"))
+  @BatchSize(size = 32)
+  private List<NameTranslation> translations = new ArrayList<>();
+
   /** Exigido pelo Hibernate. Protegido para que ninguem o use por engano. */
   protected SkillCategoryEntity() {}
 
@@ -87,5 +104,35 @@ public class SkillCategoryEntity {
 
   public List<SkillEntity> getSkills() {
     return skills;
+  }
+
+  public List<NameTranslation> getTranslations() {
+    return translations;
+  }
+
+  /**
+   * Esta categoria no idioma pedido - o nome dela e o de cada competencia.
+   *
+   * <p><strong>Traduz as competencias mesmo quando a categoria nao tem traducao.</strong> As duas
+   * reservas sao independentes: uma categoria ainda sem nome em ingles pode ter uma competencia que
+   * ja tem, e devolver a categoria intocada esconderia essa traducao.
+   */
+  public SkillCategoryEntity traduzidoPara(ContentLanguage idioma) {
+    if (idioma.isPadrao()) {
+      return this;
+    }
+
+    String nomeTraduzido =
+        translations.stream()
+            .filter(traducao -> traducao.getLocale().equals(idioma.tag()))
+            .findFirst()
+            .map(NameTranslation::getName)
+            .orElse(name);
+
+    return new SkillCategoryEntity(
+        id,
+        nomeTraduzido,
+        displayOrder,
+        skills.stream().map(skill -> skill.traduzidoPara(idioma)).toList());
   }
 }
