@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import dev.crystofer.portfolio.projects.domain.model.Project;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 import dev.crystofer.portfolio.shared.domain.Slug;
 
 /**
@@ -25,10 +26,10 @@ public interface LoadProjectPort {
   /**
    * @return os projetos registrados, possivelmente vazia
    */
-  List<Project> loadProjects();
+  List<Project> loadProjects(ContentLanguage idioma);
 
   /**
    * @return o projeto do slug, ou vazio se nao houver
    */
-  Optional<Project> loadProjectBySlug(Slug slug);
+  Optional<Project> loadProjectBySlug(Slug slug, ContentLanguage idioma);
 }

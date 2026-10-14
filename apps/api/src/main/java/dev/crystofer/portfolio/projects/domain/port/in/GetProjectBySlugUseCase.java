@@ -1,6 +1,7 @@
 package dev.crystofer.portfolio.projects.domain.port.in;
 
 import dev.crystofer.portfolio.projects.domain.model.Project;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 import dev.crystofer.portfolio.shared.domain.Slug;
 
 /**
@@ -21,5 +22,5 @@ import dev.crystofer.portfolio.shared.domain.Slug;
  */
 public interface GetProjectBySlugUseCase {
 
-  Project getProjectBySlug(Slug slug);
+  Project getProjectBySlug(Slug slug, ContentLanguage idioma);
 }

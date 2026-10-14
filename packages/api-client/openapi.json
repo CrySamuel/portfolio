@@ -121,9 +121,27 @@
         "summary": "Lista os projetos do catalogo",
         "description": "Projetos em ordem editorial. Sem a narrativa e sem os enderecos, que sao do detalhe.",
         "operationId": "listProjects",
+        "parameters": [
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "description": "Idioma preferido do conteudo, no formato do Accept-Language (RFC 4647). Existem pt-BR e en-US; en casa com en-US. Ausente, malformado ou sem idioma suportado: pt-BR.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "en-US"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Catalogo, possivelmente vazio",
+            "headers": {
+              "Content-Language": {
+                "description": "Idioma do conteudo entregue: pt-BR ou en-US. A resposta varia pelo Accept-Language.",
+                "style": "simple"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -152,11 +170,27 @@
             "schema": {
               "$ref": "#/components/schemas/Slug"
             }
+          },
+          {
+            "name": "Accept-Language",
+            "in": "header",
+            "description": "Idioma preferido do conteudo, no formato do Accept-Language (RFC 4647). Existem pt-BR e en-US; en casa com en-US. Ausente, malformado ou sem idioma suportado: pt-BR.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "en-US"
           }
         ],
         "responses": {
           "200": {
             "description": "Projeto encontrado",
+            "headers": {
+              "Content-Language": {
+                "description": "Idioma do conteudo entregue: pt-BR ou en-US. A resposta varia pelo Accept-Language.",
+                "style": "simple"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {

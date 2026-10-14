@@ -119,4 +119,32 @@ public final class ProjectFixtures {
 
     return projectId;
   }
+
+  /**
+   * Traduz para en-US o titulo e a narrativa do projeto do slug. O titulo traduzido e o unico que o
+   * teste escolhe; a narrativa leva um sufixo, para que se veja de onde veio.
+   */
+  public static void translateProject(JdbcTemplate jdbcTemplate, String slug, String title) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO project_translation (project_id, locale, title, summary, problem, solution,
+                                         outcome)
+        SELECT id, 'en-US', ?, 'Card summary.', 'The problem.', 'The solution.', 'The outcome.'
+        FROM project WHERE slug = ?
+        """,
+        title,
+        slug);
+  }
+
+  /** Traduz todas as metricas do projeto do slug: o rotulo ganha " (en)", o valor fica igual. */
+  public static void translateMetrics(JdbcTemplate jdbcTemplate, String slug) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO project_metric_translation (metric_id, locale, label, value)
+        SELECT m.id, 'en-US', m.label || ' (en)', m.value
+        FROM project_metric m JOIN project p ON p.id = m.project_id
+        WHERE p.slug = ?
+        """,
+        slug);
+  }
 }

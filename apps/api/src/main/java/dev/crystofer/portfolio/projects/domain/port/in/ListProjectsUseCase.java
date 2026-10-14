@@ -1,6 +1,7 @@
 package dev.crystofer.portfolio.projects.domain.port.in;
 
 import dev.crystofer.portfolio.projects.domain.model.ProjectCatalog;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Porta de entrada: listar o catalogo de projetos.
@@ -15,5 +16,5 @@ import dev.crystofer.portfolio.projects.domain.model.ProjectCatalog;
  */
 public interface ListProjectsUseCase {
 
-  ProjectCatalog listProjects();
+  ProjectCatalog listProjects(ContentLanguage idioma);
 }

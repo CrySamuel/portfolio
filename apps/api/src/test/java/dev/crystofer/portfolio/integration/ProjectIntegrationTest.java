@@ -2,6 +2,8 @@ package dev.crystofer.portfolio.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import javax.sql.DataSource;
 
 import jakarta.persistence.EntityManagerFactory;
@@ -274,6 +276,32 @@ class ProjectIntegrationTest extends AbstractIntegrationTest {
   }
 
   /** O mesmo para tecnologia, cuja remocao so e possivel depois de os vinculos sairem. */
+  /**
+   * As duas rotas pelo HTTP, em ingles: declaram o idioma, variam por ele, e o detalhe chega pelo
+   * mesmo slug. E o slug que mantem {@code /projetos/finai} e {@code /en-US/projects/finai} como o
+   * mesmo projeto.
+   */
+  @Test
+  @DisplayName("deve servir listagem e detalhe no idioma pedido, pelo mesmo slug")
+  void shouldServeBothRoutes_inTheRequestedLanguage() {
+    // given
+    ProjectFixtures.insertProject(jdbcTemplate, "finai", "FinAI", true, 0, 2, 1);
+    ProjectFixtures.translateProject(jdbcTemplate, "finai", "FinAI in English");
+
+    // when
+    var listagem = getComChaveEmIdioma("/api/v1/projects", "en-US", String.class);
+    var detalhe = getComChaveEmIdioma("/api/v1/projects/finai", "en-US", String.class);
+
+    // then
+    for (var resposta : List.of(listagem, detalhe)) {
+      assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.OK);
+      assertThat(resposta.getHeaders().getFirst(HttpHeaders.CONTENT_LANGUAGE)).isEqualTo("en-US");
+      assertThat(resposta.getHeaders().getVary()).contains(HttpHeaders.ACCEPT_LANGUAGE);
+    }
+    assertThat(listagem.getBody()).contains("\"title\":\"FinAI in English\"");
+    assertThat(detalhe.getBody()).contains("\"slug\":\"finai\"", "\"problem\":\"The problem.\"");
+  }
+
   @Test
   @DisplayName("deve remover a tecnologia que sai da lista do seed")
   void shouldRemoveTechnology_whenItLeavesTheSeedList() {

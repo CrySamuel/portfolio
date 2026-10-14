@@ -1,6 +1,8 @@
 package dev.crystofer.portfolio.projects.adapter.in.web;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -43,7 +45,7 @@ class ProjectControllerTest {
   @DisplayName("deve responder a listagem como array puro")
   void shouldRespondListing_asABareArray() throws Exception {
     // given
-    given(listProjectsUseCase.listProjects())
+    given(listProjectsUseCase.listProjects(any()))
         .willReturn(
             new ProjectCatalog(
                 List.of(
@@ -71,7 +73,7 @@ class ProjectControllerTest {
   @Test
   @DisplayName("deve omitir narrativa e enderecos do resumo")
   void shouldOmitNarrativeAndUrls_fromTheSummary() throws Exception {
-    given(listProjectsUseCase.listProjects())
+    given(listProjectsUseCase.listProjects(any()))
         .willReturn(new ProjectCatalog(List.of(ProjectSamples.projetoCompleto())));
 
     var corpo =
@@ -92,7 +94,8 @@ class ProjectControllerTest {
   void shouldRespondDetail_withTheFullNarrative() throws Exception {
     // given
     Project projeto = ProjectSamples.projetoCompleto();
-    given(getProjectBySlugUseCase.getProjectBySlug(Slug.of("finai"))).willReturn(projeto);
+    given(getProjectBySlugUseCase.getProjectBySlug(eq(Slug.of("finai")), any()))
+        .willReturn(projeto);
 
     // when / then
     mockMvc
@@ -117,7 +120,7 @@ class ProjectControllerTest {
   @Test
   @DisplayName("deve publicar os nulaveis presentes e nulos")
   void shouldPublishNullable_asPresentAndNull() throws Exception {
-    given(getProjectBySlugUseCase.getProjectBySlug(Slug.of("interno")))
+    given(getProjectBySlugUseCase.getProjectBySlug(eq(Slug.of("interno")), any()))
         .willReturn(ProjectSamples.projeto("interno", "Interno", 0, false));
 
     mockMvc
@@ -132,7 +135,7 @@ class ProjectControllerTest {
   @Test
   @DisplayName("deve responder 404 em problem+json quando o slug nao existe")
   void shouldRespond404_whenSlugIsUnknown() throws Exception {
-    given(getProjectBySlugUseCase.getProjectBySlug(Slug.of("nao-existe")))
+    given(getProjectBySlugUseCase.getProjectBySlug(eq(Slug.of("nao-existe")), any()))
         .willThrow(new ResourceNotFoundException("project", "Projeto nao encontrado: nao-existe"));
 
     mockMvc

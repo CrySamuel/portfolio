@@ -7,6 +7,7 @@ import dev.crystofer.portfolio.projects.domain.model.ProjectCatalog;
 import dev.crystofer.portfolio.projects.domain.port.in.GetProjectBySlugUseCase;
 import dev.crystofer.portfolio.projects.domain.port.in.ListProjectsUseCase;
 import dev.crystofer.portfolio.projects.domain.port.out.LoadProjectPort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 import dev.crystofer.portfolio.shared.domain.Slug;
 import dev.crystofer.portfolio.shared.error.ResourceNotFoundException;
 
@@ -43,8 +44,8 @@ public class ProjectService implements ListProjectsUseCase, GetProjectBySlugUseC
    * adaptador ter lembrado do {@code ORDER BY}.
    */
   @Override
-  public ProjectCatalog listProjects() {
-    return new ProjectCatalog(loadProjectPort.loadProjects());
+  public ProjectCatalog listProjects(ContentLanguage idioma) {
+    return new ProjectCatalog(loadProjectPort.loadProjects(idioma));
   }
 
   /**
@@ -55,9 +56,9 @@ public class ProjectService implements ListProjectsUseCase, GetProjectBySlugUseC
    * infraestrutura fica no log do {@code GlobalExceptionHandler} (secao 2.4).
    */
   @Override
-  public Project getProjectBySlug(Slug slug) {
+  public Project getProjectBySlug(Slug slug, ContentLanguage idioma) {
     return loadProjectPort
-        .loadProjectBySlug(slug)
+        .loadProjectBySlug(slug, idioma)
         .orElseThrow(
             () ->
                 new ResourceNotFoundException(

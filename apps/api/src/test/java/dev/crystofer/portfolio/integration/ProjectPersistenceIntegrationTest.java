@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import dev.crystofer.portfolio.projects.domain.model.Project;
 import dev.crystofer.portfolio.projects.domain.model.Technology;
 import dev.crystofer.portfolio.projects.domain.port.out.LoadProjectPort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 import dev.crystofer.portfolio.shared.domain.Slug;
 import dev.crystofer.portfolio.support.fixtures.ProjectFixtures;
 
@@ -66,7 +67,7 @@ class ProjectPersistenceIntegrationTest extends AbstractIntegrationTest {
     ProjectFixtures.insertProject(jdbcTemplate, "finai", "FinAI", true, 0, 3, 2);
 
     // when
-    List<Project> projetos = loadProjectPort.loadProjects();
+    List<Project> projetos = loadProjectPort.loadProjects(ContentLanguage.PT_BR);
 
     // then
     assertThat(projetos).hasSize(1);
@@ -95,7 +96,7 @@ class ProjectPersistenceIntegrationTest extends AbstractIntegrationTest {
     Statistics statistics = estatisticasLimpas();
 
     // when
-    List<Project> projetos = loadProjectPort.loadProjects();
+    List<Project> projetos = loadProjectPort.loadProjects(ContentLanguage.PT_BR);
 
     // then
     assertThat(projetos).hasSize(3);
@@ -116,7 +117,7 @@ class ProjectPersistenceIntegrationTest extends AbstractIntegrationTest {
     Statistics statistics = estatisticasLimpas();
 
     // when
-    loadProjectPort.loadProjects();
+    loadProjectPort.loadProjects(ContentLanguage.PT_BR);
 
     // then
     assertThat(statistics.getPrepareStatementCount()).isEqualTo(2);
@@ -131,7 +132,7 @@ class ProjectPersistenceIntegrationTest extends AbstractIntegrationTest {
     Statistics statistics = estatisticasLimpas();
 
     // when
-    var encontrado = loadProjectPort.loadProjectBySlug(Slug.of("portfolio"));
+    var encontrado = loadProjectPort.loadProjectBySlug(Slug.of("portfolio"), ContentLanguage.PT_BR);
 
     // then
     assertThat(encontrado).isPresent();
@@ -148,7 +149,8 @@ class ProjectPersistenceIntegrationTest extends AbstractIntegrationTest {
   void shouldReturnEmpty_whenSlugIsUnknown() {
     ProjectFixtures.insertProject(jdbcTemplate, "finai", "FinAI", true, 0, 1, 1);
 
-    assertThat(loadProjectPort.loadProjectBySlug(Slug.of("nao-existe"))).isEmpty();
+    assertThat(loadProjectPort.loadProjectBySlug(Slug.of("nao-existe"), ContentLanguage.PT_BR))
+        .isEmpty();
   }
 
   /**
@@ -161,7 +163,7 @@ class ProjectPersistenceIntegrationTest extends AbstractIntegrationTest {
   @Test
   @DisplayName("deve devolver lista vazia quando nao ha projeto nenhum")
   void shouldReturnEmptyList_whenThereAreNoProjects() {
-    assertThat(loadProjectPort.loadProjects()).isEmpty();
+    assertThat(loadProjectPort.loadProjects(ContentLanguage.PT_BR)).isEmpty();
   }
 
   /**
@@ -175,11 +177,99 @@ class ProjectPersistenceIntegrationTest extends AbstractIntegrationTest {
   void shouldLoadProject_whenCollectionsAreEmpty() {
     ProjectFixtures.insertProject(jdbcTemplate, "vazio", "Vazio", false, 0, 0, 0);
 
-    List<Project> projetos = loadProjectPort.loadProjects();
+    List<Project> projetos = loadProjectPort.loadProjects(ContentLanguage.PT_BR);
 
     assertThat(projetos).hasSize(1);
     assertThat(projetos.get(0).technologies()).isEmpty();
     assertThat(projetos.get(0).metrics()).isEmpty();
+  }
+
+  /**
+   * O projeto em ingles: titulo e narrativa traduzidos, metricas traduzidas, e o que nao e texto
+   * intocado - o slug e o mesmo em qualquer idioma, porque e o endereco publico (ADR-0013).
+   */
+  @Test
+  @DisplayName("deve carregar o projeto traduzido, com slug e tecnologias intactos")
+  void shouldLoadTranslatedProject_keepingWhatIsNotText() {
+    // given
+    ProjectFixtures.insertProject(jdbcTemplate, "finai", "FinAI", true, 0, 2, 2);
+    ProjectFixtures.translateProject(jdbcTemplate, "finai", "FinAI (en)");
+    ProjectFixtures.translateMetrics(jdbcTemplate, "finai");
+
+    // when
+    var projeto =
+        loadProjectPort.loadProjectBySlug(Slug.of("finai"), ContentLanguage.EN_US).orElseThrow();
+
+    // then
+    assertThat(projeto.title()).isEqualTo("FinAI (en)");
+    assertThat(projeto.problem()).isEqualTo("The problem.");
+    assertThat(projeto.slug()).isEqualTo(Slug.of("finai"));
+    assertThat(projeto.technologies()).hasSize(2);
+    assertThat(projeto.metrics())
+        .allSatisfy(metrica -> assertThat(metrica.label()).endsWith("(en)"));
+  }
+
+  /**
+   * As reservas sao independentes: projeto ainda sem narrativa em ingles nao esconde as metricas
+   * que ja tem. A implementacao que devolvesse o projeto intocado por falta da traducao dele
+   * passaria no teste acima e falharia aqui.
+   */
+  @Test
+  @DisplayName("deve traduzir as metricas mesmo quando o projeto nao tem traducao")
+  void shouldTranslateMetrics_evenWhenProjectHasNoTranslation() {
+    // given
+    ProjectFixtures.insertProject(jdbcTemplate, "finai", "FinAI", true, 0, 1, 2);
+    ProjectFixtures.translateMetrics(jdbcTemplate, "finai");
+
+    // when
+    var projeto =
+        loadProjectPort.loadProjectBySlug(Slug.of("finai"), ContentLanguage.EN_US).orElseThrow();
+
+    // then
+    assertThat(projeto.title()).isEqualTo("FinAI");
+    assertThat(projeto.metrics())
+        .allSatisfy(metrica -> assertThat(metrica.label()).endsWith("(en)"));
+  }
+
+  /**
+   * Quatro consultas em ingles, com um projeto e com tres: projetos e tecnologias, o lote de
+   * metricas, o lote de traducoes dos projetos e o das metricas. Em portugues, as duas de sempre. A
+   * igualdade entre os tamanhos e o que prova os lotes (secao 4.39).
+   */
+  @Test
+  @DisplayName("deve manter as consultas em ingles constantes quando ha mais projetos")
+  void shouldKeepEnglishQueryCountConstant_whenThereAreMoreProjects() {
+    // given
+    ProjectFixtures.insertProject(jdbcTemplate, "finai", "FinAI", true, 0, 2, 2);
+    ProjectFixtures.translateProject(jdbcTemplate, "finai", "FinAI (en)");
+    ProjectFixtures.translateMetrics(jdbcTemplate, "finai");
+
+    Statistics statistics = estatisticasLimpas();
+    loadProjectPort.loadProjects(ContentLanguage.EN_US);
+    long comUm = statistics.getPrepareStatementCount();
+
+    for (String slug : List.of("portfolio", "terceiro")) {
+      ProjectFixtures.insertProject(jdbcTemplate, slug, slug, false, 1, 3, 2);
+      ProjectFixtures.translateProject(jdbcTemplate, slug, slug + " (en)");
+      ProjectFixtures.translateMetrics(jdbcTemplate, slug);
+    }
+
+    // when
+    statistics.clear();
+    List<Project> projetos = loadProjectPort.loadProjects(ContentLanguage.EN_US);
+    long comTres = statistics.getPrepareStatementCount();
+
+    statistics.clear();
+    loadProjectPort.loadProjects(ContentLanguage.PT_BR);
+    long emPortugues = statistics.getPrepareStatementCount();
+
+    // then
+    assertThat(projetos)
+        .extracting(Project::title)
+        .allSatisfy(titulo -> assertThat(titulo).endsWith("(en)"));
+    assertThat(comUm).isEqualTo(4);
+    assertThat(comTres).isEqualTo(4);
+    assertThat(emPortugues).isEqualTo(2);
   }
 
   private Statistics estatisticasLimpas() {

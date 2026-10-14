@@ -1,11 +1,22 @@
 package dev.crystofer.portfolio.projects.adapter.out.persistence.entity;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
+
+import org.hibernate.annotations.BatchSize;
+
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Linha de {@code project_metric}.
@@ -37,6 +48,17 @@ public class ProjectMetricEntity {
   @Column(name = "display_order", nullable = false)
   private short displayOrder;
 
+  /**
+   * O rotulo e o valor nos outros idiomas. {@code @BatchSize} porque as metricas ja chegam em lote,
+   * e as traducoes delas precisam chegar da mesma forma - uma consulta para todas.
+   */
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(
+      name = "project_metric_translation",
+      joinColumns = @JoinColumn(name = "metric_id"))
+  @BatchSize(size = 64)
+  private List<MetricTranslation> translations = new ArrayList<>();
+
   /** Exigido pelo Hibernate. Protegido para que ninguem o use por engano. */
   protected ProjectMetricEntity() {}
 
@@ -62,5 +84,24 @@ public class ProjectMetricEntity {
 
   public short getDisplayOrder() {
     return displayOrder;
+  }
+
+  public List<MetricTranslation> getTranslations() {
+    return translations;
+  }
+
+  /** Esta metrica com rotulo e valor no idioma pedido, ou ela mesma. */
+  public ProjectMetricEntity traduzidoPara(ContentLanguage idioma) {
+    if (idioma.isPadrao()) {
+      return this;
+    }
+
+    return translations.stream()
+        .filter(traducao -> traducao.getLocale().equals(idioma.tag()))
+        .findFirst()
+        .map(
+            traducao ->
+                new ProjectMetricEntity(id, traducao.getLabel(), traducao.getValue(), displayOrder))
+        .orElse(this);
   }
 }

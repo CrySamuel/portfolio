@@ -10,6 +10,7 @@ import dev.crystofer.portfolio.projects.adapter.out.persistence.mapper.ProjectPe
 import dev.crystofer.portfolio.projects.adapter.out.persistence.repository.ProjectJpaRepository;
 import dev.crystofer.portfolio.projects.domain.model.Project;
 import dev.crystofer.portfolio.projects.domain.port.out.LoadProjectPort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 import dev.crystofer.portfolio.shared.domain.Slug;
 
 /**
@@ -41,13 +42,17 @@ public class ProjectPersistenceAdapter implements LoadProjectPort {
    */
   @Override
   @Transactional(readOnly = true)
-  public List<Project> loadProjects() {
-    return repository.findAllByOrderByDisplayOrderAsc().stream().map(mapper::toDomain).toList();
+  public List<Project> loadProjects(ContentLanguage idioma) {
+    return repository.findAllByOrderByDisplayOrderAsc().stream()
+        .map(projeto -> mapper.toDomain(projeto.traduzidoPara(idioma)))
+        .toList();
   }
 
   @Override
   @Transactional(readOnly = true)
-  public Optional<Project> loadProjectBySlug(Slug slug) {
-    return repository.findBySlug(slug.value()).map(mapper::toDomain);
+  public Optional<Project> loadProjectBySlug(Slug slug, ContentLanguage idioma) {
+    return repository
+        .findBySlug(slug.value())
+        .map(projeto -> mapper.toDomain(projeto.traduzidoPara(idioma)));
   }
 }

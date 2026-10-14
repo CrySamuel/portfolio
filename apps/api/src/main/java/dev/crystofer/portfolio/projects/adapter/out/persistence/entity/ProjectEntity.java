@@ -4,7 +4,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -18,6 +20,8 @@ import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 
 import org.hibernate.annotations.BatchSize;
+
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
  * Linha de {@code project}, com as tecnologias e as metricas associadas.
@@ -122,6 +126,15 @@ public class ProjectEntity {
   @BatchSize(size = 32)
   private List<ProjectMetricEntity> metrics = new ArrayList<>();
 
+  /**
+   * Titulo e narrativa nos outros idiomas (ADR-0013). {@code @BatchSize} porque o catalogo e uma
+   * lista - a mesma razao das metricas logo acima, e o mesmo defeito evitado.
+   */
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(name = "project_translation", joinColumns = @JoinColumn(name = "project_id"))
+  @BatchSize(size = 32)
+  private List<ProjectTranslation> translations = new ArrayList<>();
+
   /** Exigido pelo Hibernate. Protegido para que ninguem o use por engano. */
   protected ProjectEntity() {}
 
@@ -217,5 +230,46 @@ public class ProjectEntity {
 
   public List<ProjectMetricEntity> getMetrics() {
     return metrics;
+  }
+
+  public List<ProjectTranslation> getTranslations() {
+    return translations;
+  }
+
+  /**
+   * Este projeto no idioma pedido: titulo, narrativa e metricas.
+   *
+   * <p>As reservas sao independentes, como na categoria de competencias: um projeto ainda sem
+   * narrativa em ingles pode ter metricas que ja tem, e as metricas sao traduzidas de qualquer
+   * forma. Slug, enderecos, datas e tecnologias passam iguais - nao sao texto traduzivel.
+   */
+  public ProjectEntity traduzidoPara(ContentLanguage idioma) {
+    if (idioma.isPadrao()) {
+      return this;
+    }
+
+    var traducao =
+        translations.stream()
+            .filter(candidata -> candidata.getLocale().equals(idioma.tag()))
+            .findFirst();
+    var metricasTraduzidas =
+        metrics.stream().map(metrica -> metrica.traduzidoPara(idioma)).toList();
+
+    return new ProjectEntity(
+        id,
+        slug,
+        traducao.map(ProjectTranslation::getTitle).orElse(title),
+        traducao.map(ProjectTranslation::getSummary).orElse(summary),
+        traducao.map(ProjectTranslation::getProblem).orElse(problem),
+        traducao.map(ProjectTranslation::getSolution).orElse(solution),
+        traducao.map(ProjectTranslation::getOutcome).orElse(outcome),
+        repoUrl,
+        liveUrl,
+        coverImage,
+        featured,
+        displayOrder,
+        publishedAt,
+        technologies,
+        metricasTraduzidas);
   }
 }

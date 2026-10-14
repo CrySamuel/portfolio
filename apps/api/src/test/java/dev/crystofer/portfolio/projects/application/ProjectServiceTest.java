@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import dev.crystofer.portfolio.projects.domain.model.Project;
 import dev.crystofer.portfolio.projects.domain.port.out.LoadProjectPort;
+import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 import dev.crystofer.portfolio.shared.domain.Slug;
 import dev.crystofer.portfolio.shared.error.ResourceNotFoundException;
 import dev.crystofer.portfolio.support.fixtures.ProjectSamples;
@@ -36,10 +37,11 @@ class ProjectServiceTest {
     // given
     Project segundo = ProjectSamples.projeto("portfolio", "Portfolio", 1, true);
     Project primeiro = ProjectSamples.projeto("finai", "FinAI", 0, true);
-    given(loadProjectPort.loadProjects()).willReturn(List.of(segundo, primeiro));
+    given(loadProjectPort.loadProjects(ContentLanguage.PT_BR))
+        .willReturn(List.of(segundo, primeiro));
 
     // when
-    var catalogo = new ProjectService(loadProjectPort).listProjects();
+    var catalogo = new ProjectService(loadProjectPort).listProjects(ContentLanguage.PT_BR);
 
     // then
     assertThat(catalogo.projects())
@@ -57,9 +59,10 @@ class ProjectServiceTest {
   @Test
   @DisplayName("deve devolver catalogo vazio quando a porta nao tem nada")
   void shouldReturnEmptyCatalog_whenThePortHasNothing() {
-    given(loadProjectPort.loadProjects()).willReturn(List.of());
+    given(loadProjectPort.loadProjects(ContentLanguage.PT_BR)).willReturn(List.of());
 
-    assertThat(new ProjectService(loadProjectPort).listProjects().isEmpty()).isTrue();
+    assertThat(new ProjectService(loadProjectPort).listProjects(ContentLanguage.PT_BR).isEmpty())
+        .isTrue();
   }
 
   @Test
@@ -67,10 +70,13 @@ class ProjectServiceTest {
   void shouldReturnProject_whenSlugExists() {
     // given
     Project projeto = ProjectSamples.projeto("finai", "FinAI", 0, true);
-    given(loadProjectPort.loadProjectBySlug(Slug.of("finai"))).willReturn(Optional.of(projeto));
+    given(loadProjectPort.loadProjectBySlug(Slug.of("finai"), ContentLanguage.PT_BR))
+        .willReturn(Optional.of(projeto));
 
     // when
-    Project encontrado = new ProjectService(loadProjectPort).getProjectBySlug(Slug.of("finai"));
+    Project encontrado =
+        new ProjectService(loadProjectPort)
+            .getProjectBySlug(Slug.of("finai"), ContentLanguage.PT_BR);
 
     // then
     assertThat(encontrado.title()).isEqualTo("FinAI");
@@ -86,10 +92,13 @@ class ProjectServiceTest {
   @Test
   @DisplayName("deve lancar recurso nao encontrado quando o slug nao existe")
   void shouldThrowNotFound_whenSlugIsUnknown() {
-    given(loadProjectPort.loadProjectBySlug(Slug.of("nao-existe"))).willReturn(Optional.empty());
+    given(loadProjectPort.loadProjectBySlug(Slug.of("nao-existe"), ContentLanguage.PT_BR))
+        .willReturn(Optional.empty());
 
     assertThatThrownBy(
-            () -> new ProjectService(loadProjectPort).getProjectBySlug(Slug.of("nao-existe")))
+            () ->
+                new ProjectService(loadProjectPort)
+                    .getProjectBySlug(Slug.of("nao-existe"), ContentLanguage.PT_BR))
         .isInstanceOf(ResourceNotFoundException.class)
         .hasMessageContaining("nao-existe");
   }
@@ -98,10 +107,13 @@ class ProjectServiceTest {
   @Test
   @DisplayName("deve manter detalhe de infraestrutura fora da mensagem publica")
   void shouldKeepInfrastructureDetail_outOfThePublicMessage() {
-    given(loadProjectPort.loadProjectBySlug(Slug.of("sumido"))).willReturn(Optional.empty());
+    given(loadProjectPort.loadProjectBySlug(Slug.of("sumido"), ContentLanguage.PT_BR))
+        .willReturn(Optional.empty());
 
     assertThatThrownBy(
-            () -> new ProjectService(loadProjectPort).getProjectBySlug(Slug.of("sumido")))
+            () ->
+                new ProjectService(loadProjectPort)
+                    .getProjectBySlug(Slug.of("sumido"), ContentLanguage.PT_BR))
         .hasMessageNotContainingAny("project", "seed", "SELECT", "tabela");
   }
 }
