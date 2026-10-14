@@ -2,6 +2,7 @@ import { ImageResponse } from 'next/og';
 
 import { carregarProjeto, slugsDoCatalogo, type Parametros } from '@/app/projetos/[slug]/projeto';
 import { getProfile } from '@/lib/api/profile';
+import { COR_DO_CARTAO, TAMANHO_DO_CARTAO } from '@/lib/share-card';
 
 /**
  * Os mesmos slugs da pagina, declarados de novo porque o Next nao os herda do
@@ -11,8 +12,7 @@ export function generateStaticParams(): Promise<{ slug: string }[]> {
   return slugsDoCatalogo();
 }
 
-/** O tamanho que Facebook, LinkedIn, WhatsApp e X esperam. */
-export const size = { width: 1200, height: 630 };
+export const size = TAMANHO_DO_CARTAO;
 
 export const contentType = 'image/png';
 
@@ -26,27 +26,6 @@ export const contentType = 'image/png';
  * ha nela alem do titulo.
  */
 export const alt = 'Cartão do projeto, com o título, o resumo e as tecnologias usadas';
-
-/**
- * Os tokens da secao 7 do plano, escritos como valor.
- *
- * <p>E a unica excecao a regra 7.8 - "nenhum componente escreve um valor
- * hexadecimal" -, e ela e imposta pela ferramenta: esta imagem e desenhada pelo
- * satori, fora do navegador, sem folha de estilo e sem {@code var()}. Nao ha
- * CSS custom property para consultar.
- *
- * <p>Por isso as cores ficam juntas e nomeadas aqui em vez de espalhadas pelo
- * JSX: quando um token mudar em {@code tokens.css}, o que precisa acompanhar
- * esta neste bloco, e nao em doze lugares. Sao os valores do tema escuro, que e
- * o padrao do site.
- */
-const COR = {
-  fundo: '#08080a',
-  texto: '#fafafa',
-  apagado: '#a1a1aa',
-  borda: '#232329',
-  destaque: '#8b7cf6',
-} as const;
 
 /**
  * A imagem de compartilhamento de um projeto.
@@ -79,8 +58,8 @@ export default async function ImagemDoProjeto({ params }: Parametros): Promise<I
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        backgroundColor: COR.fundo,
-        color: COR.texto,
+        backgroundColor: COR_DO_CARTAO.fundo,
+        color: COR_DO_CARTAO.texto,
         padding: 72,
         // O gap e um piso de respiro, e ele existe por medicao: sem ele, o
         // space-between so afasta o que sobra de altura, e o projeto com resumo
@@ -97,13 +76,17 @@ export default async function ImagemDoProjeto({ params }: Parametros): Promise<I
         texto que ja aparece inteiro na pagina.
       */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', fontSize: 24, color: COR.destaque, letterSpacing: 2 }}>
+        <div
+          style={{ display: 'flex', fontSize: 24, color: COR_DO_CARTAO.destaque, letterSpacing: 2 }}
+        >
           PROJETO
         </div>
 
         <div style={{ display: 'flex', fontSize: 68, lineHeight: 1.05 }}>{projeto.title}</div>
 
-        <div style={{ display: 'flex', fontSize: 28, lineHeight: 1.4, color: COR.apagado }}>
+        <div
+          style={{ display: 'flex', fontSize: 28, lineHeight: 1.4, color: COR_DO_CARTAO.apagado }}
+        >
           {projeto.summary}
         </div>
       </div>
@@ -116,8 +99,8 @@ export default async function ImagemDoProjeto({ params }: Parametros): Promise<I
               style={{
                 display: 'flex',
                 fontSize: 22,
-                color: COR.apagado,
-                border: `1px solid ${COR.borda}`,
+                color: COR_DO_CARTAO.apagado,
+                border: `1px solid ${COR_DO_CARTAO.borda}`,
                 borderRadius: 999,
                 padding: '6px 18px',
               }}
@@ -131,13 +114,13 @@ export default async function ImagemDoProjeto({ params }: Parametros): Promise<I
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            borderTop: `1px solid ${COR.borda}`,
+            borderTop: `1px solid ${COR_DO_CARTAO.borda}`,
             paddingTop: 28,
             fontSize: 24,
           }}
         >
           <div style={{ display: 'flex' }}>{perfil.fullName}</div>
-          <div style={{ display: 'flex', color: COR.apagado }}>{perfil.headline}</div>
+          <div style={{ display: 'flex', color: COR_DO_CARTAO.apagado }}>{perfil.headline}</div>
         </div>
       </div>
     </div>,
