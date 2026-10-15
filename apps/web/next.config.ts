@@ -18,6 +18,30 @@ const isDev = process.env.NODE_ENV === 'development';
 const servidoPorHttps = new URL(resolverRaiz()).protocol === 'https:';
 
 /**
+ * O hash do unico {@code <style>} inline do site: o que o next-themes injeta a cada carga e a cada
+ * troca de tema para desligar as transicoes ({@code disableTransitionOnChange}). Sem ele, as cores
+ * interpolam no meio da troca - o efeito que produziu os falsos positivos de contraste da secao
+ * 4.30 do ESTADO.
+ *
+ * <p><strong>Medido no commit 52, com {@code style-src 'self' 'report-sample'}, nas rotas dos dois
+ * idiomas e nos dois temas, no Chromium e no WebKit:</strong> o estilo inline do site tem duas
+ * formas, e so uma delas tem hash. O elemento {@code <style>} e um so, este, com conteudo fixo. Os
+ * atributos {@code style} sao os do grafico de linguagens, e a largura de cada fatia vem dos dados
+ * do GitHub - {@code flex-basis:45.99...%} -, entao nao ha hash que os cubra. Dai as duas
+ * diretivas: o {@code style-src-elem} trava os elementos neste hash, e os atributos ficam com o
+ * {@code style-src}, que mantem o {@code 'unsafe-inline'}. O elemento e o vetor que importa: e por
+ * seletor de CSS, que so existe dentro de {@code <style>} ou de folha de estilo, que se vaza dado de
+ * uma pagina; atributo nao tem seletor. Navegador sem CSP nivel 3 ignora o {@code style-src-elem}
+ * e fica com o {@code style-src} - o comportamento de antes.
+ *
+ * <p><strong>Se o next-themes mudar esse CSS, o hash deixa de bater</strong> - era o risco que o
+ * ADR-0012 nao aceitava sem guarda. A guarda agora existe: o {@code <style>} e injetado em toda
+ * carga de pagina, a recusa vai para o console, e o fixture do Playwright reprova qualquer teste com
+ * erro no console. O hash novo esta na propria mensagem de erro do navegador.
+ */
+const HASH_DO_NEXT_THEMES = "'sha256-skqujXORqzxt1aE0NNXxujEanPTX6raoqSscTV/Ww/Y='";
+
+/**
  * Content Security Policy **sem nonce**, e a ausencia do nonce e a decisao.
  *
  * A secao 2.4 do plano pede "CSP com nonce". Nonce muda a cada requisicao,
@@ -72,12 +96,13 @@ const contentSecurityPolicy = [
   // declarar a diretiva substitui o default por completo - listar so o terceiro
   // barraria as requisicoes do proprio site.
   "connect-src 'self' https://challenges.cloudflare.com",
-  // O next-themes injeta um <style> em tempo de execucao para desligar
-  // transicoes durante a troca de tema (`disableTransitionOnChange`). Sem
-  // 'unsafe-inline' o navegador bloqueia essa injecao e a troca volta a
-  // interpolar cores no meio do caminho - que e exatamente o efeito que
-  // produziu os dois falsos positivos de contraste da secao 4.30.
+  // Duas diretivas para estilo, porque estilo inline tem duas formas e so uma
+  // delas tem hash - ver HASH_DO_NEXT_THEMES. O style-src fica com o
+  // 'unsafe-inline' para os atributos `style`, cujo valor vem dos dados.
   "style-src 'self' 'unsafe-inline'",
+  // Fora do dev: o dev server injeta o CSS do proprio site por <style>, um a
+  // cada arquivo, e nenhum hash fixo cobre isso.
+  ...(isDev ? [] : [`style-src-elem 'self' ${HASH_DO_NEXT_THEMES}`]),
   // blob: e data: cobrem o que o next/image emite. As fontes sao
   // auto-hospedadas via next/font/local, entao font-src nao precisa de origem
   // externa - e nao ter nenhuma e o que torna a diretiva util.

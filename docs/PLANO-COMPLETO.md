@@ -2959,6 +2959,23 @@ Não existe caminho por onde entrada de usuário vire script inline nesta págin
 
 **Novo prazo:** commit 52, junto do hash do `style-src`. É quando Playwright e axe entram no CI e passa a existir verificação automatizada capaz de pegar uma quebra de hidratação ou de política em silêncio — que é a única coisa que faltava para a alternativa dos hashes deixar de ser perigosa.
 
+#### Reavaliação no commit 52 — o estilo muda, o script não
+
+O commit 52 trouxe a guarda que faltava: o Playwright roda o site construído em Chromium, Firefox e WebKit, e **todo teste reprova com erro no console** — o lugar onde o navegador escreve cada recusa da CSP. As duas reavaliações prometidas foram feitas com medida.
+
+**`style-src`: muda.** Com `style-src 'self' 'report-sample'`, nas rotas dos dois idiomas e nos dois temas, o estilo inline do site apareceu em duas formas, e só uma tem hash:
+
+| Forma | Origem | Hash fixo? |
+|---|---|---|
+| Elemento `<style>` | next-themes, a cada carga e a cada troca de tema | **sim** — conteúdo único |
+| Atributo `style` | gráfico de linguagens: `flex-basis:45.99…%`, que vem dos dados do GitHub | **não** |
+
+A política passa a ser `style-src 'self' 'unsafe-inline'` mais `style-src-elem 'self' 'sha256-skqujXORqzxt1aE0NNXxujEanPTX6raoqSscTV/Ww/Y='`. Navegador com CSP nível 3 aceita **um** `<style>` inline, este; os atributos continuam permitidos pelo `style-src`. O elemento é o vetor que importa — é por seletor de CSS, que só existe dentro de `<style>` ou de folha de estilo, que se vaza dado de uma página. Navegador antigo ignora o `style-src-elem` e fica como antes. O hash conferido de duas formas: calculado sobre o texto do next-themes 0.4.6 e informado pelo próprio Chromium na recusa.
+
+**A guarda foi quebrada de propósito:** um caractere trocado no hash, e os 9 testes de home e projetos reprovaram com 26 recusas de `style-src-elem`. Se um bump do next-themes mudar o CSS, é isso que acontece no CI — e o hash novo vem na mensagem de erro do navegador.
+
+**`script-src`: não muda, e o motivo agora é mais forte do que o de agosto.** A home tem **44 scripts inline com 44 hashes distintos** (42 de dados de flight); entre a home em português e em inglês, só 9 coincidem. E há o que o texto original não registrava: a CSP é gravada **no build**, enquanto o ISR troca o conteúdo da página **a cada hora**, sem build novo. Um hash dos scripts de flight fixado no build deixaria de valer na primeira revalidação, e a página pararia de hidratar em produção. O nonce continua custando o ISR. O `'unsafe-inline'` do `script-src` segue apoiado na condição medida no commit 49 — nenhum caminho por onde entrada de usuário vire script inline —, agora com uma guarda automática que reprova qualquer script recusado.
+
 ### ADR-0013: Conteúdo bilíngue no banco, com o idioma negociado por `Accept-Language`
 
 **Status:** Aceito. Detalha a [F11](#f11--internacionalização), emenda a [seção 3.7](#37-modelo-de-dados) com seis tabelas e a [seção 11.4](#114-urls-e-estrutura-semântica) quanto à forma das URLs.
