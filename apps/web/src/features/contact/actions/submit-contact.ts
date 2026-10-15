@@ -118,6 +118,12 @@ export async function submitContact(
     };
   }
 
+  // O identificador que liga este log ao da API - o CorrelationIdFilter de lá o
+  // põe em cada linha da requisição. Só aqui, e não nas leituras de conteúdo: a
+  // chave do cache de dados do Next inclui os cabeçalhos, e um valor novo a cada
+  // chamada desligaria o cache.
+  const correlacao = crypto.randomUUID();
+
   try {
     await api.submitContact(
       {
@@ -133,13 +139,16 @@ export async function submitContact(
         // balde só. O cabeçalho é falsificável, e o `ContactController`
         // documenta por que isso é aceito: contra adversário dedicado quem
         // trabalha é o Turnstile, que já rodou acima.
-        ...(origem === null ? {} : { headers: { 'X-Forwarded-For': origem } }),
+        headers: {
+          'X-Correlation-Id': correlacao,
+          ...(origem === null ? {} : { 'X-Forwarded-For': origem }),
+        },
       },
     );
   } catch (causa) {
     return {
       estado: 'recusado',
-      mensagem: mensagemDaFalha(causa, t),
+      mensagem: mensagemDaFalha(causa, t, correlacao),
       erros: {},
       valores: bruto,
     };
@@ -267,13 +276,13 @@ async function passouNoTurnstile(
  * URL chamada, e ela é interna: publicá-la entregaria o endereço da API Java a
  * quem só vê o site. O que atravessa é o status, traduzido.
  */
-function mensagemDaFalha(causa: unknown, t: Tradutor): string {
+function mensagemDaFalha(causa: unknown, t: Tradutor, correlacao: string): string {
   if (!(causa instanceof ApiError)) {
-    console.error('Falha inesperada ao enviar o contato', causa);
+    console.error('Falha inesperada ao enviar o contato [correlationId %s]', correlacao, causa);
     return t('genericFailure');
   }
 
-  console.error('A API recusou o contato: %s', causa.message);
+  console.error('A API recusou o contato [correlationId %s]: %s', correlacao, causa.message);
 
   if (causa.status === 429) {
     return t('rateLimited', { espera: esperaLegivel(causa.retryAfterSeconds, t) });

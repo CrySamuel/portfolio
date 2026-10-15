@@ -57,6 +57,8 @@ function envioValido(extras: Record<string, string> = {}): FormData {
 
 const INICIAL = { estado: 'inicial' } as const;
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 beforeEach(() => {
   vi.resetAllMocks();
   falarEm('pt-BR');
@@ -78,7 +80,31 @@ describe('submitContact', () => {
         message: 'Ola! Vi o portfolio e queria conversar.',
         website: '  x ',
       },
-      expect.objectContaining({ headers: { 'X-Forwarded-For': '203.0.113.7' } }),
+      expect.objectContaining({
+        headers: {
+          'X-Correlation-Id': expect.stringMatching(UUID) as unknown,
+          'X-Forwarded-For': '203.0.113.7',
+        },
+      }),
+    );
+  });
+
+  it('registra a falha com o mesmo identificador que mandou a API', async () => {
+    const erro = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.mocked(api.submitContact).mockRejectedValue(
+      new ApiError(400, '/api/v1/contact', 'Bad Request'),
+    );
+
+    await submitContact(INICIAL, envioValido());
+
+    const enviado = (
+      vi.mocked(api.submitContact).mock.calls[0]?.[1]?.headers as Record<string, string> | undefined
+    )?.['X-Correlation-Id'];
+    expect(enviado).toMatch(UUID);
+    expect(erro).toHaveBeenCalledWith(
+      expect.stringContaining('correlationId'),
+      enviado,
+      'Bad Request',
     );
   });
 
