@@ -23,6 +23,10 @@
     "menu": "Menu de navegação",
     "mobile": "Navegação mobile"
   },
+  "LocaleSwitcher": {
+    "short": "PT",
+    "label": "Ler em português"
+  },
   "SkipLink": {
     "label": "Pular para o conteúdo"
   },

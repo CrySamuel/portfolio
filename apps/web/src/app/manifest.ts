@@ -23,7 +23,7 @@ import { getProfile } from '@/lib/api/profile';
  * mesma razao das metas {@code theme-color} do layout: o manifest nao le CSS.
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const perfil = await getProfile();
+  const perfil = await getProfile(routing.defaultLocale);
   // O manifest e um so para o site inteiro, e fala o idioma padrao: e o
   // endereco sem prefixo que quem instala estava visitando.
   const t = await getTranslations({ locale: routing.defaultLocale, namespace: 'Metadata' });

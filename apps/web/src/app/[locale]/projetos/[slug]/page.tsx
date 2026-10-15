@@ -12,7 +12,7 @@ import { JsonLd } from '@/components/seo/JsonLd';
 import { codigoFonte, grafo, trilha } from '@/components/seo/structured-data';
 import { ProjectDetail } from '@/features/projects/components/ProjectDetail';
 import { fixarIdioma, idiomaDaRota } from '@/i18n/locale';
-import { caminhoPublico } from '@/i18n/navigation';
+import { caminhoPublico, enderecosDaPagina } from '@/i18n/navigation';
 import { getProfile } from '@/lib/api/profile';
 import { metadataDaPagina } from '@/lib/metadata';
 
@@ -54,15 +54,15 @@ export function generateStaticParams(): Promise<{ slug: string }[]> {
 export async function generateMetadata({ params }: Parametros): Promise<Metadata> {
   const [locale, { slug }] = await Promise.all([idiomaDaRota(params), params]);
   const [projeto, perfil, cartao] = await Promise.all([
-    carregarProjeto(slug),
-    getProfile(),
+    carregarProjeto(slug, locale),
+    getProfile(locale),
     cartaoDoProjeto(locale, slug),
   ]);
 
   return metadataDaPagina(perfil, {
     titulo: projeto.title,
     descricao: projeto.summary,
-    caminho: caminhoPublico({ href: `/projetos/${projeto.slug}`, locale }),
+    enderecos: enderecosDaPagina(`/projetos/${projeto.slug}`, locale),
     artigo: { publicadoEm: projeto.publishedAt },
     cartao,
   });
@@ -83,8 +83,8 @@ export default async function ProjetoPage({ params }: Parametros): Promise<React
   fixarIdioma(locale);
 
   const [projeto, perfil, degraus] = await Promise.all([
-    carregarProjeto(slug),
-    getProfile(),
+    carregarProjeto(slug, locale),
+    getProfile(locale),
     degrausDaListagem(locale),
   ]);
 
@@ -92,7 +92,7 @@ export default async function ProjetoPage({ params }: Parametros): Promise<React
     <>
       <JsonLd
         dados={grafo(
-          codigoFonte(projeto, perfil),
+          codigoFonte(projeto, perfil, locale),
           trilha([
             ...degraus,
             {

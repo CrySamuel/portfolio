@@ -1,6 +1,8 @@
 import type { Profile, ProjectDetail, SkillCategory } from '@portfolio/api-client';
 import type { BreadcrumbList, Graph, Person, SoftwareSourceCode, Thing, WebSite } from 'schema-dts';
 
+import { caminhoPublico } from '@/i18n/navigation';
+import type { Idioma } from '@/i18n/routing';
 import { SITE_URL } from '@/lib/site';
 
 /**
@@ -45,7 +47,11 @@ export function grafo(...entidades: Thing[]): Graph {
  * editorial dela. Uma lista escrita a mao aqui divergiria da que aparece na
  * tela no primeiro ajuste.
  */
-export function pessoa(perfil: Profile, competencias: readonly SkillCategory[]): Person {
+export function pessoa(
+  perfil: Profile,
+  competencias: readonly SkillCategory[],
+  locale: Idioma,
+): Person {
   const email = perfil.socialLinks.find((link) => link.platform === 'email');
 
   return {
@@ -54,7 +60,7 @@ export function pessoa(perfil: Profile, competencias: readonly SkillCategory[]):
     name: perfil.fullName,
     jobTitle: perfil.headline,
     description: perfil.bio,
-    url: endereco('/'),
+    url: endereco(caminhoPublico({ href: '/', locale })),
     ...(email === undefined ? {} : { email: email.url.replace(/^mailto:/, '') }),
     sameAs: perfil.socialLinks.filter((link) => link.platform !== 'email').map((link) => link.url),
     knowsAbout: competencias.flatMap((categoria) => categoria.skills.map((skill) => skill.name)),
@@ -69,14 +75,17 @@ export function pessoa(perfil: Profile, competencias: readonly SkillCategory[]):
  * para onde a acao apontar, e o Google aposentou a caixa de busca nos
  * resultados em novembro de 2024 - declarar seria marcacao para um recurso que
  * nao existe dos dois lados.
+ *
+ * <p>O {@code @id} e um so para os idiomas - e o mesmo site -, e o endereco e o
+ * idioma sao os da pagina que o declara.
  */
-export function site(perfil: Profile): WebSite {
+export function site(perfil: Profile, locale: Idioma): WebSite {
   return {
     '@type': 'WebSite',
     '@id': ID_DO_SITE,
     name: perfil.fullName,
-    url: endereco('/'),
-    inLanguage: 'pt-BR',
+    url: endereco(caminhoPublico({ href: '/', locale })),
+    inLanguage: locale,
     author: { '@id': ID_DA_PESSOA },
   };
 }
@@ -116,17 +125,26 @@ export function trilha(degraus: readonly Degrau[]): BreadcrumbList {
  * grafo da home, e uma referencia que aponta para fora da pagina nao e resolvida
  * por quem le esta.
  */
-export function codigoFonte(projeto: ProjectDetail, perfil: Profile): SoftwareSourceCode {
+export function codigoFonte(
+  projeto: ProjectDetail,
+  perfil: Profile,
+  locale: Idioma,
+): SoftwareSourceCode {
   return {
     '@type': 'SoftwareSourceCode',
     name: projeto.title,
     description: projeto.summary,
-    url: endereco(`/projetos/${projeto.slug}`),
+    url: endereco(caminhoPublico({ href: `/projetos/${projeto.slug}`, locale })),
+    inLanguage: locale,
     ...(projeto.repoUrl === null ? {} : { codeRepository: projeto.repoUrl }),
     programmingLanguage: projeto.technologies
       .filter((tecnologia) => tecnologia.category === 'language')
       .map((tecnologia) => tecnologia.name),
     ...(projeto.publishedAt === null ? {} : { datePublished: projeto.publishedAt }),
-    author: { '@type': 'Person', name: perfil.fullName, url: endereco('/') },
+    author: {
+      '@type': 'Person',
+      name: perfil.fullName,
+      url: endereco(caminhoPublico({ href: '/', locale })),
+    },
   };
 }

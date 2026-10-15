@@ -2,6 +2,16 @@
 import type { Locale } from 'next-intl';
 import { defineRouting } from 'next-intl/routing';
 
+import { IDIOMA_PADRAO, IDIOMAS } from '@/i18n/idiomas';
+import { caminhoTraduzido } from '@/i18n/navigation';
+
+/** Os moldes de rota que mudam de nome por idioma - ver SEGMENTOS em i18n/navigation. */
+const ROTAS_TRADUZIDAS = [
+  '/projetos',
+  '/projetos/[slug]',
+  '/projetos/[slug]/opengraph-image',
+] as const;
+
 /**
  * Os idiomas do site e a forma das URLs (ADR-0013).
  *
@@ -12,15 +22,34 @@ import { defineRouting } from 'next-intl/routing';
  * ({@code /pt-BR/...}) redireciona para o sem prefixo: duas URLs para a mesma pagina seriam conteudo
  * duplicado para o buscador.
  *
+ * <p><strong>Os caminhos tem nome no idioma</strong> - {@code /en-US/projects/finai} - e o
+ * middleware reescreve o nome publico para a pasta, que e uma so. Os {@code pathnames} saem da
+ * mesma tabela que o {@code caminhoPublico} usa para escrever os links: duas tabelas divergiriam, e
+ * o sintoma seria um link que o middleware nao reconhece.
+ *
+ * <p><strong>Sem deteccao de idioma, e sem cookie.</strong> O next-intl redirecionaria {@code /}
+ * para {@code /en-US} quando o navegador pedisse ingles. Recusado: o endereco deixaria de dizer o
+ * que mostra - o mesmo link abriria paginas diferentes para pessoas diferentes, inclusive para o
+ * crawler -, e o cookie que guarda a escolha seria o primeiro do site. Quem quer o ingles usa o
+ * seletor, e o buscador acha cada versao pelo {@code hreflang}.
+ *
  * <p><strong>Sem os cabecalhos {@code Link} de alternativas.</strong> O middleware do next-intl
  * pode anuncia-las por cabecalho HTTP, e o {@code hreflang} ja sai na metadata de cada pagina. Duas
  * fontes para a mesma declaracao divergiriam no primeiro ajuste de uma delas.
  */
 export const routing = defineRouting({
-  locales: ['pt-BR'],
-  defaultLocale: 'pt-BR',
+  locales: IDIOMAS,
+  defaultLocale: IDIOMA_PADRAO,
   localePrefix: 'as-needed',
+  localeDetection: false,
+  localeCookie: false,
   alternateLinks: false,
+  pathnames: Object.fromEntries(
+    ROTAS_TRADUZIDAS.map((molde) => [
+      molde,
+      Object.fromEntries(IDIOMAS.map((idioma) => [idioma, caminhoTraduzido(molde, idioma)])),
+    ]),
+  ),
 });
 
 export type Idioma = (typeof routing.locales)[number];

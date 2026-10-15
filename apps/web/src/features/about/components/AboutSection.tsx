@@ -28,11 +28,11 @@ const SECTION_ID = 'sobre';
  * 15, e ate agora o link levava a lugar nenhum. Este commit fecha essa ponta.
  */
 export async function AboutSection(): Promise<ReactNode> {
-  const [profile, experiences, t, locale] = await Promise.all([
-    getProfile(),
-    listExperiences(),
+  const locale = await getLocale();
+  const [profile, experiences, t] = await Promise.all([
+    getProfile(locale),
+    listExperiences(locale),
     getTranslations('About'),
-    getLocale(),
   ]);
 
   return (

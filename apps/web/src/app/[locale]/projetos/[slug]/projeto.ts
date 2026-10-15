@@ -1,7 +1,7 @@
 import { ApiError, type ProjectDetail } from '@portfolio/api-client';
 import { notFound } from 'next/navigation';
 
-import { routing } from '@/i18n/routing';
+import { routing, type Idioma } from '@/i18n/routing';
 import { getProject, listProjects } from '@/lib/api/projects';
 
 /**
@@ -31,9 +31,11 @@ export interface Parametros {
  * <p>A lista sai de {@code listProjects()}, que e a mesma chamada da listagem e
  * da home: uma segunda fonte de slugs poderia discordar da primeira, e o modo de
  * discordar seria um card apontando para uma pagina que o build nao gerou.
+ *
+ * <p>Lida no idioma padrao, e vale para todos: o slug e o mesmo em cada idioma (ADR-0013).
  */
 export async function slugsDoCatalogo(): Promise<{ slug: string }[]> {
-  const projetos = await listProjects();
+  const projetos = await listProjects(routing.defaultLocale);
   return projetos.map((projeto) => ({ slug: projeto.slug }));
 }
 
@@ -70,9 +72,9 @@ export async function idiomasESlugsDoCatalogo(): Promise<{ locale: string; slug:
  * ausencia: transformar 500 em "projeto nao encontrado" apagaria o incidente e
  * publicaria uma pagina de 404 no lugar de um erro que precisa aparecer.
  */
-export async function carregarProjeto(slug: string): Promise<ProjectDetail> {
+export async function carregarProjeto(slug: string, idioma: Idioma): Promise<ProjectDetail> {
   try {
-    return await getProject(slug);
+    return await getProject(slug, idioma);
   } catch (erro) {
     if (erro instanceof ApiError && (erro.status === 404 || erro.status === 400)) notFound();
     throw erro;

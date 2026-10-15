@@ -44,9 +44,16 @@ const COLD_START_TIMEOUT_MS = 90_000;
  * resposta razoavel: renderizar a pagina sem nome nem bio publicaria um
  * portfolio vazio, com aparencia de site pronto. Falhar alto deixa o erro no log
  * do deploy, que e onde alguem pode agir.
+ *
+ * <p><strong>O idioma vai no {@code Accept-Language}</strong>, e e a API que escolhe o texto
+ * (ADR-0013). Ele e parametro, e nao lido da requisicao aqui dentro, porque quem chama nem sempre
+ * tem requisicao: a imagem de compartilhamento e o sitemap rodam fora do layout. O cabecalho tambem
+ * separa o cache de dados do Next - a chave do {@code fetch} inclui os cabecalhos -, e o
+ * {@code cache} do React separa pelo argumento.
  */
-export const getProfile = cache((): Promise<Profile> => {
+export const getProfile = cache((idioma: string): Promise<Profile> => {
   return api.getProfile({
+    headers: { 'Accept-Language': idioma },
     next: { revalidate: PROFILE_REVALIDATE_SECONDS, tags: [PROFILE_CACHE_TAG] },
     timeoutMs: COLD_START_TIMEOUT_MS,
   });

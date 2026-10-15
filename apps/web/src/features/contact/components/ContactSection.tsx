@@ -28,7 +28,10 @@ const SECTION_ID = 'contato';
  * o inglês. Um mapa tipado pelos idiomas do site, e não uma comparação: idioma
  * novo sem tag aqui reprova a compilação, em vez de cair calado no padrão.
  */
-const IDIOMA_DO_TURNSTILE = { 'pt-BR': 'pt-br' } as const satisfies Record<Idioma, string>;
+const IDIOMA_DO_TURNSTILE = { 'pt-BR': 'pt-br', 'en-US': 'en' } as const satisfies Record<
+  Idioma,
+  string
+>;
 
 /**
  * A seção de contato: o fim do funil.
@@ -52,11 +55,8 @@ const IDIOMA_DO_TURNSTILE = { 'pt-BR': 'pt-br' } as const satisfies Record<Idiom
  * silenciosamente ausente em produção.
  */
 export async function ContactSection(): Promise<ReactNode> {
-  const [profile, t, locale] = await Promise.all([
-    getProfile(),
-    getTranslations('Contact'),
-    getLocale(),
-  ]);
+  const locale = await getLocale();
+  const [profile, t] = await Promise.all([getProfile(locale), getTranslations('Contact')]);
 
   return (
     <Section id={SECTION_ID}>

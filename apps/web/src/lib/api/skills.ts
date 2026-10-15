@@ -22,8 +22,10 @@ const COLD_START_TIMEOUT_MS = 90_000;
  * Sem try/catch, como as demais: uma secao que falha em silencio publicaria um
  * portfolio com aparencia de pronto e conteudo faltando.
  */
-export const listSkills = cache((): Promise<SkillCategory[]> => {
+export const listSkills = cache((idioma: string): Promise<SkillCategory[]> => {
   return api.listSkills({
+    // O idioma do texto - ver getProfile.
+    headers: { 'Accept-Language': idioma },
     next: { revalidate: SKILLS_REVALIDATE_SECONDS, tags: [SKILLS_CACHE_TAG] },
     timeoutMs: COLD_START_TIMEOUT_MS,
   });

@@ -1,4 +1,4 @@
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense, type ReactNode } from 'react';
 
 import { SectionHeading } from '@/components/common/SectionHeading';
@@ -39,7 +39,8 @@ export async function ProjectsSection({
 }: {
   readonly variante?: 'destaques' | 'catalogo';
 } = {}): Promise<ReactNode> {
-  const [todos, t] = await Promise.all([listProjects(), getTranslations('Projects')]);
+  const locale = await getLocale();
+  const [todos, t] = await Promise.all([listProjects(locale), getTranslations('Projects')]);
   const projects = variante === 'destaques' ? todos.filter((project) => project.featured) : todos;
 
   // Catalogo vazio nao renderiza cabecalho sozinho. A API distingue "sem

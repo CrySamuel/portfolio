@@ -45,8 +45,8 @@ const COMPETENCIAS_NO_CARTAO = 6;
 export default async function ImagemDoSite({ params }: ParametrosDoIdioma): Promise<ImageResponse> {
   const locale = await idiomaDaRota(params);
   const [perfil, categorias, t] = await Promise.all([
-    getProfile(),
-    listSkills(),
+    getProfile(locale),
+    listSkills(locale),
     getTranslations({ locale, namespace: 'ShareCard' }),
   ]);
   const competencias = categorias

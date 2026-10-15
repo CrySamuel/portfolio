@@ -3,8 +3,10 @@ import type { Metadata } from 'next';
 
 import { TAMANHO_DO_CARTAO } from '@/lib/share-card';
 
-/** O idioma do site, no formato que o Open Graph espera - com sublinhado. */
-const LOCALE_OPEN_GRAPH = 'pt_BR';
+/** Um idioma no formato que o Open Graph espera - {@code pt_BR}, com sublinhado. */
+export function localeOpenGraph(idioma: string): string {
+  return idioma.replace('-', '_');
+}
 
 /**
  * O titulo da home, que e tambem o titulo padrao de qualquer rota sem um proprio.
@@ -26,12 +28,24 @@ export interface Cartao {
   readonly alt: string;
 }
 
+/**
+ * Onde uma pagina mora, em cada idioma - quem monta e {@code enderecosDaPagina}, em
+ * i18n/navigation. Caminhos relativos: o {@code metadataBase} do layout os torna absolutos.
+ */
+export interface Enderecos {
+  /** O idioma desta pagina, na tag BCP 47 - {@code pt-BR}. */
+  readonly idioma: string;
+  /** O caminho da mesma pagina em cada idioma, inclusive o deste. */
+  readonly porIdioma: Readonly<Record<string, string>>;
+  /** O idioma que atende quem nao casa com nenhum dos outros - o {@code x-default}. */
+  readonly padrao: string;
+}
+
 /** O que uma pagina precisa dizer sobre si mesma. */
 export interface Pagina {
   readonly titulo: string;
   readonly descricao: string;
-  /** O caminho canonico, relativo - o {@code metadataBase} do layout o torna absoluto. */
-  readonly caminho: string;
+  readonly enderecos: Enderecos;
   /** A home usa o titulo inteiro; as demais recebem o sufixo do template do layout. */
   readonly tituloAbsoluto?: boolean;
   /** Presente nas paginas que sao um artigo, como a de cada projeto. */
@@ -64,12 +78,22 @@ export interface Pagina {
  * interno, com o idioma, e o middleware o redireciona. Declarar em toda pagina,
  * com o endereco publico, e agora o que mantem a imagem a um GET de distancia -
  * o motivo e o custo estao em app/[locale]/cartoes.
+ *
+ * <p><strong>Cada idioma anuncia todos os outros, e a si mesmo</strong> ({@code hreflang}
+ * reciproco): o Google ignora a alternativa que nao e confirmada pela pagina do outro lado. O
+ * {@code x-default} aponta para o portugues, que e o que {@code /} entrega sem prefixo. O canonical
+ * e o endereco do proprio idioma - nunca o de outro, que diria ao buscador que a traducao e copia.
  */
 export function metadataDaPagina(perfil: Profile, pagina: Pagina): Metadata {
+  const { idioma, porIdioma, padrao } = pagina.enderecos;
+  const caminho = porIdioma[idioma] ?? '/';
   const comum = {
     siteName: perfil.fullName,
-    locale: LOCALE_OPEN_GRAPH,
-    url: pagina.caminho,
+    locale: localeOpenGraph(idioma),
+    alternateLocale: Object.keys(porIdioma)
+      .filter((outro) => outro !== idioma)
+      .map(localeOpenGraph),
+    url: caminho,
     title: pagina.titulo,
     description: pagina.descricao,
     images: [
@@ -85,7 +109,10 @@ export function metadataDaPagina(perfil: Profile, pagina: Pagina): Metadata {
   return {
     title: pagina.tituloAbsoluto === true ? { absolute: pagina.titulo } : pagina.titulo,
     description: pagina.descricao,
-    alternates: { canonical: pagina.caminho },
+    alternates: {
+      canonical: caminho,
+      languages: { ...porIdioma, 'x-default': porIdioma[padrao] ?? '/' },
+    },
     openGraph:
       pagina.artigo === undefined
         ? { ...comum, type: 'website' }

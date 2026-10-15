@@ -1,4 +1,4 @@
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import { SectionHeading } from '@/components/common/SectionHeading';
@@ -24,7 +24,8 @@ const SECTION_ID = 'skills';
  * desde o commit 15, e ate agora o link nao levava a lugar nenhum.
  */
 export async function SkillsSection(): Promise<ReactNode> {
-  const [categories, t] = await Promise.all([listSkills(), getTranslations('Skills')]);
+  const locale = await getLocale();
+  const [categories, t] = await Promise.all([listSkills(locale), getTranslations('Skills')]);
 
   // Catalogo vazio nao renderiza cabecalho sozinho. A API distingue "sem
   // conteudo" de falha respondendo 200 com lista vazia, e a secao respeita isso

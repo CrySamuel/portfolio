@@ -1,12 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { Container } from '@/components/layout/Container';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { useActiveSection } from '@/hooks/use-active-section';
+import type { Idioma } from '@/i18n/idiomas';
+import { caminhoInterno, caminhoPublico } from '@/i18n/navigation';
 import { NAV_IDS, type NavItem } from '@/lib/navigation';
 
 /**
@@ -30,6 +33,15 @@ export interface NavbarProps {
   /** O endereco da home no idioma da pagina. */
   readonly inicio: string;
   readonly itens: readonly NavItem[];
+  /**
+   * Os outros idiomas, com os textos ja no idioma de cada um: "EN" e "Read in English" numa pagina
+   * em portugues.
+   */
+  readonly idiomas: readonly {
+    readonly locale: Idioma;
+    readonly sigla: string;
+    readonly rotulo: string;
+  }[];
   readonly textos: {
     readonly principal: string;
     readonly abrirMenu: string;
@@ -41,8 +53,9 @@ export interface NavbarProps {
   };
 }
 
-export function Navbar({ nome, inicio, itens, textos }: NavbarProps): ReactNode {
+export function Navbar({ nome, inicio, itens, idiomas, textos }: NavbarProps): ReactNode {
   const secaoAtiva = useActiveSection(NAV_IDS);
+  const paginaAtual = caminhoInterno(usePathname()).href;
   const sentinela = useRef<HTMLDivElement>(null);
   const [rolou, setRolou] = useState(false);
 
@@ -105,6 +118,30 @@ export function Navbar({ nome, inicio, itens, textos }: NavbarProps): ReactNode 
                 </li>
               ))}
             </ul>
+
+            {/*
+              A mesma pagina no outro idioma - o projeto em ingles, e nao a home em
+              ingles. O caminho sai do endereco atual, que o servidor e o navegador
+              veem de formas diferentes (ver caminhoInterno); as duas levam ao mesmo
+              link. <a>, e nao <Link>: trocar de idioma troca o layout raiz, e a
+              pagina carrega inteira de qualquer jeito.
+
+              O nome acessivel comeca pelo texto visivel - "EN — Read in English" -,
+              para quem navega por voz poder dizer o que ve (WCAG 2.5.3). O lang faz
+              o leitor de tela trocar a pronuncia.
+            */}
+            {idiomas.map((idioma) => (
+              <a
+                key={idioma.locale}
+                href={caminhoPublico({ href: paginaAtual, locale: idioma.locale })}
+                hrefLang={idioma.locale}
+                lang={idioma.locale}
+                className="flex min-h-11 items-center rounded-md px-3 text-body-sm text-fg-muted transition-colors duration-(--duration-fast) hover:text-fg"
+              >
+                {idioma.sigla}
+                <span className="sr-only"> — {idioma.rotulo}</span>
+              </a>
+            ))}
 
             <ThemeToggle rotulos={{ claro: textos.temaClaro, escuro: textos.temaEscuro }} />
             <MobileNav

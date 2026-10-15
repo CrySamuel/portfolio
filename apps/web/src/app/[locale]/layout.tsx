@@ -13,9 +13,10 @@ import {
   type ParametrosDoIdioma,
 } from '@/i18n/locale';
 import { caminhoPublico } from '@/i18n/navigation';
+import { routing } from '@/i18n/routing';
 import { getProfile } from '@/lib/api/profile';
 import { fontVariables } from '@/lib/fonts';
-import { tituloDoSite } from '@/lib/metadata';
+import { localeOpenGraph, tituloDoSite } from '@/lib/metadata';
 import { MAIN_ID, NAV_IDS } from '@/lib/navigation';
 import { SITE_URL } from '@/lib/site';
 
@@ -63,7 +64,7 @@ export const revalidate = 3600;
 export async function generateMetadata({ params }: ParametrosDoIdioma): Promise<Metadata> {
   const locale = await idiomaDaRota(params);
   const t = await getTranslations({ locale, namespace: 'Metadata' });
-  const perfil = await getProfile();
+  const perfil = await getProfile(locale);
   const titulo = tituloDoSite(perfil);
   const descricao = t('siteDescription', { nome: perfil.fullName });
 
@@ -82,7 +83,7 @@ export async function generateMetadata({ params }: ParametrosDoIdioma): Promise<
     openGraph: {
       type: 'website',
       siteName: perfil.fullName,
-      locale: 'pt_BR',
+      locale: localeOpenGraph(locale),
       title: titulo,
       description: descricao,
     },
@@ -123,7 +124,7 @@ export default async function RootLayout({
 
   // O mesmo perfil que o hero usa: o `cache` do React devolve a promessa ja
   // resolvida, entao montar layout e pagina custa **uma** chamada a API.
-  const profile = await getProfile();
+  const profile = await getProfile(locale);
   const t = await getTranslations();
 
   // A API manda plataforma e URL; o rotulo e texto de interface e mora nas
@@ -139,8 +140,20 @@ export default async function RootLayout({
   // A navbar e componente de cliente, e recebe tudo ja traduzido: o next-intl
   // no navegador traria o formatador de mensagens, varios KB do orcamento de JS
   // para repetir o que o servidor ja fez.
+  // Os textos do seletor vem no idioma de destino: e "Read in English" que
+  // aparece numa pagina em portugues.
+  const idiomas = await Promise.all(
+    routing.locales
+      .filter((outro) => outro !== locale)
+      .map(async (outro) => {
+        const tOutro = await getTranslations({ locale: outro, namespace: 'LocaleSwitcher' });
+        return { locale: outro, sigla: tOutro('short'), rotulo: tOutro('label') };
+      }),
+  );
+
   const navegacao = {
     nome: profile.fullName,
+    idiomas,
     inicio: caminhoPublico({ href: '/', locale }),
     itens: NAV_IDS.map((id) => ({ id, label: t(`Navigation.${id}`) })),
     textos: {

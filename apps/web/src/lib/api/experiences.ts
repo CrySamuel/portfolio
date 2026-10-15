@@ -33,8 +33,10 @@ const COLD_START_TIMEOUT_MS = 90_000;
  * Lista vazia **nao** e erro - e o estado de quem ainda nao preencheu a propria
  * historia, e a API a distingue de falha respondendo 200 com `[]`.
  */
-export const listExperiences = cache((): Promise<Experience[]> => {
+export const listExperiences = cache((idioma: string): Promise<Experience[]> => {
   return api.listExperiences({
+    // O idioma do texto - ver getProfile.
+    headers: { 'Accept-Language': idioma },
     next: { revalidate: EXPERIENCES_REVALIDATE_SECONDS, tags: [EXPERIENCES_CACHE_TAG] },
     timeoutMs: COLD_START_TIMEOUT_MS,
   });

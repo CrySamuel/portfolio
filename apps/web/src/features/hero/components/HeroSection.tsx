@@ -1,5 +1,5 @@
 import { Badge, Button } from '@portfolio/ui';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import { Container } from '@/components/layout/Container';
@@ -21,7 +21,8 @@ const SECTION_ID = 'inicio';
  * medida e ainda respeita `prefers-reduced-motion`.
  */
 export async function HeroSection(): Promise<ReactNode> {
-  const [profile, t] = await Promise.all([getProfile(), getTranslations('Hero')]);
+  const locale = await getLocale();
+  const [profile, t] = await Promise.all([getProfile(locale), getTranslations('Hero')]);
 
   const github = profile.socialLinks.find((link) => link.platform === 'github');
   const email = profile.socialLinks.find((link) => link.platform === 'email');

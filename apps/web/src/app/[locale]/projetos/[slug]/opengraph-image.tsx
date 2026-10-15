@@ -45,8 +45,8 @@ export const contentType = 'image/png';
 export default async function ImagemDoProjeto({ params }: Parametros): Promise<ImageResponse> {
   const [locale, { slug }] = await Promise.all([idiomaDaRota(params), params]);
   const [projeto, perfil, t] = await Promise.all([
-    carregarProjeto(slug),
-    getProfile(),
+    carregarProjeto(slug, locale),
+    getProfile(locale),
     getTranslations({ locale, namespace: 'ShareCard' }),
   ]);
 

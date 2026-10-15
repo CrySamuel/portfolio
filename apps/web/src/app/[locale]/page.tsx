@@ -12,7 +12,7 @@ import { HeroSection } from '@/features/hero/components/HeroSection';
 import { ProjectsSection } from '@/features/projects/components/ProjectsSection';
 import { SkillsSection } from '@/features/skills/components/SkillsSection';
 import { fixarIdioma, idiomaDaRota, type ParametrosDoIdioma } from '@/i18n/locale';
-import { caminhoPublico } from '@/i18n/navigation';
+import { enderecosDaPagina } from '@/i18n/navigation';
 import { getProfile } from '@/lib/api/profile';
 import { listSkills } from '@/lib/api/skills';
 import { metadataDaPagina, tituloDoSite } from '@/lib/metadata';
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: ParametrosDoIdioma): Promise<
   const locale = await idiomaDaRota(params);
   const [t, perfil, cartao] = await Promise.all([
     getTranslations({ locale, namespace: 'Metadata' }),
-    getProfile(),
+    getProfile(locale),
     cartaoDoSite(locale),
   ]);
 
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: ParametrosDoIdioma): Promise<
     titulo: tituloDoSite(perfil),
     tituloAbsoluto: true,
     descricao: t('siteDescription', { nome: perfil.fullName }),
-    caminho: caminhoPublico({ href: '/', locale }),
+    enderecos: enderecosDaPagina('/', locale),
     cartao,
   });
 }
@@ -65,11 +65,11 @@ export default async function HomePage({ params }: ParametrosDoIdioma): Promise<
   const locale = await idiomaDaRota(params);
   fixarIdioma(locale);
 
-  const [perfil, competencias] = await Promise.all([getProfile(), listSkills()]);
+  const [perfil, competencias] = await Promise.all([getProfile(locale), listSkills(locale)]);
 
   return (
     <>
-      <JsonLd dados={grafo(pessoa(perfil, competencias), site(perfil))} />
+      <JsonLd dados={grafo(pessoa(perfil, competencias, locale), site(perfil, locale))} />
       <HeroSection />
       <AboutSection />
       <ProjectsSection />

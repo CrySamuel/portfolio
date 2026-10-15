@@ -25,8 +25,10 @@ const COLD_START_TIMEOUT_MS = 90_000;
  * O `cache` do React desduplica a chamada dentro do mesmo render, que e o que
  * permite a home e a listagem pedirem a mesma coisa sem dobrar a requisicao.
  */
-export const listProjects = cache((): Promise<ProjectSummary[]> => {
+export const listProjects = cache((idioma: string): Promise<ProjectSummary[]> => {
   return api.listProjects({
+    // O idioma do texto - ver getProfile.
+    headers: { 'Accept-Language': idioma },
     next: { revalidate: PROJECTS_REVALIDATE_SECONDS, tags: [PROJECTS_CACHE_TAG] },
     timeoutMs: COLD_START_TIMEOUT_MS,
   });
@@ -49,8 +51,9 @@ export const listProjects = cache((): Promise<ProjectSummary[]> => {
  * traduzidos na pagina, que e quem sabe que ausencia de projeto vira
  * `notFound()` e nao tela de erro.
  */
-export const getProject = cache((slug: string): Promise<ProjectDetail> => {
+export const getProject = cache((slug: string, idioma: string): Promise<ProjectDetail> => {
   return api.getProjectBySlug(slug, {
+    headers: { 'Accept-Language': idioma },
     next: { revalidate: PROJECTS_REVALIDATE_SECONDS, tags: [PROJECTS_CACHE_TAG] },
     timeoutMs: COLD_START_TIMEOUT_MS,
   });

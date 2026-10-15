@@ -1,0 +1,145 @@
+{
+  "Metadata": {
+    "siteDescription": "Portfolio of {nome}, backend developer in Java and Spring Boot: projects in production, hexagonal architecture, integration tests and open source.",
+    "projectsTitle": "Projects",
+    "projectsDescription": "Projects with the problem they solved, what was built and the outcome that followed.",
+    "breadcrumbHome": "Home",
+    "breadcrumbProjects": "Projects"
+  },
+  "ShareCard": {
+    "siteEyebrow": "PORTFOLIO",
+    "siteAlt": "Portfolio card, with the name, the role and the main skills",
+    "projectEyebrow": "PROJECT",
+    "projectAlt": "Project card, with the title, the summary and the technologies used"
+  },
+  "Navigation": {
+    "main": "Main",
+    "sobre": "About",
+    "projetos": "Projects",
+    "skills": "Skills",
+    "contato": "Contact",
+    "openMenu": "Open navigation menu",
+    "closeMenu": "Close menu",
+    "menu": "Navigation menu",
+    "mobile": "Mobile navigation"
+  },
+  "LocaleSwitcher": {
+    "short": "EN",
+    "label": "Read in English"
+  },
+  "SkipLink": {
+    "label": "Skip to content"
+  },
+  "ThemeToggle": {
+    "toLight": "Switch to light theme",
+    "toDark": "Switch to dark theme"
+  },
+  "Footer": {
+    "nav": "Profiles and contact"
+  },
+  "SocialLinks": {
+    "github": "GitHub profile",
+    "linkedin": "LinkedIn profile",
+    "email": "Send an email"
+  },
+  "Hero": {
+    "available": "Open to opportunities",
+    "github": "See the code on GitHub",
+    "contact": "Get in touch"
+  },
+  "About": {
+    "eyebrow": "Career",
+    "title": "About",
+    "description": "From technical support to backend development, with automation along the way.",
+    "resume": "Download résumé (PDF in Portuguese, {tamanho})",
+    "current": "Current",
+    "present": "present"
+  },
+  "Skills": {
+    "eyebrow": "Expertise",
+    "title": "Skills",
+    "description": "Level stated in words, with no percentage bar — the scale is short on purpose.",
+    "basic": "Basic",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced",
+    "years": "{anos, plural, =0 {less than 1 year} =1 {1 year} other {# years}}"
+  },
+  "Projects": {
+    "eyebrow": "Proof of work",
+    "title": "Projects",
+    "descriptionHome": "What was built, with the problem behind it and the outcome that followed.",
+    "descriptionCatalog": "Each one with the problem it solved, what was built and what changed afterwards.",
+    "technologiesOf": "Technologies used in {titulo}",
+    "filter": "Filter by technology",
+    "all": "All",
+    "empty": "No project uses this technology.",
+    "allProjects": "All projects",
+    "repository": "See the repository",
+    "live": "See it live",
+    "problem": "Problem",
+    "solution": "Solution",
+    "outcome": "Outcome",
+    "numbersOf": "{titulo} in numbers",
+    "notFoundEyebrow": "Error 404",
+    "notFoundTitle": "This project doesn't exist",
+    "notFoundDescription": "The address may have changed, or the project may have left the catalog. The full list is still here.",
+    "notFoundBack": "See all projects"
+  },
+  "GitHub": {
+    "eyebrow": "Activity",
+    "title": "On GitHub",
+    "description": "The numbers come from the GitHub API at runtime, behind a cache, a circuit breaker and retries — not from a screenshot.",
+    "publicRepositories": "Public repositories",
+    "languages": "Languages",
+    "contributions": "Contributions in the last year",
+    "featured": "Featured repositories",
+    "others": "Others",
+    "primaryLanguage": "Primary language",
+    "starsLabel": "Stars",
+    "stars": "{n, plural, =1 {1 star} other {# stars}}",
+    "lastPush": "Last push"
+  },
+  "Contact": {
+    "eyebrow": "Contact",
+    "title": "Let's talk",
+    "description": "Write about a role, a project or a technical question. The message is saved before any attempt to send it — if the email fails, it is resent on its own.",
+    "directTitle": "Prefer to go direct?",
+    "directText": "The form stores the message before trying to notify me, so it doesn't get lost. But if you'd rather take the short route, the two addresses below reach me just the same.",
+    "email": "Email",
+    "linkedin": "LinkedIn",
+    "name": "Name",
+    "subject": "Subject",
+    "message": "Message",
+    "trap": "Website",
+    "send": "Send message",
+    "protected": "Protected by Cloudflare Turnstile.",
+    "sentTitle": "Message sent.",
+    "sentText": "It's already saved. I'll reply to the address you left.",
+    "checkFields": "Check the fields marked below.",
+    "genericFailure": "I couldn't send your message right now. Try again in a moment, or write directly to the email address next to the form.",
+    "turnstileRefused": "The anti-bot check rejected this attempt. Try sending again.",
+    "turnstileMissing": "The anti-bot check didn't load — usually a content blocker or the network. Wait a moment and try again; if it keeps happening, write directly to the email address next to the form.",
+    "rateLimited": "You've already sent a few messages today. {espera}",
+    "rejectedByServer": "Your message didn't pass the server's validation. Write directly to the email address next to the form — it will reach me just the same.",
+    "retryLater": "Try again later.",
+    "retryInSeconds": "Try again in {segundos, plural, =1 {1 second} other {# seconds}}.",
+    "retryInMinutes": "Try again in {minutos, plural, =1 {1 minute} other {# minutes}}."
+  },
+  "ContactValidation": {
+    "nameRequired": "Enter your name.",
+    "nameTooLong": "Your name must fit in {limite} characters.",
+    "emailRequired": "Enter your email — that's where the reply goes.",
+    "emailTooLong": "Your email must fit in {limite} characters.",
+    "emailInvalid": "Check the email: something seems to be missing.",
+    "subjectRequired": "Enter a subject.",
+    "subjectTooLong": "The subject must fit in {limite} characters.",
+    "messageRequired": "Write your message.",
+    "messageTooLong": "The message must fit in {limite} characters."
+  },
+  "NotFound": {
+    "eyebrow": "Error 404",
+    "title": "This page doesn't exist",
+    "description": "The address may have changed, or never existed. The home page is still here.",
+    "back": "Go to the home page"
+  }
+}

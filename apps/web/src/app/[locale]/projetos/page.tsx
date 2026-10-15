@@ -8,7 +8,7 @@ import { JsonLd } from '@/components/seo/JsonLd';
 import { grafo, trilha } from '@/components/seo/structured-data';
 import { ProjectsSection } from '@/features/projects/components/ProjectsSection';
 import { fixarIdioma, idiomaDaRota, type ParametrosDoIdioma } from '@/i18n/locale';
-import { caminhoPublico } from '@/i18n/navigation';
+import { enderecosDaPagina } from '@/i18n/navigation';
 import { getProfile } from '@/lib/api/profile';
 import { metadataDaPagina } from '@/lib/metadata';
 
@@ -31,7 +31,7 @@ import { metadataDaPagina } from '@/lib/metadata';
 export async function generateMetadata({ params }: ParametrosDoIdioma): Promise<Metadata> {
   const locale = await idiomaDaRota(params);
   const [perfil, t, cartao] = await Promise.all([
-    getProfile(),
+    getProfile(locale),
     getTranslations({ locale, namespace: 'Metadata' }),
     cartaoDoSite(locale),
   ]);
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: ParametrosDoIdioma): Promise<
   return metadataDaPagina(perfil, {
     titulo: t('projectsTitle'),
     descricao: t('projectsDescription'),
-    caminho: caminhoPublico({ href: '/projetos', locale }),
+    enderecos: enderecosDaPagina('/projetos', locale),
     // Nao ha opengraph-image neste segmento: a listagem usa o cartao do site.
     cartao,
   });

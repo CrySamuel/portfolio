@@ -2,6 +2,7 @@ import { getRequestConfig } from 'next-intl/server';
 
 import { ehIdioma, routing, type Idioma } from '@/i18n/routing';
 
+import enUS from './messages/en-US.json';
 import ptBR from './messages/pt-BR.json';
 
 /**
@@ -9,8 +10,13 @@ import ptBR from './messages/pt-BR.json';
  * o caminho montado em tempo de execucao passa pelo type-check sem conferir que o arquivo existe, e
  * o idioma esquecido apareceria como erro de build so na rota dele. Aqui, faltar um arquivo e erro
  * de compilacao.
+ *
+ * <p>Cada idioma tem de ter o formato do portugues: uma chave que falte no ingles reprova a
+ * compilacao, em vez de aparecer na tela como o nome da chave. Chave a mais nao reprova - o JSON
+ * importado nao passa pela checagem de propriedade em excesso -, e nem precisa: o codigo so pede
+ * chaves que o tipo do portugues conhece, entao a sobra nunca chega a tela.
  */
-const MENSAGENS = { 'pt-BR': ptBR } satisfies Record<Idioma, unknown>;
+const MENSAGENS = { 'pt-BR': ptBR, 'en-US': enUS } satisfies Record<Idioma, typeof ptBR>;
 
 /**
  * A configuracao de cada requisicao: o idioma, as mensagens e o fuso.
