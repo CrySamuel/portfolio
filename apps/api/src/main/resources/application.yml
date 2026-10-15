@@ -181,5 +181,10 @@ portfolio:
     repositories-for-languages: 20
 
 logging:
+  # O identificador de correlacao em toda linha de log da requisicao (CorrelationIdFilter). O
+  # padrao de console do Spring Boot ja reserva este lugar; sem requisicao - o envio agendado de
+  # e-mail, a inicializacao -, sai vazio.
+  pattern:
+    correlation: '[%X{correlationId:-}] '
   level:
     root: INFO

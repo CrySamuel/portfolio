@@ -8,6 +8,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -82,6 +83,9 @@ public class ServiceKeyAuthFilter extends OncePerRequestFilter {
             HttpStatus.UNAUTHORIZED, "Chave de servico ausente ou invalida");
     problem.setTitle("Nao autorizado");
     problem.setType(ProblemTypes.de("unauthorized"));
+    // Este corpo nasce antes do Spring MVC, e por isso nao passa pelo CorrelationIdProblemAdvice.
+    String correlacao = MDC.get(CorrelationIdFilter.MDC_KEY);
+    if (correlacao != null) problem.setProperty(CorrelationIdFilter.MDC_KEY, correlacao);
 
     response.setStatus(HttpStatus.UNAUTHORIZED.value());
     response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);

@@ -4,7 +4,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 
+import dev.crystofer.portfolio.shared.web.CorrelationIdFilter;
 import dev.crystofer.portfolio.shared.web.ServiceKeyAuthFilter;
 import tools.jackson.databind.ObjectMapper;
 
@@ -62,6 +64,18 @@ public class SecurityConfig {
               + ". Gere com: openssl rand -base64 32");
     }
     this.chaveDeServico = chaveDeServico;
+  }
+
+  /**
+   * O identificador de correlacao, antes de todo outro filtro e em todo caminho - inclusive os
+   * publicos: a recusa da chave de servico, logo abaixo, tambem precisa leva-lo.
+   */
+  @Bean
+  FilterRegistrationBean<CorrelationIdFilter> correlationIdFilter() {
+    var registro = new FilterRegistrationBean<>(new CorrelationIdFilter());
+    registro.setOrder(Ordered.HIGHEST_PRECEDENCE);
+    registro.addUrlPatterns("/*");
+    return registro;
   }
 
   @Bean
