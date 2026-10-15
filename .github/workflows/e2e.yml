@@ -1,0 +1,140 @@
+name: E2E · web
+
+# Ponta a ponta e acessibilidade, contra o site construido e a API de verdade.
+#
+# Os dois lados entram no gatilho: uma mudanca no contrato da API quebra a
+# pagina tanto quanto uma mudanca na pagina.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/e2e.yml'
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/e2e.yml'
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  API_URL: http://localhost:8080
+  # O padrao do perfil local da API (application-local.yml). Protege dado
+  # publico de seed num banco descartavel; a de producao nunca sai dos paineis.
+  SERVICE_API_KEY: chave-local-de-desenvolvimento-nao-use-em-producao
+  # As chaves de teste que a Cloudflare publica na documentacao do Turnstile: a
+  # do site sempre aprova, e o segredo de teste sempre confirma. Nao sao
+  # credenciais - e o que deixa o teste de envio passar pela verificacao real.
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+  TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+
+jobs:
+  e2e:
+    name: playwright · axe
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # O mesmo Postgres do docker compose. As migracoes da API criam o esquema e
+    # semeiam o conteudo nos dois idiomas - o mesmo seed de producao.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: portfolio
+          POSTGRES_USER: portfolio
+          POSTGRES_PASSWORD: portfolio
+          POSTGRES_INITDB_ARGS: '--encoding=UTF8'
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U portfolio -d portfolio"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Instalar JDK 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Empacotar a API
+        working-directory: apps/api
+        # Sem os testes: eles sao do CI da API. Aqui so importa o jar.
+        run: ./mvnw -B --no-transfer-progress -DskipTests package
+
+      - name: Subir a API
+        working-directory: apps/api
+        env:
+          # A cota autenticada do GitHub, para a secao de atividade nao depender
+          # do limite anonimo, que o runner divide com quem mais estiver nele.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Perfil local: o banco do servico acima, e e-mail so no log - sem
+        # credencial do Resend, nenhuma mensagem do teste sai de verdade.
+        run: |
+          nohup java -jar target/portfolio-api-*.jar --spring.profiles.active=local > api.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -sf http://localhost:8080/actuator/health > /dev/null && exit 0
+            sleep 2
+          done
+          cat api.log
+          exit 1
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Instalar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Instalar os navegadores
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Build do web
+        # Pelo turbo, que constroi antes os pacotes de que o web depende.
+        run: pnpm turbo run build --filter=@portfolio/web
+
+      - name: Playwright
+        working-directory: apps/web
+        run: pnpm exec playwright test
+
+      - name: Publicar relatorio do Playwright
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Log da API
+        if: failure()
+        run: cat apps/api/api.log

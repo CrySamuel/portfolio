@@ -1,7 +1,21 @@
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
 
+import { resolverRaiz } from './src/lib/origem';
+
 const isDev = process.env.NODE_ENV === 'development';
+
+/**
+ * Se o site e servido por HTTPS - o que decide o {@code upgrade-insecure-requests} da CSP.
+ *
+ * <p>A diretiva so faz sentido onde ha o que promover, e <strong>o WebKit promove ate
+ * {@code http://localhost}</strong>: medido no commit 52, o {@code next start} local servia a pagina
+ * sem CSS e sem JavaScript no motor do Safari - catorze "SSL connect error" no console, e as 404,
+ * que dependem do navegador para aparecer, em branco. O Chromium e o Firefox isentam o localhost; o
+ * WebKit, nao. Antes a condicao era "fora do dev", que inclui o {@code next start} da maquina e o
+ * do CI. Agora e a origem: na Vercel ela e HTTPS, e a diretiva continua la.
+ */
+const servidoPorHttps = new URL(resolverRaiz()).protocol === 'https:';
 
 /**
  * Content Security Policy **sem nonce**, e a ausencia do nonce e a decisao.
@@ -73,9 +87,8 @@ const contentSecurityPolicy = [
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  // Fora do dev: em http://localhost nao ha o que promover, e a diretiva so
-  // adicionaria ruido ao depurar.
-  ...(isDev ? [] : ['upgrade-insecure-requests']),
+  // So com HTTPS - ver servidoPorHttps.
+  ...(servidoPorHttps ? ['upgrade-insecure-requests'] : []),
 ].join('; ');
 
 const nextConfig: NextConfig = {
