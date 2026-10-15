@@ -23,17 +23,3 @@ export const COR_DO_CARTAO = {
 
 /** O tamanho que Facebook, LinkedIn, WhatsApp e X esperam. */
 export const TAMANHO_DO_CARTAO = { width: 1200, height: 630 } as const;
-
-/**
- * O cartao do site - o {@code app/opengraph-image.tsx} - como endereco e texto
- * alternativo.
- *
- * <p>Fica aqui, e nao so no arquivo da imagem, porque tem dois leitores: o
- * proprio arquivo, que publica o {@code alt}, e o {@code metadataDaPagina}, que
- * precisa declarar a imagem nas paginas sem cartao proprio. O motivo de
- * declarar esta la.
- */
-export const CARTAO_DO_SITE = {
-  caminho: '/opengraph-image',
-  alt: 'Cartão do portfólio, com o nome, o cargo e as principais competências',
-} as const;

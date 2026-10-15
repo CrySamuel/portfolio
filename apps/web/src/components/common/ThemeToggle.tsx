@@ -21,7 +21,11 @@ import type { ReactNode } from 'react';
  * O par visivel por padrao e o do tema escuro, que e o padrao do site: sem
  * JavaScript nenhum o atributo nunca aparece, e o botao continua coerente.
  */
-export function ThemeToggle(): ReactNode {
+export function ThemeToggle({
+  rotulos,
+}: {
+  readonly rotulos: { readonly claro: string; readonly escuro: string };
+}): ReactNode {
   const { setTheme, resolvedTheme } = useTheme();
 
   return (
@@ -45,8 +49,8 @@ export function ThemeToggle(): ReactNode {
         display:none tira o texto da arvore de acessibilidade, entao exatamente
         um dos dois rotulos e anunciado - nunca os dois.
       */}
-      <span className="sr-only [[data-theme=light]_&]:hidden">Ativar tema claro</span>
-      <span className="sr-only hidden [[data-theme=light]_&]:block">Ativar tema escuro</span>
+      <span className="sr-only [[data-theme=light]_&]:hidden">{rotulos.claro}</span>
+      <span className="sr-only hidden [[data-theme=light]_&]:block">{rotulos.escuro}</span>
     </Button>
   );
 }

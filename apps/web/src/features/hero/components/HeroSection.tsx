@@ -1,4 +1,5 @@
 import { Badge, Button } from '@portfolio/ui';
+import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import { Container } from '@/components/layout/Container';
@@ -20,7 +21,7 @@ const SECTION_ID = 'inicio';
  * medida e ainda respeita `prefers-reduced-motion`.
  */
 export async function HeroSection(): Promise<ReactNode> {
-  const profile = await getProfile();
+  const [profile, t] = await Promise.all([getProfile(), getTranslations('Hero')]);
 
   const github = profile.socialLinks.find((link) => link.platform === 'github');
   const email = profile.socialLinks.find((link) => link.platform === 'email');
@@ -28,7 +29,7 @@ export async function HeroSection(): Promise<ReactNode> {
   return (
     <Section id={SECTION_ID}>
       <Container className="flex flex-col items-start gap-8">
-        {profile.availableForWork ? <AvailabilityBadge /> : null}
+        {profile.availableForWork ? <AvailabilityBadge rotulo={t('available')} /> : null}
 
         <div className="flex flex-col gap-4">
           {/*
@@ -63,14 +64,14 @@ export async function HeroSection(): Promise<ReactNode> {
           {github ? (
             <Button asChild size="lg">
               <a href={github.url} rel="me noopener">
-                Ver o código no GitHub
+                {t('github')}
               </a>
             </Button>
           ) : null}
 
           {email ? (
             <Button asChild variant="outline" size="lg">
-              <a href={email.url}>Falar comigo</a>
+              <a href={email.url}>{t('contact')}</a>
             </Button>
           ) : null}
         </div>
@@ -87,11 +88,11 @@ export async function HeroSection(): Promise<ReactNode> {
  * a quem usa leitor de tela. O ponto e decorativo e esta marcado como tal; quem
  * carrega o significado e a frase.
  */
-function AvailabilityBadge(): ReactNode {
+function AvailabilityBadge({ rotulo }: { readonly rotulo: string }): ReactNode {
   return (
     <Badge variant="success">
       <span aria-hidden className="size-2 rounded-full bg-success motion-safe:animate-pulse" />
-      Disponível para propostas
+      {rotulo}
     </Badge>
   );
 }

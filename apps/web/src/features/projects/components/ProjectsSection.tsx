@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import { Suspense, type ReactNode } from 'react';
 
 import { SectionHeading } from '@/components/common/SectionHeading';
@@ -38,7 +39,7 @@ export async function ProjectsSection({
 }: {
   readonly variante?: 'destaques' | 'catalogo';
 } = {}): Promise<ReactNode> {
-  const todos = await listProjects();
+  const [todos, t] = await Promise.all([listProjects(), getTranslations('Projects')]);
   const projects = variante === 'destaques' ? todos.filter((project) => project.featured) : todos;
 
   // Catalogo vazio nao renderiza cabecalho sozinho. A API distingue "sem
@@ -61,13 +62,9 @@ export async function ProjectsSection({
         <SectionHeading
           sectionId={SECTION_ID}
           as={catalogo ? 'h1' : 'h2'}
-          eyebrow="Prova de trabalho"
-          title="Projetos"
-          description={
-            catalogo
-              ? 'Cada um com o problema que resolvia, o que foi construído e o que mudou depois.'
-              : 'O que foi construído, com o problema que motivou e o resultado que veio depois.'
-          }
+          eyebrow={t('eyebrow')}
+          title={t('title')}
+          description={catalogo ? t('descriptionCatalog') : t('descriptionHome')}
         />
 
         {catalogo ? (
@@ -79,6 +76,7 @@ export async function ProjectsSection({
           */
           <Suspense fallback={<Grade projects={projects} nivel={2} />}>
             <ProjectFilter
+              textos={{ filtro: t('filter'), todos: t('all'), vazio: t('empty') }}
               tecnologias={listarTecnologias(projects)}
               itens={projects.map((project) => ({
                 slug: project.slug,

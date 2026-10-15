@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import { SectionHeading } from '@/components/common/SectionHeading';
@@ -23,7 +24,7 @@ const SECTION_ID = 'skills';
  * desde o commit 15, e ate agora o link nao levava a lugar nenhum.
  */
 export async function SkillsSection(): Promise<ReactNode> {
-  const categories = await listSkills();
+  const [categories, t] = await Promise.all([listSkills(), getTranslations('Skills')]);
 
   // Catalogo vazio nao renderiza cabecalho sozinho. A API distingue "sem
   // conteudo" de falha respondendo 200 com lista vazia, e a secao respeita isso
@@ -35,9 +36,9 @@ export async function SkillsSection(): Promise<ReactNode> {
       <Container className="flex flex-col gap-10">
         <SectionHeading
           sectionId={SECTION_ID}
-          eyebrow="Competências"
-          title="Skills"
-          description="Nível declarado em texto, sem barra de percentual — a escala é curta de propósito."
+          eyebrow={t('eyebrow')}
+          title={t('title')}
+          description={t('description')}
         />
 
         <div className="flex flex-col gap-10">

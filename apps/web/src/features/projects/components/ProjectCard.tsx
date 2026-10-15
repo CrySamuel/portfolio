@@ -1,8 +1,10 @@
 import type { ProjectSummary } from '@portfolio/api-client';
 import Link from 'next/link';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import { TechStack } from '@/features/projects/components/TechStack';
+import { caminhoPublico } from '@/i18n/navigation';
 
 /**
  * Um projeto na listagem e na home.
@@ -43,14 +45,15 @@ import { TechStack } from '@/features/projects/components/TechStack';
  *   {@code h3}, que e o que a regra {@code heading-order} do axe reprova. O
  *   tamanho na tela nao muda nos dois casos: nivel e estrutura, nao desenho.
  */
-export function ProjectCard({
+export async function ProjectCard({
   project,
   nivel = 3,
 }: {
   readonly project: ProjectSummary;
   readonly nivel?: 2 | 3;
-}): ReactNode {
+}): Promise<ReactNode> {
   const { slug, title, summary, technologies } = project;
+  const [t, locale] = await Promise.all([getTranslations('Projects'), getLocale()]);
   const Titulo = nivel === 2 ? 'h2' : 'h3';
 
   return (
@@ -63,7 +66,7 @@ export function ProjectCard({
             titulo.
           */}
           <Link
-            href={`/projetos/${slug}`}
+            href={caminhoPublico({ href: `/projetos/${slug}`, locale })}
             className="rounded-sm after:absolute after:inset-0 after:content-['']"
           >
             {title}
@@ -80,7 +83,7 @@ export function ProjectCard({
           mesma linha, com resumos de uma frase e de 240 caracteres.
         */}
         <div className="mt-auto pt-1">
-          <TechStack technologies={technologies} label={`Tecnologias de ${title}`} />
+          <TechStack technologies={technologies} label={t('technologiesOf', { titulo: title })} />
         </div>
       </article>
     </li>

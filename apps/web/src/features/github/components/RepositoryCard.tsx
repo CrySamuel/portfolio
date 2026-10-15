@@ -1,5 +1,6 @@
 import { Badge } from '@portfolio/ui';
 import type { Repository } from '@portfolio/api-client';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 /**
@@ -12,13 +13,6 @@ import type { ReactNode } from 'react';
  * tras para metade do planeta. Fixar o fuso na formatacao e o que garante que o
  * dia exibido seja o dia que a API disse.
  */
-const FORMATO_DE_DATA = new Intl.DateTimeFormat('pt-BR', {
-  timeZone: 'UTC',
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-});
-
 /**
  * Um repositorio em destaque.
  *
@@ -45,8 +39,19 @@ const FORMATO_DE_DATA = new Intl.DateTimeFormat('pt-BR', {
  * <p>O link e externo e leva ao GitHub, entao {@code rel="noreferrer"} - o
  * destino nao precisa saber de onde veio o clique.
  */
-export function RepositoryCard({ repository }: { repository: Repository }): ReactNode {
+export async function RepositoryCard({
+  repository,
+}: {
+  repository: Repository;
+}): Promise<ReactNode> {
   const { name, description, url, primaryLanguage, stars, lastPushedAt } = repository;
+  const [t, locale] = await Promise.all([getTranslations('GitHub'), getLocale()]);
+  const data = new Intl.DateTimeFormat(locale, {
+    timeZone: 'UTC',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
 
   return (
     <li className="h-full">
@@ -88,7 +93,7 @@ export function RepositoryCard({ repository }: { repository: Repository }): Reac
         <dl className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 pt-2 text-caption text-fg-subtle">
           {primaryLanguage === null ? null : (
             <div className="flex items-center gap-1.5">
-              <dt className="sr-only">Linguagem predominante</dt>
+              <dt className="sr-only">{t('primaryLanguage')}</dt>
               {/*
                 Selo, e nao texto solto, e a razao foi medida. Sem descricao - o
                 caso dos seis repositorios de hoje -, a linguagem e a unica
@@ -109,20 +114,20 @@ export function RepositoryCard({ repository }: { repository: Repository }): Reac
 
           {stars === 0 ? null : (
             <div className="flex items-center gap-1.5">
-              <dt className="sr-only">Estrelas</dt>
-              <dd>{stars === 1 ? '1 estrela' : `${String(stars)} estrelas`}</dd>
+              <dt className="sr-only">{t('starsLabel')}</dt>
+              <dd>{t('stars', { n: stars })}</dd>
             </div>
           )}
 
           <div className="flex items-center gap-1.5">
-            <dt className="sr-only">Último push</dt>
+            <dt className="sr-only">{t('lastPush')}</dt>
             {/*
               <time> com o valor cru no dateTime: o texto e para quem le, o
               atributo e para quem processa. Sao a mesma data em dois formatos.
             */}
             <dd>
               <time dateTime={lastPushedAt}>
-                {FORMATO_DE_DATA.format(new Date(`${lastPushedAt}T00:00:00Z`))}
+                {data.format(new Date(`${lastPushedAt}T00:00:00Z`))}
               </time>
             </dd>
           </div>

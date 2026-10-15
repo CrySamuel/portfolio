@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import { MAIN_ID } from '@/lib/navigation';
@@ -15,13 +16,15 @@ import { MAIN_ID } from '@/lib/navigation';
  * alcançado - é o erro clássico deste componente, e o que o torna decorativo em
  * tantos sites.
  */
-export function SkipLink(): ReactNode {
+export async function SkipLink(): Promise<ReactNode> {
+  const t = await getTranslations('SkipLink');
+
   return (
     <a
       href={`#${MAIN_ID}`}
       className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-accent-solid focus:px-4 focus:py-3 focus:text-body-sm focus:font-medium focus:text-white"
     >
-      Pular para o conteúdo
+      {t('label')}
     </a>
   );
 }

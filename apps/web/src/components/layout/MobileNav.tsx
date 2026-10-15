@@ -10,6 +10,13 @@ const DIALOG_ID = 'menu-mobile';
 export interface MobileNavProps {
   items: readonly NavItem[];
   activeId: string | null;
+  /** Os rotulos acessiveis, ja traduzidos - ver {@code NavbarProps}. */
+  textos: {
+    readonly abrir: string;
+    readonly fechar: string;
+    readonly menu: string;
+    readonly navegacao: string;
+  };
 }
 
 /**
@@ -35,7 +42,7 @@ export interface MobileNavProps {
  * `@starting-style` e degrada para aparecer sem animação onde não houver
  * suporte.
  */
-export function MobileNav({ items, activeId }: MobileNavProps): ReactNode {
+export function MobileNav({ items, activeId, textos }: MobileNavProps): ReactNode {
   const dialogo = useRef<HTMLDialogElement>(null);
   const [aberto, setAberto] = useState(false);
 
@@ -85,11 +92,11 @@ export function MobileNav({ items, activeId }: MobileNavProps): ReactNode {
         }}
       >
         <IconeMenu />
-        <span className="sr-only">Abrir menu de navegação</span>
+        <span className="sr-only">{textos.abrir}</span>
       </Button>
 
-      <dialog ref={dialogo} id={DIALOG_ID} aria-label="Menu de navegação" className={CN_DIALOGO}>
-        <nav aria-label="Navegação mobile" className="flex h-full flex-col gap-2 p-4">
+      <dialog ref={dialogo} id={DIALOG_ID} aria-label={textos.menu} className={CN_DIALOGO}>
+        <nav aria-label={textos.navegacao} className="flex h-full flex-col gap-2 p-4">
           <Button
             variant="ghost"
             size="icon"
@@ -99,7 +106,7 @@ export function MobileNav({ items, activeId }: MobileNavProps): ReactNode {
             }}
           >
             <IconeFechar />
-            <span className="sr-only">Fechar menu</span>
+            <span className="sr-only">{textos.fechar}</span>
           </Button>
 
           <ul className="flex flex-col gap-1">

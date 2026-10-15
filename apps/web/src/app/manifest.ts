@@ -1,7 +1,9 @@
 import type { MetadataRoute } from 'next';
 
+import { getTranslations } from 'next-intl/server';
+
+import { routing } from '@/i18n/routing';
 import { getProfile } from '@/lib/api/profile';
-import { descricaoDoSite } from '@/lib/metadata';
 
 /**
  * O manifest do site.
@@ -22,13 +24,16 @@ import { descricaoDoSite } from '@/lib/metadata';
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const perfil = await getProfile();
+  // O manifest e um so para o site inteiro, e fala o idioma padrao: e o
+  // endereco sem prefixo que quem instala estava visitando.
+  const t = await getTranslations({ locale: routing.defaultLocale, namespace: 'Metadata' });
   const [primeiroNome] = perfil.fullName.split(' ');
 
   return {
     name: perfil.fullName,
     short_name: primeiroNome ?? perfil.fullName,
-    description: descricaoDoSite(perfil),
-    lang: 'pt-BR',
+    description: t('siteDescription', { nome: perfil.fullName }),
+    lang: routing.defaultLocale,
     start_url: '/',
     display: 'standalone',
     background_color: '#08080a',

@@ -8,6 +8,12 @@ allowBuilds:
   # sharp: binario nativo de processamento de imagem, usado pelo next/image
   # para servir AVIF/WebP e gerar o blurDataURL no build.
   sharp: true
+  # @parcel/watcher e @swc/core: chegam com o next-intl, para a extracao
+  # automatica de mensagens - recurso que este projeto nao usa. Os binarios ja
+  # vem prontos pelas dependencias opcionais de cada plataforma; o script de
+  # instalacao so compilaria do fonte quando nao houvesse binario. Bloqueados.
+  '@parcel/watcher': false
+  '@swc/core': false
   # unrs-resolver: binario nativo do eslint-import-resolver-typescript, usado
   # para resolver o alias @/ nas regras de fronteira do eslint-plugin-boundaries.
   unrs-resolver: true

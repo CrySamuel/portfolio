@@ -1,18 +1,33 @@
 import type { Metadata, Viewport } from 'next';
+import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import { SkipLink } from '@/components/common/SkipLink';
-import { SOCIAL_LINK_LABELS } from '@/components/common/SocialLinks';
 import { Footer } from '@/components/layout/Footer';
 import { Navbar } from '@/components/layout/Navbar';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import {
+  fixarIdioma,
+  idiomaDaRota,
+  parametrosDosIdiomas,
+  type ParametrosDoIdioma,
+} from '@/i18n/locale';
+import { caminhoPublico } from '@/i18n/navigation';
 import { getProfile } from '@/lib/api/profile';
 import { fontVariables } from '@/lib/fonts';
-import { descricaoDoSite, tituloDoSite } from '@/lib/metadata';
-import { MAIN_ID } from '@/lib/navigation';
+import { tituloDoSite } from '@/lib/metadata';
+import { MAIN_ID, NAV_IDS } from '@/lib/navigation';
 import { SITE_URL } from '@/lib/site';
 
-import './globals.css';
+import '../globals.css';
+
+/**
+ * Um build por idioma, e e isto que mantem as rotas estaticas: sem a lista, o segmento
+ * {@code [locale]} so seria resolvido por requisicao.
+ */
+export function generateStaticParams(): { locale: string }[] {
+  return parametrosDosIdiomas();
+}
 
 /**
  * HTML pre-renderizado no build, revalidado de hora em hora (ISR).
@@ -45,10 +60,12 @@ export const revalidate = 3600;
  * <p>A chamada ao perfil nao custa uma segunda requisicao - o mesmo {@code cache}
  * do React que o corpo do layout usa logo abaixo.
  */
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({ params }: ParametrosDoIdioma): Promise<Metadata> {
+  const locale = await idiomaDaRota(params);
+  const t = await getTranslations({ locale, namespace: 'Metadata' });
   const perfil = await getProfile();
   const titulo = tituloDoSite(perfil);
-  const descricao = descricaoDoSite(perfil);
+  const descricao = t('siteDescription', { nome: perfil.fullName });
 
   return {
     // A raiz contra a qual o Next resolve todo endereco de metadata - canonical
@@ -95,19 +112,47 @@ export const viewport: Viewport = {
   ],
 };
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({
+  children,
+  params,
+}: ParametrosDoIdioma & { readonly children: ReactNode }) {
+  const locale = await idiomaDaRota(params);
+
+  // Antes de qualquer traducao, e cada pagina repete - ver fixarIdioma.
+  fixarIdioma(locale);
+
   // O mesmo perfil que o hero usa: o `cache` do React devolve a promessa ja
   // resolvida, entao montar layout e pagina custa **uma** chamada a API.
   const profile = await getProfile();
+  const t = await getTranslations();
 
-  // A API manda plataforma e URL; o rotulo e texto de interface e mora no
-  // front. Juntar as duas coisas aqui evita que o componente de apresentacao
-  // precise conhecer o formato da resposta.
+  // A API manda plataforma e URL; o rotulo e texto de interface e mora nas
+  // mensagens. A chave e montada com a plataforma, e as mensagens sao tipadas:
+  // uma plataforma nova no contrato sem rotulo reprova a compilacao, como
+  // reprovava quando o rotulo era um Record no proprio componente.
   const socialLinks = profile.socialLinks.map((link) => ({
     platform: link.platform,
     href: link.url,
-    label: SOCIAL_LINK_LABELS[link.platform],
+    label: t(`SocialLinks.${link.platform}`),
   }));
+
+  // A navbar e componente de cliente, e recebe tudo ja traduzido: o next-intl
+  // no navegador traria o formatador de mensagens, varios KB do orcamento de JS
+  // para repetir o que o servidor ja fez.
+  const navegacao = {
+    nome: profile.fullName,
+    inicio: caminhoPublico({ href: '/', locale }),
+    itens: NAV_IDS.map((id) => ({ id, label: t(`Navigation.${id}`) })),
+    textos: {
+      principal: t('Navigation.main'),
+      abrirMenu: t('Navigation.openMenu'),
+      fecharMenu: t('Navigation.closeMenu'),
+      menu: t('Navigation.menu'),
+      mobile: t('Navigation.mobile'),
+      temaClaro: t('ThemeToggle.toLight'),
+      temaEscuro: t('ThemeToggle.toDark'),
+    },
+  };
 
   return (
     // suppressHydrationWarning e obrigatorio aqui: o script anti-FOUC escreve
@@ -118,7 +163,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     // As variaveis de fonte entram no <html>, e nao no <body>: os tokens de
     // tipografia sao resolvidos em :root, entao precisam estar visiveis no
     // elemento raiz.
-    <html lang="pt-BR" className={fontVariables} suppressHydrationWarning>
+    <html lang={locale} className={fontVariables} suppressHydrationWarning>
       <body>
         <ThemeProvider>
           {/*
@@ -127,7 +172,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             nao pula nada.
           */}
           <SkipLink />
-          <Navbar />
+          <Navbar {...navegacao} />
 
           {/*
             tabIndex={-1} nao e detalhe: sem ele o pulo do skip link move a
@@ -140,7 +185,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             {children}
           </main>
 
-          <Footer links={socialLinks} />
+          <Footer nome={profile.fullName} links={socialLinks} />
         </ThemeProvider>
       </body>
     </html>

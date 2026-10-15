@@ -2,6 +2,7 @@
 
 import { ApiError } from '@portfolio/api-client';
 import { headers } from 'next/headers';
+import { getTranslations } from 'next-intl/server';
 
 import {
   CAMPOS,
@@ -11,7 +12,7 @@ import {
   type CampoDoContato,
   type EstadoDoContato,
 } from '@/features/contact/schemas/contact-fields';
-import { contactSchema } from '@/features/contact/schemas/contact-schema';
+import { criarContactSchema } from '@/features/contact/schemas/contact-schema';
 import { api } from '@/lib/api/client';
 import { verificarTurnstile } from '@/lib/turnstile';
 
@@ -29,19 +30,18 @@ import { verificarTurnstile } from '@/lib/turnstile';
  */
 const TIMEOUT_MS = 20_000;
 
-/**
- * A frase que aparece quando não há nada útil a dizer sobre a falha.
+/*
+ * As frases desta ação moram nas mensagens, em `Contact`, uma versão por
+ * idioma. O porquê de cada uma fica aqui, junto do código que escolhe entre
+ * elas.
  *
- * <p>Ela sempre oferece a saída alternativa. Um formulário que falha sem dizer
+ * <p>`genericFailure` aparece quando não há nada útil a dizer sobre a falha, e
+ * sempre oferece a saída alternativa. Um formulário que falha sem dizer
  * "escreva direto para este endereço" transforma um problema nosso em uma
  * oportunidade perdida — e o e-mail está logo ao lado, na mesma seção.
- */
-const FALHA_GENERICA =
-  'Não consegui enviar sua mensagem agora. Tente de novo em instantes, ou escreva direto para o e-mail ao lado.';
-
-/**
- * As duas frases do antirrobô, e **separá-las foi correção de um defeito
- * medido**.
+ *
+ * <p>`turnstileRefused` e `turnstileMissing` são as duas frases do antirrobô, e
+ * **separá-las foi correção de um defeito medido**.
  *
  * <p>A primeira versão tinha uma frase só — "a verificação não passou,
  * recarregue a página" — para os dois casos. Exercitando o formulário,
@@ -55,10 +55,6 @@ const FALHA_GENERICA =
  * recusado é sobre <em>esta</em> tentativa; token ausente é sobre o widget não
  * ter chegado, e a saída é o e-mail ao lado.
  */
-const TURNSTILE_RECUSOU = 'A verificação anti-robô recusou esta tentativa. Tente enviar de novo.';
-
-const TURNSTILE_NAO_CARREGOU =
-  'A verificação anti-robô não carregou — costuma ser bloqueador de conteúdo ou rede. Espere um instante e tente de novo; se continuar, escreva direto para o e-mail ao lado.';
 
 /**
  * Recebe o formulário de contato — **o único caminho de escrita do site**.
@@ -90,13 +86,21 @@ export async function submitContact(
   _anterior: EstadoDoContato,
   formulario: FormData,
 ): Promise<EstadoDoContato> {
+  // O idioma é o da requisição: o middleware também atende o POST do
+  // formulário, inclusive o envio sem JavaScript.
+  const [t, validacao] = await Promise.all([
+    getTranslations('Contact'),
+    getTranslations('ContactValidation'),
+  ]);
   const bruto = lerCampos(formulario);
-  const analise = contactSchema.safeParse(bruto);
+  const analise = criarContactSchema((chave, valores) => validacao(chave, valores)).safeParse(
+    bruto,
+  );
 
   if (!analise.success) {
     return {
       estado: 'recusado',
-      mensagem: 'Confira os campos marcados abaixo.',
+      mensagem: t('checkFields'),
       erros: primeiroErroPorCampo(analise.error.issues),
       valores: bruto,
     };
@@ -108,7 +112,7 @@ export async function submitContact(
   if (antirrobo !== 'aprovado') {
     return {
       estado: 'recusado',
-      mensagem: antirrobo === 'sem-token' ? TURNSTILE_NAO_CARREGOU : TURNSTILE_RECUSOU,
+      mensagem: antirrobo === 'sem-token' ? t('turnstileMissing') : t('turnstileRefused'),
       erros: {},
       valores: bruto,
     };
@@ -135,7 +139,7 @@ export async function submitContact(
   } catch (causa) {
     return {
       estado: 'recusado',
-      mensagem: mensagemDaFalha(causa),
+      mensagem: mensagemDaFalha(causa, t),
       erros: {},
       valores: bruto,
     };
@@ -230,7 +234,7 @@ async function ipDaOrigem(): Promise<string | null> {
  * custo de cada lado é conhecido e nenhum dos dois é obviamente maior.
  *
  * <p><strong>`sem-token` não é `recusado`</strong>, e a distinção existe porque
- * a mensagem que cada um merece é diferente — ver `TURNSTILE_NAO_CARREGOU`.
+ * a mensagem que cada um merece é diferente — ver `turnstileMissing`, no topo.
  *
  * <p><strong>Cloudflare fora do ar deixa passar</strong>, e isso é escolha
  * separada da anterior. Bloquear seria trocar uma indisponibilidade de terceiro
@@ -263,26 +267,26 @@ async function passouNoTurnstile(
  * URL chamada, e ela é interna: publicá-la entregaria o endereço da API Java a
  * quem só vê o site. O que atravessa é o status, traduzido.
  */
-function mensagemDaFalha(causa: unknown): string {
+function mensagemDaFalha(causa: unknown, t: Tradutor): string {
   if (!(causa instanceof ApiError)) {
     console.error('Falha inesperada ao enviar o contato', causa);
-    return FALHA_GENERICA;
+    return t('genericFailure');
   }
 
   console.error('A API recusou o contato: %s', causa.message);
 
   if (causa.status === 429) {
-    return `Você já enviou algumas mensagens hoje. ${esperaLegivel(causa.retryAfterSeconds)}`;
+    return t('rateLimited', { espera: esperaLegivel(causa.retryAfterSeconds, t) });
   }
 
   // 400 aqui significa que o Zod e a Bean Validation discordaram — o formulário
   // aceitou algo que a API recusa. É defeito nosso, não da pessoa, e por isso a
   // frase não manda "conferir os campos": não há o que ela possa corrigir.
   if (causa.status === 400) {
-    return 'Sua mensagem não passou na validação do servidor. Escreva direto para o e-mail ao lado — vou receber do mesmo jeito.';
+    return t('rejectedByServer');
   }
 
-  return FALHA_GENERICA;
+  return t('genericFailure');
 }
 
 /**
@@ -293,10 +297,12 @@ function mensagemDaFalha(causa: unknown): string {
  * baixo produz a única versão errada: quem volta no minuto anunciado leva o
  * mesmo 429 de novo.
  */
-function esperaLegivel(segundos: number | null): string {
-  if (segundos === null || segundos <= 0) return 'Tente de novo mais tarde.';
-  if (segundos < 60) return `Tente de novo em ${String(segundos)} segundos.`;
+function esperaLegivel(segundos: number | null, t: Tradutor): string {
+  if (segundos === null || segundos <= 0) return t('retryLater');
+  if (segundos < 60) return t('retryInSeconds', { segundos });
 
-  const minutos = Math.ceil(segundos / 60);
-  return `Tente de novo em ${String(minutos)} ${minutos === 1 ? 'minuto' : 'minutos'}.`;
+  return t('retryInMinutes', { minutos: Math.ceil(segundos / 60) });
 }
+
+/** O tradutor de `Contact`, do jeito que o next-intl o entrega à ação. */
+type Tradutor = Awaited<ReturnType<typeof getTranslations<'Contact'>>>;

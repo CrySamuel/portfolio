@@ -5,28 +5,13 @@ import type { ReactNode } from 'react';
 export interface SocialLink {
   readonly platform: SocialPlatform;
   readonly href: string;
-  /** Nome acessível do link. Descreve o destino, não o ícone. */
+  /**
+   * Nome acessível do link. Descreve o destino, não o ícone. Vem das mensagens
+   * ({@code SocialLinks.github}), tipadas pela plataforma: uma plataforma nova no
+   * contrato sem rótulo reprova a compilação de quem monta a lista.
+   */
   readonly label: string;
 }
-
-/**
- * O nome acessível de cada plataforma.
- *
- * Rótulo é texto de interface, não dado: ele muda com o idioma e não com o
- * conteúdo do perfil, então não vem da API. O que vem de lá é a lista de
- * plataformas e as URLs.
- *
- * O tipo é `Record<SocialPlatform, string>`, e `SocialPlatform` é a união
- * gerada do contrato. Uma plataforma nova na API passa a **quebrar a compilação
- * aqui** até que alguém escreva o rótulo e desenhe o ícone - que é exatamente o
- * momento certo de decidir as duas coisas. Sem isso, o link novo apareceria em
- * produção anunciado como "link", com o ícone de e-mail.
- */
-export const SOCIAL_LINK_LABELS: Record<SocialPlatform, string> = {
-  github: 'Perfil no GitHub',
-  linkedin: 'Perfil no LinkedIn',
-  email: 'Enviar e-mail',
-};
 
 export interface SocialLinksProps {
   links: readonly SocialLink[];
@@ -89,7 +74,7 @@ const COMUM = { 'aria-hidden': true, width: 20, height: 20, viewBox: '0 0 24 24'
  * A cadeia terminava com `return` do ícone de e-mail, e esse `else` implícito
  * era uma armadilha: plataforma nova compilaria e apareceria com o ícone
  * errado. O `Record` obriga a completar o conjunto - a mesma exaustividade que
- * `SOCIAL_LINK_LABELS` dá aos rótulos.
+ * as mensagens tipadas dão aos rótulos (`SocialLinks.<plataforma>`).
  */
 const SOCIAL_ICONS: Record<SocialPlatform, () => ReactNode> = {
   github: () => (

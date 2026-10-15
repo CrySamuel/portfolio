@@ -8,7 +8,7 @@
  * `id` é a âncora no documento e a chave do IntersectionObserver.
  */
 export interface NavItem {
-  readonly id: string;
+  readonly id: NavId;
   readonly label: string;
 }
 
@@ -19,22 +19,19 @@ export interface NavItem {
 // documento. A navbar descreve a estrutura da pagina, e essa descricao precisa
 // ser verdadeira sempre. A seccao mantem o `id`, entao link direto continua
 // funcionando.
-export const NAV_ITEMS: readonly NavItem[] = [
-  { id: 'sobre', label: 'Sobre' },
-  { id: 'projetos', label: 'Projetos' },
-  { id: 'skills', label: 'Skills' },
-  { id: 'contato', label: 'Contato' },
-];
+export const NAV_IDS = ['sobre', 'projetos', 'skills', 'contato'] as const;
 
 /**
- * Os ids, derivados uma única vez.
+ * Os ids sao a ancora no documento e a chave da mensagem com o rotulo -
+ * {@code Navigation.sobre}. Iguais nos dois idiomas: o realce da navbar depende
+ * deles, e ancora nao pesa em busca. O rotulo e que muda, e vem traduzido pelo
+ * layout, porque a navbar e componente de cliente.
  *
- * Precisa ser estável: `useActiveSection` recebe esta lista como dependência de
- * efeito, e um `NAV_ITEMS.map(...)` no corpo do componente devolveria um array
- * novo a cada render - o IntersectionObserver seria destruído e recriado sem
- * parar, o que anula justamente a razão de usar observer em vez de listener.
+ * <p>Precisa ser estavel: {@code useActiveSection} recebe esta lista como
+ * dependencia de efeito, e um array montado no corpo do componente seria novo a
+ * cada render - o IntersectionObserver seria destruido e recriado sem parar.
  */
-export const NAV_IDS: readonly string[] = NAV_ITEMS.map((item) => item.id);
+export type NavId = (typeof NAV_IDS)[number];
 
 /** Id do <main>, alvo do skip link. */
 export const MAIN_ID = 'conteudo';

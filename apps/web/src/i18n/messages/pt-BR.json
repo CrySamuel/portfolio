@@ -1,0 +1,141 @@
+{
+  "Metadata": {
+    "siteDescription": "Portfólio de {nome}, desenvolvedor backend Java e Spring Boot: projetos em produção, arquitetura hexagonal, testes de integração e código aberto.",
+    "projectsTitle": "Projetos",
+    "projectsDescription": "Projetos com o problema que resolviam, o que foi construído e o resultado que veio depois.",
+    "breadcrumbHome": "Início",
+    "breadcrumbProjects": "Projetos"
+  },
+  "ShareCard": {
+    "siteEyebrow": "PORTFÓLIO",
+    "siteAlt": "Cartão do portfólio, com o nome, o cargo e as principais competências",
+    "projectEyebrow": "PROJETO",
+    "projectAlt": "Cartão do projeto, com o título, o resumo e as tecnologias usadas"
+  },
+  "Navigation": {
+    "main": "Principal",
+    "sobre": "Sobre",
+    "projetos": "Projetos",
+    "skills": "Skills",
+    "contato": "Contato",
+    "openMenu": "Abrir menu de navegação",
+    "closeMenu": "Fechar menu",
+    "menu": "Menu de navegação",
+    "mobile": "Navegação mobile"
+  },
+  "SkipLink": {
+    "label": "Pular para o conteúdo"
+  },
+  "ThemeToggle": {
+    "toLight": "Ativar tema claro",
+    "toDark": "Ativar tema escuro"
+  },
+  "Footer": {
+    "nav": "Perfis e contato"
+  },
+  "SocialLinks": {
+    "github": "Perfil no GitHub",
+    "linkedin": "Perfil no LinkedIn",
+    "email": "Enviar e-mail"
+  },
+  "Hero": {
+    "available": "Disponível para propostas",
+    "github": "Ver o código no GitHub",
+    "contact": "Falar comigo"
+  },
+  "About": {
+    "eyebrow": "Trajetória",
+    "title": "Sobre",
+    "description": "De suporte técnico a desenvolvimento backend, com automação no meio do caminho.",
+    "resume": "Baixar currículo (PDF, {tamanho})",
+    "current": "Atual",
+    "present": "presente"
+  },
+  "Skills": {
+    "eyebrow": "Competências",
+    "title": "Skills",
+    "description": "Nível declarado em texto, sem barra de percentual — a escala é curta de propósito.",
+    "basic": "Básico",
+    "intermediate": "Intermediário",
+    "advanced": "Avançado",
+    "years": "{anos, plural, =0 {menos de 1 ano} =1 {1 ano} other {# anos}}"
+  },
+  "Projects": {
+    "eyebrow": "Prova de trabalho",
+    "title": "Projetos",
+    "descriptionHome": "O que foi construído, com o problema que motivou e o resultado que veio depois.",
+    "descriptionCatalog": "Cada um com o problema que resolvia, o que foi construído e o que mudou depois.",
+    "technologiesOf": "Tecnologias de {titulo}",
+    "filter": "Filtrar por tecnologia",
+    "all": "Todos",
+    "empty": "Nenhum projeto com essa tecnologia.",
+    "allProjects": "Todos os projetos",
+    "repository": "Ver o repositório",
+    "live": "Ver no ar",
+    "problem": "Problema",
+    "solution": "Solução",
+    "outcome": "Resultado",
+    "numbersOf": "Números de {titulo}",
+    "notFoundEyebrow": "Erro 404",
+    "notFoundTitle": "Este projeto não existe",
+    "notFoundDescription": "O endereço pode ter mudado, ou o projeto pode ter saído do catálogo. A lista completa continua no lugar.",
+    "notFoundBack": "Ver todos os projetos"
+  },
+  "GitHub": {
+    "eyebrow": "Atividade",
+    "title": "No GitHub",
+    "description": "Os números vêm da API do GitHub em tempo de execução, atrás de cache, disjuntor e retentativa — não de uma captura de tela.",
+    "publicRepositories": "Repositórios públicos",
+    "languages": "Linguagens",
+    "contributions": "Contribuições no último ano",
+    "featured": "Repositórios em destaque",
+    "others": "Outras",
+    "primaryLanguage": "Linguagem predominante",
+    "starsLabel": "Estrelas",
+    "stars": "{n, plural, =1 {1 estrela} other {# estrelas}}",
+    "lastPush": "Último push"
+  },
+  "Contact": {
+    "eyebrow": "Contato",
+    "title": "Vamos conversar",
+    "description": "Escreva sobre uma vaga, um projeto ou uma dúvida técnica. A mensagem é gravada antes de qualquer tentativa de envio — se o e-mail falhar, ela é reenviada sozinha.",
+    "directTitle": "Prefere ir direto?",
+    "directText": "O formulário guarda a mensagem antes de tentar me avisar, então ela não se perde. Mas se preferir o caminho curto, os dois endereços abaixo chegam em mim do mesmo jeito.",
+    "email": "E-mail",
+    "linkedin": "LinkedIn",
+    "name": "Nome",
+    "subject": "Assunto",
+    "message": "Mensagem",
+    "trap": "Site",
+    "send": "Enviar mensagem",
+    "protected": "Protegido pelo Turnstile, da Cloudflare.",
+    "sentTitle": "Mensagem enviada.",
+    "sentText": "Ela já está guardada. Respondo no endereço que você deixou.",
+    "checkFields": "Confira os campos marcados abaixo.",
+    "genericFailure": "Não consegui enviar sua mensagem agora. Tente de novo em instantes, ou escreva direto para o e-mail ao lado.",
+    "turnstileRefused": "A verificação anti-robô recusou esta tentativa. Tente enviar de novo.",
+    "turnstileMissing": "A verificação anti-robô não carregou — costuma ser bloqueador de conteúdo ou rede. Espere um instante e tente de novo; se continuar, escreva direto para o e-mail ao lado.",
+    "rateLimited": "Você já enviou algumas mensagens hoje. {espera}",
+    "rejectedByServer": "Sua mensagem não passou na validação do servidor. Escreva direto para o e-mail ao lado — vou receber do mesmo jeito.",
+    "retryLater": "Tente de novo mais tarde.",
+    "retryInSeconds": "Tente de novo em {segundos} segundos.",
+    "retryInMinutes": "Tente de novo em {minutos, plural, =1 {1 minuto} other {# minutos}}."
+  },
+  "ContactValidation": {
+    "nameRequired": "Escreva seu nome.",
+    "nameTooLong": "O nome precisa caber em {limite} caracteres.",
+    "emailRequired": "Escreva seu e-mail — é por ele que a resposta volta.",
+    "emailTooLong": "O e-mail precisa caber em {limite} caracteres.",
+    "emailInvalid": "Confira o e-mail: parece faltar alguma coisa.",
+    "subjectRequired": "Escreva um assunto.",
+    "subjectTooLong": "O assunto precisa caber em {limite} caracteres.",
+    "messageRequired": "Escreva a mensagem.",
+    "messageTooLong": "A mensagem precisa caber em {limite} caracteres."
+  },
+  "NotFound": {
+    "eyebrow": "Erro 404",
+    "title": "Esta página não existe",
+    "description": "O endereço pode ter mudado, ou nunca ter existido. A página inicial continua no lugar.",
+    "back": "Ir para o início"
+  }
+}

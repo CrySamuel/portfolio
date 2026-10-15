@@ -1,19 +1,20 @@
 import { ImageResponse } from 'next/og';
+import { getTranslations } from 'next-intl/server';
 
+import { idiomaDaRota, parametrosDosIdiomas, type ParametrosDoIdioma } from '@/i18n/locale';
 import { getProfile } from '@/lib/api/profile';
 import { listSkills } from '@/lib/api/skills';
-import { CARTAO_DO_SITE, COR_DO_CARTAO, TAMANHO_DO_CARTAO } from '@/lib/share-card';
+import { COR_DO_CARTAO, TAMANHO_DO_CARTAO } from '@/lib/share-card';
 import { SITE_URL } from '@/lib/site';
+
+/** Um cartao por idioma, gerado no build - ver {@link parametrosDosIdiomas}. */
+export function generateStaticParams(): { locale: string }[] {
+  return parametrosDosIdiomas();
+}
 
 export const size = TAMANHO_DO_CARTAO;
 
 export const contentType = 'image/png';
-
-/**
- * Diz o que ha na imagem alem do que as outras metas ja dizem - o mesmo
- * criterio do texto alternativo da imagem de cada projeto.
- */
-export const alt = CARTAO_DO_SITE.alt;
 
 /** Quantas competencias cabem numa linha de selos sem quebrar para a segunda. */
 const COMPETENCIAS_NO_CARTAO = 6;
@@ -25,9 +26,9 @@ const COMPETENCIAS_NO_CARTAO = 6;
  * WhatsApp, num e-mail de recrutador. Vale tambem para toda rota sem imagem
  * propria, mas <strong>nao por heranca</strong>: um segmento filho que declara
  * {@code openGraph} descarta a imagem herdada deste arquivo, e foi assim que a
- * listagem saiu sem {@code og:image} na primeira medicao. Quem a estende as
- * outras rotas e o {@code metadataDaPagina}. As paginas de projeto tem a delas,
- * ao lado.
+ * listagem saiu sem {@code og:image} na primeira medicao. Quem a anuncia e a
+ * pagina, por {@code cartaoDoSite} - com o endereco publico e o alt no idioma
+ * dela. As paginas de projeto tem a delas, ao lado.
  *
  * <p><strong>Gerada no build, como a dos projetos</strong>, e revalidada junto
  * com a pagina: o crawler recebe um PNG estatico da CDN, e nao espera o cold
@@ -41,8 +42,13 @@ const COMPETENCIAS_NO_CARTAO = 6;
  * <p>O rodape mostra o endereco do site, e ele sai de {@code SITE_URL}: quando o
  * dominio proprio chegar, a imagem acompanha sem edicao.
  */
-export default async function ImagemDoSite(): Promise<ImageResponse> {
-  const [perfil, categorias] = await Promise.all([getProfile(), listSkills()]);
+export default async function ImagemDoSite({ params }: ParametrosDoIdioma): Promise<ImageResponse> {
+  const locale = await idiomaDaRota(params);
+  const [perfil, categorias, t] = await Promise.all([
+    getProfile(),
+    listSkills(),
+    getTranslations({ locale, namespace: 'ShareCard' }),
+  ]);
   const competencias = categorias
     .flatMap((categoria) => categoria.skills.map((skill) => skill.name))
     .slice(0, COMPETENCIAS_NO_CARTAO);
@@ -65,7 +71,7 @@ export default async function ImagemDoSite(): Promise<ImageResponse> {
         <div
           style={{ display: 'flex', fontSize: 24, color: COR_DO_CARTAO.destaque, letterSpacing: 2 }}
         >
-          PORTFÓLIO
+          {t('siteEyebrow')}
         </div>
 
         <div style={{ display: 'flex', fontSize: 84, lineHeight: 1.05 }}>{perfil.fullName}</div>

@@ -1,31 +1,27 @@
 import { ImageResponse } from 'next/og';
+import { getTranslations } from 'next-intl/server';
 
-import { carregarProjeto, slugsDoCatalogo, type Parametros } from '@/app/projetos/[slug]/projeto';
+import {
+  carregarProjeto,
+  idiomasESlugsDoCatalogo,
+  type Parametros,
+} from '@/app/[locale]/projetos/[slug]/projeto';
+import { idiomaDaRota } from '@/i18n/locale';
 import { getProfile } from '@/lib/api/profile';
 import { COR_DO_CARTAO, TAMANHO_DO_CARTAO } from '@/lib/share-card';
 
 /**
- * Os mesmos slugs da pagina, declarados de novo porque o Next nao os herda do
- * arquivo vizinho - a medicao esta em {@link slugsDoCatalogo}.
+ * Os mesmos slugs da pagina, em cada idioma, declarados aqui porque o Next nao
+ * os herda nem do arquivo vizinho nem do layout - ver
+ * {@link idiomasESlugsDoCatalogo}.
  */
-export function generateStaticParams(): Promise<{ slug: string }[]> {
-  return slugsDoCatalogo();
+export function generateStaticParams(): Promise<{ locale: string; slug: string }[]> {
+  return idiomasESlugsDoCatalogo();
 }
 
 export const size = TAMANHO_DO_CARTAO;
 
 export const contentType = 'image/png';
-
-/**
- * O texto alternativo da imagem, e ele e o mesmo em todos os projetos.
- *
- * <p>Um alt por projeto seria possivel com {@code generateImageMetadata}, e foi
- * recusado: o {@code og:image:alt} aparece ao lado do titulo e da descricao que
- * as outras metas ja carregam, entao repetir o titulo aqui diria a mesma coisa
- * duas vezes. O que falta a quem nao ve a imagem nao e o titulo - e saber o que
- * ha nela alem do titulo.
- */
-export const alt = 'Cartão do projeto, com o título, o resumo e as tecnologias usadas';
 
 /**
  * A imagem de compartilhamento de um projeto.
@@ -47,8 +43,12 @@ export const alt = 'Cartão do projeto, com o título, o resumo e as tecnologias
  * portfolio pode ficar desatualizado sem ninguem notar.
  */
 export default async function ImagemDoProjeto({ params }: Parametros): Promise<ImageResponse> {
-  const { slug } = await params;
-  const [projeto, perfil] = await Promise.all([carregarProjeto(slug), getProfile()]);
+  const [locale, { slug }] = await Promise.all([idiomaDaRota(params), params]);
+  const [projeto, perfil, t] = await Promise.all([
+    carregarProjeto(slug),
+    getProfile(),
+    getTranslations({ locale, namespace: 'ShareCard' }),
+  ]);
 
   return new ImageResponse(
     <div
@@ -79,7 +79,7 @@ export default async function ImagemDoProjeto({ params }: Parametros): Promise<I
         <div
           style={{ display: 'flex', fontSize: 24, color: COR_DO_CARTAO.destaque, letterSpacing: 2 }}
         >
-          PROJETO
+          {t('projectEyebrow')}
         </div>
 
         <div style={{ display: 'flex', fontSize: 68, lineHeight: 1.05 }}>{projeto.title}</div>

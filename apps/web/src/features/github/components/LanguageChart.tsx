@@ -1,4 +1,5 @@
 import type { LanguageShare } from '@portfolio/api-client';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 /**
@@ -21,11 +22,6 @@ const FATIA_MINIMA = 1;
  * daltonismo que o conjunto garante.
  */
 const FATIAS_NOMEADAS = 6;
-
-const FORMATO = new Intl.NumberFormat('pt-BR', {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-});
 
 interface Fatia {
   readonly nome: string;
@@ -57,9 +53,21 @@ interface Fatia {
  * e o que a validacao da paleta exige - tres dos seis tons ficam abaixo de 3:1
  * contra a superficie clara, e a identidade nunca pode depender so da cor.
  */
-export function LanguageChart({ languages }: { languages: readonly LanguageShare[] }): ReactNode {
-  const fatias = agruparCauda(languages);
+export async function LanguageChart({
+  languages,
+}: {
+  languages: readonly LanguageShare[];
+}): Promise<ReactNode> {
+  const [t, locale] = await Promise.all([getTranslations('GitHub'), getLocale()]);
+  const fatias = agruparCauda(languages, t('others'));
   if (fatias.length === 0) return null;
+
+  // Uma casa decimal sempre, no separador do idioma: 46,0% em portugues, 46.0%
+  // em ingles. A casa fixa e o que alinha a coluna de porcentagens da legenda.
+  const porcentagem = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -102,7 +110,7 @@ export function LanguageChart({ languages }: { languages: readonly LanguageShare
               texto.
             */}
             <span className="ml-auto shrink-0 text-fg-muted tabular-nums">
-              {FORMATO.format(fatia.share)}%
+              {porcentagem.format(fatia.share)}%
             </span>
           </li>
         ))}
@@ -127,7 +135,7 @@ function rotular(fatia: Fatia): string {
  * ser o nome dela. Agrupar um item so seria esconder um nome atras de uma
  * palavra mais longa do que ele.
  */
-function agruparCauda(languages: readonly LanguageShare[]): readonly Fatia[] {
+function agruparCauda(languages: readonly LanguageShare[], outras: string): readonly Fatia[] {
   const cores = [
     'var(--chart-1)',
     'var(--chart-2)',
@@ -154,7 +162,7 @@ function agruparCauda(languages: readonly LanguageShare[]): readonly Fatia[] {
 
   if (cauda.length > 0) {
     fatias.push({
-      nome: cauda.length === 1 ? (cauda[0]?.name ?? 'Outras') : 'Outras',
+      nome: cauda.length === 1 ? (cauda[0]?.name ?? outras) : outras,
       share: cauda.reduce((soma, linguagem) => soma + linguagem.share, 0),
       cor: 'var(--chart-rest)',
       linguagens: cauda.length,

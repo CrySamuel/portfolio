@@ -1,11 +1,13 @@
 import type { ProjectDetail as Projeto } from '@portfolio/api-client';
 import { Button } from '@portfolio/ui';
 import Link from 'next/link';
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import { Container } from '@/components/layout/Container';
 import { ProjectMetrics } from '@/features/projects/components/ProjectMetrics';
 import { TechStack } from '@/features/projects/components/TechStack';
+import { caminhoPublico } from '@/i18n/navigation';
 
 /**
  * Locale e fuso fixos, como no {@code TimelineItem} - e o segundo pelo mesmo
@@ -22,12 +24,6 @@ import { TechStack } from '@/features/projects/components/TechStack';
  * por extenso - e o que se repetiria e a armadilha, nao o codigo. Ela esta
  * escrita nos dois lugares de proposito.
  */
-const FORMATADOR_DE_MES = new Intl.DateTimeFormat('pt-BR', {
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
-
 /**
  * A pagina de um projeto: problema, solucao e resultado.
  *
@@ -50,7 +46,7 @@ const FORMATADOR_DE_MES = new Intl.DateTimeFormat('pt-BR', {
  * criterio 3.2.5 da WCAG, e anunciar a mudanca em cada rotulo poluiria a leitura
  * de todos - e a mesma decisao ja tomada nos links do rodape.
  */
-export function ProjectDetail({ project }: { project: Projeto }): ReactNode {
+export async function ProjectDetail({ project }: { project: Projeto }): Promise<ReactNode> {
   const {
     title,
     summary,
@@ -63,6 +59,8 @@ export function ProjectDetail({ project }: { project: Projeto }): ReactNode {
     technologies,
     metrics,
   } = project;
+  const [t, locale] = await Promise.all([getTranslations('Projects'), getLocale()]);
+  const mes = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
   return (
     <Container className="flex flex-col gap-10 py-16 md:gap-12 md:py-24">
@@ -81,9 +79,12 @@ export function ProjectDetail({ project }: { project: Projeto }): ReactNode {
             onde o plano poe os dados estruturados.
           */}
           <p className="text-body-sm">
-            <Link href="/projetos" className="rounded-sm text-fg-muted hover:text-fg">
+            <Link
+              href={caminhoPublico({ href: '/projetos', locale })}
+              className="rounded-sm text-fg-muted hover:text-fg"
+            >
               <span aria-hidden>← </span>
-              Todos os projetos
+              {t('allProjects')}
             </Link>
           </p>
 
@@ -105,11 +106,11 @@ export function ProjectDetail({ project }: { project: Projeto }): ReactNode {
           */}
           {publishedAt === null ? null : (
             <p className="text-body-sm text-fg-subtle">
-              <time dateTime={publishedAt}>{FORMATADOR_DE_MES.format(new Date(publishedAt))}</time>
+              <time dateTime={publishedAt}>{mes.format(new Date(publishedAt))}</time>
             </p>
           )}
 
-          <TechStack technologies={technologies} label={`Tecnologias de ${title}`} />
+          <TechStack technologies={technologies} label={t('technologiesOf', { titulo: title })} />
 
           {/*
             Os dois enderecos sao nulaveis, e os dois casos sao reais: o FinAI
@@ -124,12 +125,12 @@ export function ProjectDetail({ project }: { project: Projeto }): ReactNode {
             <div className="flex flex-wrap gap-3">
               {repoUrl === null ? null : (
                 <Button asChild variant="outline">
-                  <a href={repoUrl}>Ver o repositório</a>
+                  <a href={repoUrl}>{t('repository')}</a>
                 </Button>
               )}
               {liveUrl === null ? null : (
                 <Button asChild variant="primary">
-                  <a href={liveUrl}>Ver no ar</a>
+                  <a href={liveUrl}>{t('live')}</a>
                 </Button>
               )}
             </div>
@@ -143,9 +144,9 @@ export function ProjectDetail({ project }: { project: Projeto }): ReactNode {
         */}
         <div className="flex flex-col gap-8">
           {[
-            { titulo: 'Problema', texto: problem },
-            { titulo: 'Solução', texto: solution },
-            { titulo: 'Resultado', texto: outcome },
+            { titulo: t('problem'), texto: problem },
+            { titulo: t('solution'), texto: solution },
+            { titulo: t('outcome'), texto: outcome },
           ].map((bloco) => (
             <section key={bloco.titulo} className="flex flex-col gap-2">
               {/*
@@ -164,7 +165,7 @@ export function ProjectDetail({ project }: { project: Projeto }): ReactNode {
           As metricas fecham a narrativa, logo depois do resultado que elas
           sustentam. Antes dele seriam numeros sem a frase que os explica.
         */}
-        <ProjectMetrics metrics={metrics} label={`Números de ${title}`} />
+        <ProjectMetrics metrics={metrics} label={t('numbersOf', { titulo: title })} />
       </article>
     </Container>
   );

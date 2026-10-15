@@ -1,11 +1,18 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 
-import { carregarProjeto, slugsDoCatalogo, type Parametros } from '@/app/projetos/[slug]/projeto';
-import { DEGRAUS_DA_LISTAGEM } from '@/app/projetos/trilha';
+import { cartaoDoProjeto } from '@/app/[locale]/cartoes';
+import {
+  carregarProjeto,
+  slugsDoCatalogo,
+  type Parametros,
+} from '@/app/[locale]/projetos/[slug]/projeto';
+import { degrausDaListagem } from '@/app/[locale]/projetos/trilha';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { codigoFonte, grafo, trilha } from '@/components/seo/structured-data';
 import { ProjectDetail } from '@/features/projects/components/ProjectDetail';
+import { fixarIdioma, idiomaDaRota } from '@/i18n/locale';
+import { caminhoPublico } from '@/i18n/navigation';
 import { getProfile } from '@/lib/api/profile';
 import { metadataDaPagina } from '@/lib/metadata';
 
@@ -34,25 +41,30 @@ export function generateStaticParams(): Promise<{ slug: string }[]> {
  * nada. O {@code canonical} fixa o endereco unico da pagina, e ele e resolvido
  * contra o {@code metadataBase} do layout.
  *
- * <p><strong>{@code openGraph.images} nao aparece aqui de proposito.</strong> O
- * arquivo {@code opengraph-image.tsx} ao lado ja e a convencao do App Router
- * para isso: o Next injeta as tres metas - endereco, largura e altura - a partir
- * dele. Declarar a imagem tambem aqui criaria duas fontes de verdade para o
- * mesmo endereco, e a daqui venceria, silenciando o arquivo.
+ * <p><strong>A imagem e declarada aqui, e vence o arquivo ao lado de
+ * proposito.</strong> O {@code opengraph-image.tsx} continua desenhando o PNG;
+ * quem o anuncia e o {@code cartaoDoProjeto}, porque o endereco que a convencao
+ * geraria e o interno, com o idioma, e o middleware o redireciona - ver
+ * app/[locale]/cartoes.
  *
  * <p>A chamada nao custa uma segunda requisicao: o {@code cache} do React
  * memoiza por passagem de renderizacao, entao o projeto que este metodo carrega
  * e o mesmo que a pagina abaixo recebe.
  */
 export async function generateMetadata({ params }: Parametros): Promise<Metadata> {
-  const { slug } = await params;
-  const [projeto, perfil] = await Promise.all([carregarProjeto(slug), getProfile()]);
+  const [locale, { slug }] = await Promise.all([idiomaDaRota(params), params]);
+  const [projeto, perfil, cartao] = await Promise.all([
+    carregarProjeto(slug),
+    getProfile(),
+    cartaoDoProjeto(locale, slug),
+  ]);
 
   return metadataDaPagina(perfil, {
     titulo: projeto.title,
     descricao: projeto.summary,
-    caminho: `/projetos/${projeto.slug}`,
+    caminho: caminhoPublico({ href: `/projetos/${projeto.slug}`, locale }),
     artigo: { publicadoEm: projeto.publishedAt },
+    cartao,
   });
 }
 
@@ -67,8 +79,14 @@ export async function generateMetadata({ params }: Parametros): Promise<Metadata
  * dele no site, e saem do mesmo projeto que a pagina desenha.
  */
 export default async function ProjetoPage({ params }: Parametros): Promise<ReactNode> {
-  const { slug } = await params;
-  const [projeto, perfil] = await Promise.all([carregarProjeto(slug), getProfile()]);
+  const [locale, { slug }] = await Promise.all([idiomaDaRota(params), params]);
+  fixarIdioma(locale);
+
+  const [projeto, perfil, degraus] = await Promise.all([
+    carregarProjeto(slug),
+    getProfile(),
+    degrausDaListagem(locale),
+  ]);
 
   return (
     <>
@@ -76,8 +94,11 @@ export default async function ProjetoPage({ params }: Parametros): Promise<React
         dados={grafo(
           codigoFonte(projeto, perfil),
           trilha([
-            ...DEGRAUS_DA_LISTAGEM,
-            { nome: projeto.title, caminho: `/projetos/${projeto.slug}` },
+            ...degraus,
+            {
+              nome: projeto.title,
+              caminho: caminhoPublico({ href: `/projetos/${projeto.slug}`, locale }),
+            },
           ]),
         )}
       />

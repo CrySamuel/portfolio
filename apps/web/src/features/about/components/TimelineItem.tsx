@@ -3,35 +3,6 @@ import type { Experience } from '@portfolio/api-client';
 import type { ReactNode } from 'react';
 
 /**
- * Locale fixo enquanto nao ha i18n.
- *
- * O `next-intl` so chega no commit 51, e ate la o site e monolingue. Usar `Intl`
- * agora, em vez de escrever os meses a mao, e o que torna aquele commit uma
- * troca de parametro: o mesmo codigo passa a produzir `Jan 2026` em en-US sem
- * ninguem traduzir nome de mes.
- */
-const LOCALE = 'pt-BR';
-
-/**
- * <strong>UTC explicito, e nao detalhe.</strong>
- *
- * A API manda `2026-01-01`, que o construtor de `Date` interpreta como meia-noite
- * <em>UTC</em>. Formatado no fuso de quem renderiza - `America/Sao_Paulo`, tres
- * horas atras - isso vira 31 de dezembro de 2025, e a data de inicio aparece um
- * mes antes do que deveria.
- *
- * Medido nesta maquina antes de escrever: sem `timeZone`, `2026-01-01` sai como
- * `dez. de 2025`. O defeito nao quebra nada, nao aparece em teste de tipo e some
- * em qualquer maquina que rode em UTC - inclusive o runner do CI. So apareceria
- * na tela de quem visita o site.
- */
-const FORMATADOR_DE_MES = new Intl.DateTimeFormat(LOCALE, {
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
-
-/**
  * Uma passagem da timeline.
  *
  * Server Component: nao ha estado, efeito nem API de navegador aqui, entao o
@@ -43,7 +14,16 @@ const FORMATADOR_DE_MES = new Intl.DateTimeFormat(LOCALE, {
  * decide a semantica de sequencia, e um item que se declarasse `<article>` solto
  * quebraria a contagem que o leitor de tela anuncia.
  */
-export function TimelineItem({ experience }: { experience: Experience }): ReactNode {
+export function TimelineItem({
+  experience,
+  locale,
+  textos,
+}: {
+  readonly experience: Experience;
+  readonly locale: string;
+  readonly textos: { readonly atual: string; readonly presente: string };
+}): ReactNode {
+  const formatarMes = formatadorDeMes(locale);
   const { company, role, startDate, endDate, description, highlights } = experience;
 
   // A ausencia de data de saida **e** o que significa cargo atual - o mesmo
@@ -79,7 +59,7 @@ export function TimelineItem({ experience }: { experience: Experience }): ReactN
               fonte - pular de h2 para h4 confundiria a navegacao por cabecalhos.
             */}
             <h3 className="text-h4 text-fg">{role}</h3>
-            {atual ? <Badge variant="accent">Atual</Badge> : null}
+            {atual ? <Badge variant="accent">{textos.atual}</Badge> : null}
           </div>
 
           <p className="text-body text-fg-muted">{company}</p>
@@ -92,7 +72,11 @@ export function TimelineItem({ experience }: { experience: Experience }): ReactN
           <p className="text-body-sm text-fg-subtle">
             <time dateTime={startDate}>{formatarMes(startDate)}</time>
             {' – '}
-            {endDate === null ? 'presente' : <time dateTime={endDate}>{formatarMes(endDate)}</time>}
+            {endDate === null ? (
+              textos.presente
+            ) : (
+              <time dateTime={endDate}>{formatarMes(endDate)}</time>
+            )}
           </p>
         </div>
 
@@ -123,7 +107,24 @@ export function TimelineItem({ experience }: { experience: Experience }): ReactN
   );
 }
 
-/** `2026-01-01` vira `jan. de 2026`, sempre em UTC - ver o comentario do formatador. */
-function formatarMes(data: string): string {
-  return FORMATADOR_DE_MES.format(new Date(data));
+/**
+ * <strong>UTC explicito, e nao detalhe.</strong>
+ *
+ * A API manda `2026-01-01`, que o construtor de `Date` interpreta como meia-noite
+ * <em>UTC</em>. Formatado no fuso de quem renderiza - `America/Sao_Paulo`, tres
+ * horas atras - isso vira 31 de dezembro de 2025, e a data de inicio aparece um
+ * mes antes do que deveria.
+ *
+ * Medido nesta maquina antes de escrever: sem `timeZone`, `2026-01-01` sai como
+ * `dez. de 2025`. O defeito nao quebra nada, nao aparece em teste de tipo e some
+ * em qualquer maquina que rode em UTC - inclusive o runner do CI. So apareceria
+ * na tela de quem visita o site.
+ */
+function formatadorDeMes(locale: string): (data: string) => string {
+  const formato = new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+  return (data) => formato.format(new Date(data));
 }

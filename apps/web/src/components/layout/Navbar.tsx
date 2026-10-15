@@ -7,7 +7,7 @@ import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { Container } from '@/components/layout/Container';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { useActiveSection } from '@/hooks/use-active-section';
-import { NAV_IDS, NAV_ITEMS } from '@/lib/navigation';
+import { NAV_IDS, type NavItem } from '@/lib/navigation';
 
 /**
  * Navegação principal (seção 8.3).
@@ -20,8 +20,28 @@ import { NAV_IDS, NAV_ITEMS } from '@/lib/navigation';
  * avaliado fora da thread principal, acordando só quando o cruzamento muda. Um
  * handler de scroll rodaria dezenas de vezes por segundo exatamente durante a
  * rolagem, que é quando o INP é medido.
+ *
+ * Os textos chegam prontos, por props, e o motivo e o orcamento de JS: o next-intl no navegador
+ * traria o formatador de mensagens para repetir o que o layout ja fez no servidor.
  */
-export function Navbar(): ReactNode {
+export interface NavbarProps {
+  /** O nome do dono do site, que e o link para a home. Vem do perfil, e nao de um literal. */
+  readonly nome: string;
+  /** O endereco da home no idioma da pagina. */
+  readonly inicio: string;
+  readonly itens: readonly NavItem[];
+  readonly textos: {
+    readonly principal: string;
+    readonly abrirMenu: string;
+    readonly fecharMenu: string;
+    readonly menu: string;
+    readonly mobile: string;
+    readonly temaClaro: string;
+    readonly temaEscuro: string;
+  };
+}
+
+export function Navbar({ nome, inicio, itens, textos }: NavbarProps): ReactNode {
   const secaoAtiva = useActiveSection(NAV_IDS);
   const sentinela = useRef<HTMLDivElement>(null);
   const [rolou, setRolou] = useState(false);
@@ -60,17 +80,17 @@ export function Navbar(): ReactNode {
           menu mobile e o do rodapé -, e o leitor de tela lista todos: sem nome
           viram "navegação, navegação, navegação".
         */}
-        <nav aria-label="Principal">
+        <nav aria-label={textos.principal}>
           <Container className="flex h-16 items-center gap-2">
             <Link
-              href="/"
+              href={inicio}
               className="mr-auto flex min-h-11 items-center rounded-md text-body font-medium text-fg"
             >
-              Crystofer Demetino
+              {nome}
             </Link>
 
             <ul className="hidden items-center gap-1 md:flex">
-              {NAV_ITEMS.map((item) => (
+              {itens.map((item) => (
                 <li key={item.id}>
                   <a
                     href={`#${item.id}`}
@@ -86,8 +106,17 @@ export function Navbar(): ReactNode {
               ))}
             </ul>
 
-            <ThemeToggle />
-            <MobileNav items={NAV_ITEMS} activeId={secaoAtiva} />
+            <ThemeToggle rotulos={{ claro: textos.temaClaro, escuro: textos.temaEscuro }} />
+            <MobileNav
+              items={itens}
+              activeId={secaoAtiva}
+              textos={{
+                abrir: textos.abrirMenu,
+                fechar: textos.fecharMenu,
+                menu: textos.menu,
+                navegacao: textos.mobile,
+              }}
+            />
           </Container>
         </nav>
       </header>

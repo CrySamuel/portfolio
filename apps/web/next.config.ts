@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import createNextIntlPlugin from 'next-intl/plugin';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -135,4 +136,11 @@ const nextConfig: NextConfig = {
     ]),
 };
 
-export default nextConfig;
+/**
+ * O next-intl entra por plugin, que aponta onde mora a configuracao de cada requisicao. Ele nao
+ * acrescenta nada ao navegador: o site usa so as APIs de servidor da biblioteca, e os textos chegam
+ * aos componentes de cliente ja traduzidos, por props.
+ */
+const comIdiomas = createNextIntlPlugin('./src/i18n/request.ts');
+
+export default comIdiomas(nextConfig);

@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import { SectionHeading } from '@/components/common/SectionHeading';
@@ -43,7 +44,7 @@ const SECTION_ID = 'github';
  * GraphQL nao responde e o total chega zero.
  */
 export async function GitHubSection(): Promise<ReactNode> {
-  const stats = await getGitHubStats();
+  const [stats, t] = await Promise.all([getGitHubStats(), getTranslations('GitHub')]);
 
   if (retratoVazio(stats)) return null;
 
@@ -52,14 +53,14 @@ export async function GitHubSection(): Promise<ReactNode> {
       <Container className="flex flex-col gap-10">
         <SectionHeading
           sectionId={SECTION_ID}
-          eyebrow="Atividade"
-          title="No GitHub"
-          description="Os números vêm da API do GitHub em tempo de execução, atrás de cache, disjuntor e retentativa — não de uma captura de tela."
+          eyebrow={t('eyebrow')}
+          title={t('title')}
+          description={t('description')}
         />
 
         <dl className="flex flex-wrap gap-x-10 gap-y-4">
-          <Numero rotulo="Repositórios públicos" valor={stats.publicRepositories} />
-          <Numero rotulo="Linguagens" valor={stats.languages.length} />
+          <Numero rotulo={t('publicRepositories')} valor={stats.publicRepositories} />
+          <Numero rotulo={t('languages')} valor={stats.languages.length} />
 
           {/*
             Zero aqui nao e "nenhuma contribuicao": e "sem token, e o GraphQL do
@@ -67,20 +68,20 @@ export async function GitHubSection(): Promise<ReactNode> {
             algo que o dado nao diz.
           */}
           {stats.contributionsLastYear === 0 ? null : (
-            <Numero rotulo="Contribuições no último ano" valor={stats.contributionsLastYear} />
+            <Numero rotulo={t('contributions')} valor={stats.contributionsLastYear} />
           )}
         </dl>
 
         {stats.languages.length === 0 ? null : (
           <div className="flex flex-col gap-4">
-            <h3 className="text-h4 text-fg">Linguagens</h3>
+            <h3 className="text-h4 text-fg">{t('languages')}</h3>
             <LanguageChart languages={stats.languages} />
           </div>
         )}
 
         {stats.repositories.length === 0 ? null : (
           <div className="flex flex-col gap-4">
-            <h3 className="text-h4 text-fg">Repositórios em destaque</h3>
+            <h3 className="text-h4 text-fg">{t('featured')}</h3>
 
             {/* eslint-disable-next-line jsx-a11y/no-redundant-roles -- list-style: none medido; ver Timeline */}
             <ul role="list" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

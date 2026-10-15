@@ -1,4 +1,5 @@
 import type { Profile } from '@portfolio/api-client';
+import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 /**
@@ -18,7 +19,8 @@ import type { ReactNode } from 'react';
  * perfil não publicar e-mail, a seção mostra só o formulário: um bloco de
  * contato com um endereço inventado seria pior que a ausência dele.
  */
-export function ContactInfo({ profile }: { readonly profile: Profile }): ReactNode {
+export async function ContactInfo({ profile }: { readonly profile: Profile }): Promise<ReactNode> {
+  const t = await getTranslations('Contact');
   const email = profile.socialLinks.find((link) => link.platform === 'email');
   const linkedin = profile.socialLinks.find((link) => link.platform === 'linkedin');
 
@@ -27,11 +29,8 @@ export function ContactInfo({ profile }: { readonly profile: Profile }): ReactNo
   return (
     <div className="flex flex-col gap-6 rounded-lg border border-border bg-surface p-6">
       <div className="flex flex-col gap-2">
-        <h3 className="text-h4 text-fg">Prefere ir direto?</h3>
-        <p className="text-body-sm text-pretty text-fg-muted">
-          O formulário guarda a mensagem antes de tentar me avisar, então ela não se perde. Mas se
-          preferir o caminho curto, os dois endereços abaixo chegam em mim do mesmo jeito.
-        </p>
+        <h3 className="text-h4 text-fg">{t('directTitle')}</h3>
+        <p className="text-body-sm text-pretty text-fg-muted">{t('directText')}</p>
       </div>
 
       {/*
@@ -41,11 +40,11 @@ export function ContactInfo({ profile }: { readonly profile: Profile }): ReactNo
       */}
       <dl className="flex flex-col gap-4">
         {email === undefined ? null : (
-          <Endereco rotulo="E-mail" href={email.url} texto={semMailto(email.url)} />
+          <Endereco rotulo={t('email')} href={email.url} texto={semMailto(email.url)} />
         )}
 
         {linkedin === undefined ? null : (
-          <Endereco rotulo="LinkedIn" href={linkedin.url} texto={semEsquema(linkedin.url)} />
+          <Endereco rotulo={t('linkedin')} href={linkedin.url} texto={semEsquema(linkedin.url)} />
         )}
       </dl>
 

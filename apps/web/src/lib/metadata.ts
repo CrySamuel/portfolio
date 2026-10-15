@@ -1,7 +1,7 @@
 import type { Profile } from '@portfolio/api-client';
 import type { Metadata } from 'next';
 
-import { CARTAO_DO_SITE, TAMANHO_DO_CARTAO } from '@/lib/share-card';
+import { TAMANHO_DO_CARTAO } from '@/lib/share-card';
 
 /** O idioma do site, no formato que o Open Graph espera - com sublinhado. */
 const LOCALE_OPEN_GRAPH = 'pt_BR';
@@ -19,19 +19,11 @@ export function tituloDoSite(perfil: Profile): string {
   return `${perfil.fullName} | ${perfil.headline}`;
 }
 
-/**
- * A descricao da home.
- *
- * <p><strong>Nao e a bio, e a diferenca e de tamanho.</strong> A bio tem mais de
- * trezentos caracteres e o resultado de busca corta em torno de 160 - o que
- * sobrasse seria cortado no meio de uma frase. Esta foi escrita para caber
- * inteira, com o que um recrutador procura na ordem em que procura.
- */
-export function descricaoDoSite(perfil: Profile): string {
-  return (
-    `Portfólio de ${perfil.fullName}, desenvolvedor backend Java e Spring Boot: ` +
-    'projetos em produção, arquitetura hexagonal, testes de integração e código aberto.'
-  );
+/** A imagem de compartilhamento de uma pagina - quem monta e app/[locale]/cartoes. */
+export interface Cartao {
+  /** O endereco publico da imagem, relativo - o {@code metadataBase} do layout o torna absoluto. */
+  readonly caminho: string;
+  readonly alt: string;
 }
 
 /** O que uma pagina precisa dizer sobre si mesma. */
@@ -44,12 +36,8 @@ export interface Pagina {
   readonly tituloAbsoluto?: boolean;
   /** Presente nas paginas que sao um artigo, como a de cada projeto. */
   readonly artigo?: { readonly publicadoEm: string | null };
-  /**
-   * Para a pagina sem {@code opengraph-image} no proprio segmento: usa o cartao
-   * do site, que ela nao herda. A que tem arquivo nao deve pedir - ver
-   * {@link metadataDaPagina}.
-   */
-  readonly cartaoDoSite?: boolean;
+  /** Obrigatorio: toda pagina declara o proprio cartao - ver {@link metadataDaPagina}. */
+  readonly cartao: Cartao;
 }
 
 /**
@@ -66,15 +54,16 @@ export interface Pagina {
  * esquecida passaria a dizer ao Google que e copia da home - que e a forma mais
  * silenciosa de tirar uma pagina do indice.
  *
- * <p><strong>A imagem so entra a pedido, e as duas medicoes que levaram a isso
- * apontam em sentidos opostos.</strong> A primeira: o {@code opengraph-image}
- * da raiz nao e herdado por uma pagina filha que declara {@code openGraph} - a
- * juncao rasa descarta a imagem junto com o resto, e a listagem saiu sem
- * {@code og:image}. A segunda: declarar a imagem em objeto em toda pagina
- * tampouco serve, porque a declarada <strong>vence</strong> o arquivo do
- * proprio segmento - os projetos perderam o cartao deles para o do site, e a
- * home perdeu o hash de cache do endereco. Por isso a imagem entra so onde nao
- * ha arquivo no segmento, e quem sabe disso e a pagina.
+ * <p><strong>Toda pagina declara a imagem, e foram tres medicoes ate
+ * aqui.</strong> A primeira: o {@code opengraph-image} da raiz nao e herdado por
+ * uma pagina filha que declara {@code openGraph} - a juncao rasa descarta a
+ * imagem junto com o resto, e a listagem saiu sem {@code og:image}. A segunda: a
+ * imagem declarada <strong>vence</strong> o arquivo do proprio segmento, e por
+ * isso ela entrava so onde nao havia arquivo. A terceira, no commit 51, inverteu
+ * a conta: com as rotas sob {@code [locale]}, o endereco que o arquivo gera e o
+ * interno, com o idioma, e o middleware o redireciona. Declarar em toda pagina,
+ * com o endereco publico, e agora o que mantem a imagem a um GET de distancia -
+ * o motivo e o custo estao em app/[locale]/cartoes.
  */
 export function metadataDaPagina(perfil: Profile, pagina: Pagina): Metadata {
   const comum = {
@@ -83,11 +72,14 @@ export function metadataDaPagina(perfil: Profile, pagina: Pagina): Metadata {
     url: pagina.caminho,
     title: pagina.titulo,
     description: pagina.descricao,
-    ...(pagina.cartaoDoSite === true
-      ? {
-          images: [{ url: CARTAO_DO_SITE.caminho, alt: CARTAO_DO_SITE.alt, ...TAMANHO_DO_CARTAO }],
-        }
-      : {}),
+    images: [
+      {
+        url: pagina.cartao.caminho,
+        alt: pagina.cartao.alt,
+        type: 'image/png',
+        ...TAMANHO_DO_CARTAO,
+      },
+    ],
   };
 
   return {

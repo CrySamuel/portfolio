@@ -1,11 +1,15 @@
 import { ApiError, type ProjectDetail } from '@portfolio/api-client';
 import { notFound } from 'next/navigation';
 
+import { routing } from '@/i18n/routing';
 import { getProject, listProjects } from '@/lib/api/projects';
 
-/** O que o segmento dinamico entrega, ja como o Next 15 o entrega: em promessa. */
+/**
+ * O que os dois segmentos dinamicos entregam - o idioma e o projeto -, como o
+ * Next 15 os entrega: em promessa.
+ */
 export interface Parametros {
-  readonly params: Promise<{ readonly slug: string }>;
+  readonly params: Promise<{ readonly locale: string; readonly slug: string }>;
 }
 
 /**
@@ -31,6 +35,19 @@ export interface Parametros {
 export async function slugsDoCatalogo(): Promise<{ slug: string }[]> {
   const projetos = await listProjects();
   return projetos.map((projeto) => ({ slug: projeto.slug }));
+}
+
+/**
+ * Os pares de idioma e slug que a imagem de compartilhamento pre-renderiza.
+ *
+ * <p>A pagina recebe o idioma do layout e so declara os slugs; a imagem nao
+ * recebe nada, porque rota de imagem nao passa pelo layout - a mesma heranca
+ * que faltou aos slugs (ver acima) falta tambem ao idioma. Medido: com so os
+ * slugs, o build listou a imagem como {@code ●} e nao gravou nenhum PNG.
+ */
+export async function idiomasESlugsDoCatalogo(): Promise<{ locale: string; slug: string }[]> {
+  const slugs = await slugsDoCatalogo();
+  return routing.locales.flatMap((locale) => slugs.map(({ slug }) => ({ locale, slug })));
 }
 
 /**

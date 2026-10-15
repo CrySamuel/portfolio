@@ -2,6 +2,21 @@ import { z } from 'zod';
 
 import { LIMITES } from '@/features/contact/schemas/contact-fields';
 
+/** As chaves de validação, em `ContactValidation` nas mensagens. */
+export type ChaveDeValidacao =
+  | 'nameRequired'
+  | 'nameTooLong'
+  | 'emailRequired'
+  | 'emailTooLong'
+  | 'emailInvalid'
+  | 'subjectRequired'
+  | 'subjectTooLong'
+  | 'messageRequired'
+  | 'messageTooLong';
+
+/** Quem traduz as mensagens de validação — o `getTranslations('ContactValidation')` da ação. */
+export type TradutorDeValidacao = (chave: ChaveDeValidacao, valores?: { limite: number }) => string;
+
 /**
  * A forma de uma mensagem de contato válida.
  *
@@ -16,32 +31,38 @@ import { LIMITES } from '@/features/contact/schemas/contact-fields';
  * regra que a API aceita — o formulário passaria a recusar o que o backend
  * grava, e a divergência apareceria como um campo que não deixa enviar sem
  * motivo visível. Onde o servidor não impõe piso, este arquivo não inventa um.
+ *
+ * <p><strong>Fábrica, e não constante</strong>, porque a mensagem depende do
+ * idioma da requisição: a mesma Server Action atende o português e o inglês. As
+ * frases moram nas mensagens; os limites continuam vindo de `contact-fields`.
  */
-export const contactSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, 'Escreva seu nome.')
-    .max(LIMITES.name, `O nome precisa caber em ${String(LIMITES.name)} caracteres.`),
+export function criarContactSchema(t: TradutorDeValidacao) {
+  return z.object({
+    name: z
+      .string()
+      .trim()
+      .min(1, t('nameRequired'))
+      .max(LIMITES.name, t('nameTooLong', { limite: LIMITES.name })),
 
-  email: z
-    .string()
-    .trim()
-    .min(1, 'Escreva seu e-mail — é por ele que a resposta volta.')
-    .max(LIMITES.email, `O e-mail precisa caber em ${String(LIMITES.email)} caracteres.`)
-    .pipe(z.email('Confira o e-mail: parece faltar alguma coisa.')),
+    email: z
+      .string()
+      .trim()
+      .min(1, t('emailRequired'))
+      .max(LIMITES.email, t('emailTooLong', { limite: LIMITES.email }))
+      .pipe(z.email(t('emailInvalid'))),
 
-  subject: z
-    .string()
-    .trim()
-    .min(1, 'Escreva um assunto.')
-    .max(LIMITES.subject, `O assunto precisa caber em ${String(LIMITES.subject)} caracteres.`),
+    subject: z
+      .string()
+      .trim()
+      .min(1, t('subjectRequired'))
+      .max(LIMITES.subject, t('subjectTooLong', { limite: LIMITES.subject })),
 
-  message: z
-    .string()
-    .trim()
-    .min(1, 'Escreva a mensagem.')
-    .max(LIMITES.message, `A mensagem precisa caber em ${String(LIMITES.message)} caracteres.`),
-});
+    message: z
+      .string()
+      .trim()
+      .min(1, t('messageRequired'))
+      .max(LIMITES.message, t('messageTooLong', { limite: LIMITES.message })),
+  });
+}
 
-export type ContatoValidado = z.infer<typeof contactSchema>;
+export type ContatoValidado = z.infer<ReturnType<typeof criarContactSchema>>;

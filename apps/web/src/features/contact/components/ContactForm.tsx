@@ -71,13 +71,29 @@ const SCRIPT_DO_TURNSTILE = 'https://challenges.cloudflare.com/turnstile/v0/api.
 /** De quanto em quanto tempo se olha se o script já chegou. */
 const INTERVALO_DE_ESPERA_MS = 100;
 
-/** Rótulo e forma de cada campo. A ordem de exibição é a de `CAMPOS`. */
-const DESENHO: Record<CampoDoContato, { readonly rotulo: string; readonly area: boolean }> = {
-  name: { rotulo: 'Nome', area: false },
-  email: { rotulo: 'E-mail', area: false },
-  subject: { rotulo: 'Assunto', area: false },
-  message: { rotulo: 'Mensagem', area: true },
+/**
+ * Quais campos são área de texto. O rótulo de cada um chega traduzido, por props; a forma não muda
+ * com o idioma, e fica aqui. A ordem de exibição é a de `CAMPOS`.
+ */
+const AREA: Record<CampoDoContato, boolean> = {
+  name: false,
+  email: false,
+  subject: false,
+  message: true,
 };
+
+/**
+ * Os textos do formulário, já traduzidos pela seção. Este é componente de cliente: o next-intl no
+ * navegador traria o formatador de mensagens para repetir o que o servidor já fez.
+ */
+export interface TextosDoFormulario {
+  readonly campos: Readonly<Record<CampoDoContato, string>>;
+  readonly armadilha: string;
+  readonly enviar: string;
+  readonly protegido: string;
+  readonly enviadoTitulo: string;
+  readonly enviadoTexto: string;
+}
 
 /**
  * O formulário de contato.
@@ -113,8 +129,13 @@ const DESENHO: Record<CampoDoContato, { readonly rotulo: string; readonly area: 
  */
 export function ContactForm({
   turnstileSiteKey,
+  idiomaDoWidget,
+  textos,
 }: {
   readonly turnstileSiteKey: string;
+  /** A tag que o widget do Turnstile entende: `pt-br` ou `en`. */
+  readonly idiomaDoWidget: string;
+  readonly textos: TextosDoFormulario;
 }): ReactNode {
   const [estado, enviar, enviando] = useActionState(submitContact, ESTADO_INICIAL);
   const prefixo = useId();
@@ -165,7 +186,7 @@ export function ContactForm({
       idDoWidget.current = turnstile.render(alvo, {
         sitekey: turnstileSiteKey,
         theme: 'auto',
-        language: 'pt-br',
+        language: idiomaDoWidget,
       });
     };
 
@@ -180,7 +201,7 @@ export function ContactForm({
       if (idDoWidget.current !== undefined) window.turnstile?.remove(idDoWidget.current);
       idDoWidget.current = undefined;
     };
-  }, [turnstileSiteKey, enviado]);
+  }, [turnstileSiteKey, idiomaDoWidget, enviado]);
 
   /*
     Duas coisas depois de uma recusa, e as duas só existem com script.
@@ -223,16 +244,14 @@ export function ContactForm({
       <div aria-live="polite">
         {enviado ? (
           <div className="flex flex-col gap-2 rounded-lg border border-success/40 bg-surface p-6">
-            <p className="text-h4 text-fg">Mensagem enviada.</p>
+            <p className="text-h4 text-fg">{textos.enviadoTitulo}</p>
             {/*
               A frase só afirma o que o 202 garante: a mensagem está gravada. O
               aviso por e-mail sai depois da resposta, numa thread própria, e pode
               falhar e ser reenviado minutos depois — dizer que ele "saiu" seria
               prometer o que ainda não aconteceu.
             */}
-            <p className="text-body text-fg-muted">
-              Ela já está guardada. Respondo no endereço que você deixou.
-            </p>
+            <p className="text-body text-fg-muted">{textos.enviadoTexto}</p>
           </div>
         ) : null}
       </div>
@@ -263,13 +282,14 @@ export function ContactForm({
             <Campo
               key={campo}
               nome={campo}
+              rotulo={textos.campos[campo]}
               prefixo={prefixo}
               erro={estado.estado === 'recusado' ? estado.erros[campo] : undefined}
               valor={estado.estado === 'recusado' ? (estado.valores[campo] ?? '') : ''}
             />
           ))}
 
-          <ArmadilhaParaRobos prefixo={prefixo} />
+          <ArmadilhaParaRobos prefixo={prefixo} rotulo={textos.armadilha} />
 
           {/*
             A caixa do widget. Vazia para o React, e continua vazia: quem põe o
@@ -307,10 +327,10 @@ export function ContactForm({
 
           <div className="flex flex-wrap items-center gap-4">
             <Button type="submit" size="lg" loading={enviando}>
-              Enviar mensagem
+              {textos.enviar}
             </Button>
 
-            <p className="text-caption text-fg-subtle">Protegido pelo Turnstile, da Cloudflare.</p>
+            <p className="text-caption text-fg-subtle">{textos.protegido}</p>
           </div>
         </form>
       )}
@@ -333,16 +353,18 @@ export function ContactForm({
  */
 function Campo({
   nome,
+  rotulo,
   prefixo,
   erro,
   valor,
 }: {
   readonly nome: CampoDoContato;
+  readonly rotulo: string;
   readonly prefixo: string;
   readonly erro: string | undefined;
   readonly valor: string;
 }): ReactNode {
-  const { rotulo, area } = DESENHO[nome];
+  const area = AREA[nome];
   const id = `${prefixo}-${nome}`;
   const idDoErro = `${id}-erro`;
 
@@ -416,12 +438,18 @@ function Campo({
  * <p>O rótulo existe, ainda que ninguém o leia, porque um `<input>` sem rótulo é
  * o que denuncia a armadilha a quem estiver procurando por ela.
  */
-function ArmadilhaParaRobos({ prefixo }: { readonly prefixo: string }): ReactNode {
+function ArmadilhaParaRobos({
+  prefixo,
+  rotulo,
+}: {
+  readonly prefixo: string;
+  readonly rotulo: string;
+}): ReactNode {
   const id = `${prefixo}-${CAMPO_ARMADILHA}`;
 
   return (
     <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
-      <label htmlFor={id}>Site</label>
+      <label htmlFor={id}>{rotulo}</label>
       <input id={id} type="text" name={CAMPO_ARMADILHA} tabIndex={-1} autoComplete="off" />
     </div>
   );

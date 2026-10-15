@@ -1,6 +1,7 @@
 import { statSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import { ResumeDownload } from '@/components/common/ResumeDownload';
@@ -27,19 +28,28 @@ const SECTION_ID = 'sobre';
  * 15, e ate agora o link levava a lugar nenhum. Este commit fecha essa ponta.
  */
 export async function AboutSection(): Promise<ReactNode> {
-  const [profile, experiences] = await Promise.all([getProfile(), listExperiences()]);
+  const [profile, experiences, t, locale] = await Promise.all([
+    getProfile(),
+    listExperiences(),
+    getTranslations('About'),
+    getLocale(),
+  ]);
 
   return (
     <Section id={SECTION_ID}>
       <Container className="flex flex-col gap-10">
         <SectionHeading
           sectionId={SECTION_ID}
-          eyebrow="Trajetória"
-          title="Sobre"
-          description="De suporte técnico a desenvolvimento backend, com automação no meio do caminho."
+          eyebrow={t('eyebrow')}
+          title={t('title')}
+          description={t('description')}
         />
 
-        <Timeline experiences={experiences} />
+        <Timeline
+          experiences={experiences}
+          locale={locale}
+          textos={{ atual: t('current'), presente: t('present') }}
+        />
 
         {/*
           O botao so existe quando ha curriculo publicado. O contrato declara
@@ -54,6 +64,8 @@ export async function AboutSection(): Promise<ReactNode> {
               href={profile.resumeUrl}
               sizeInBytes={tamanhoDoArquivoPublico(profile.resumeUrl)}
               fileName="crystofer-demetino-backend-2026.pdf"
+              rotulo={(tamanho) => t('resume', { tamanho })}
+              locale={locale}
             />
           </div>
         )}

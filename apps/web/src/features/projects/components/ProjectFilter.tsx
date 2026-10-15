@@ -47,9 +47,12 @@ export interface ItemFiltravel {
 export function ProjectFilter({
   tecnologias,
   itens,
+  textos,
 }: {
   readonly tecnologias: readonly Technology[];
   readonly itens: readonly ItemFiltravel[];
+  /** Os textos do filtro, ja traduzidos: este e componente de cliente. */
+  readonly textos: { readonly filtro: string; readonly todos: string; readonly vazio: string };
 }): ReactNode {
   const parametros = useSearchParams();
 
@@ -101,7 +104,7 @@ export function ProjectFilter({
   return (
     <div className="flex flex-col gap-6">
       {/* eslint-disable-next-line jsx-a11y/no-redundant-roles -- list-style: none medido; ver Timeline */}
-      <ul role="list" aria-label="Filtrar por tecnologia" className="flex flex-wrap gap-2">
+      <ul role="list" aria-label={textos.filtro} className="flex flex-wrap gap-2">
         <li>
           <Chip
             aceso={selecionada === null}
@@ -109,7 +112,7 @@ export function ProjectFilter({
               escolher(null);
             }}
           >
-            Todos
+            {textos.todos}
           </Chip>
         </li>
         {tecnologias.map((tecnologia) => (
@@ -134,7 +137,7 @@ export function ProjectFilter({
       <div aria-live="polite">
         {visiveis.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border px-5 py-8 text-center text-body text-fg-muted">
-            Nenhum projeto com essa tecnologia.
+            {textos.vazio}
           </p>
         ) : (
           // eslint-disable-next-line jsx-a11y/no-redundant-roles -- list-style: none medido

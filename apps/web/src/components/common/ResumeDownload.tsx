@@ -8,6 +8,10 @@ export interface ResumeDownloadProps {
   sizeInBytes: number;
   /** Nome sugerido ao salvar. Sem ele, o navegador usa o do caminho. */
   fileName?: string;
+  /** O texto do botao, montado com o tamanho ja formatado - ex.: "Baixar curriculo (PDF, 80 KB)". */
+  rotulo: (tamanho: string) => string;
+  /** O idioma da pagina, que decide o separador decimal do tamanho. */
+  locale: string;
 }
 
 /**
@@ -30,11 +34,17 @@ export interface ResumeDownloadProps {
  * para um CDN externo, o atributo para de funcionar em silencio e o link passa a
  * abrir o arquivo em vez de salva-lo.
  */
-export function ResumeDownload({ href, sizeInBytes, fileName }: ResumeDownloadProps): ReactNode {
+export function ResumeDownload({
+  href,
+  sizeInBytes,
+  fileName,
+  rotulo,
+  locale,
+}: ResumeDownloadProps): ReactNode {
   return (
     <Button asChild variant="outline" size="lg">
       <a href={href} download={fileName ?? true} hrefLang="pt-BR" type="application/pdf">
-        Baixar currículo (PDF, {formatarTamanho(sizeInBytes)})
+        {rotulo(formatarTamanho(sizeInBytes, locale))}
       </a>
     </Button>
   );
@@ -51,8 +61,8 @@ export function ResumeDownload({ href, sizeInBytes, fileName }: ResumeDownloadPr
  * melhor. Acima disso a casa volta, porque a diferenca entre 1 MB e 1,8 MB
  * importa para quem esta contando franquia de dados.
  */
-function formatarTamanho(bytes: number): string {
+function formatarTamanho(bytes: number, locale: string): string {
   const kb = bytes / 1024;
-  if (kb < 1024) return `${Math.round(kb).toLocaleString('pt-BR')} KB`;
-  return `${(kb / 1024).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`;
+  if (kb < 1024) return `${Math.round(kb).toLocaleString(locale)} KB`;
+  return `${(kb / 1024).toLocaleString(locale, { maximumFractionDigits: 1 })} MB`;
 }

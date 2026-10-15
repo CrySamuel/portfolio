@@ -1,3 +1,4 @@
+import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 
 import { SectionHeading } from '@/components/common/SectionHeading';
@@ -5,6 +6,7 @@ import { Container } from '@/components/layout/Container';
 import { Section } from '@/components/layout/Section';
 import { ContactForm } from '@/features/contact/components/ContactForm';
 import { ContactInfo } from '@/features/contact/components/ContactInfo';
+import type { Idioma } from '@/i18n/routing';
 import { env } from '@/lib/env';
 import { getProfile } from '@/lib/api/profile';
 
@@ -18,6 +20,15 @@ import { getProfile } from '@/lib/api/profile';
  * diferença de que este tinha prazo — e o prazo é este commit.
  */
 const SECTION_ID = 'contato';
+
+/**
+ * A tag de idioma que o widget da Cloudflare entende, por idioma do site.
+ *
+ * <p>Não é a mesma tag: o Turnstile usa minúsculas (`pt-br`), e sem região para
+ * o inglês. Um mapa tipado pelos idiomas do site, e não uma comparação: idioma
+ * novo sem tag aqui reprova a compilação, em vez de cair calado no padrão.
+ */
+const IDIOMA_DO_TURNSTILE = { 'pt-BR': 'pt-br' } as const satisfies Record<Idioma, string>;
 
 /**
  * A seção de contato: o fim do funil.
@@ -41,16 +52,20 @@ const SECTION_ID = 'contato';
  * silenciosamente ausente em produção.
  */
 export async function ContactSection(): Promise<ReactNode> {
-  const profile = await getProfile();
+  const [profile, t, locale] = await Promise.all([
+    getProfile(),
+    getTranslations('Contact'),
+    getLocale(),
+  ]);
 
   return (
     <Section id={SECTION_ID}>
       <Container className="flex flex-col gap-10">
         <SectionHeading
           sectionId={SECTION_ID}
-          eyebrow="Contato"
-          title="Vamos conversar"
-          description="Escreva sobre uma vaga, um projeto ou uma dúvida técnica. A mensagem é gravada antes de qualquer tentativa de envio — se o e-mail falhar, ela é reenviada sozinha."
+          eyebrow={t('eyebrow')}
+          title={t('title')}
+          description={t('description')}
         />
 
         {/*
@@ -60,7 +75,23 @@ export async function ContactSection(): Promise<ReactNode> {
           manda é a do documento — é ela que o teclado e o leitor de tela seguem.
         */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          <ContactForm turnstileSiteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} />
+          <ContactForm
+            turnstileSiteKey={env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+            idiomaDoWidget={IDIOMA_DO_TURNSTILE[locale]}
+            textos={{
+              campos: {
+                name: t('name'),
+                email: t('email'),
+                subject: t('subject'),
+                message: t('message'),
+              },
+              armadilha: t('trap'),
+              enviar: t('send'),
+              protegido: t('protected'),
+              enviadoTitulo: t('sentTitle'),
+              enviadoTexto: t('sentText'),
+            }}
+          />
           <ContactInfo profile={profile} />
         </div>
       </Container>

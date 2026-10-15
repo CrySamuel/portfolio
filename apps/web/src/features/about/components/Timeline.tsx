@@ -30,7 +30,15 @@ import { TimelineItem } from '@/features/about/components/TimelineItem';
  *
  * Server Component sem estado: custo zero no bundle do cliente.
  */
-export function Timeline({ experiences }: { experiences: readonly Experience[] }): ReactNode {
+export function Timeline({
+  experiences,
+  locale,
+  textos,
+}: {
+  readonly experiences: readonly Experience[];
+  readonly locale: string;
+  readonly textos: { readonly atual: string; readonly presente: string };
+}): ReactNode {
   // Lista vazia nao renderiza uma lista vazia. E o estado de quem ainda nao
   // preencheu a propria historia, e a API o distingue de falha respondendo 200
   // com `[]`; quem decide o que mostrar nesse caso e a secao, no commit 28.
@@ -49,6 +57,8 @@ export function Timeline({ experiences }: { experiences: readonly Experience[] }
           // ele nao e publicado no contrato, de proposito.
           key={`${experience.company}|${experience.role}|${experience.startDate}`}
           experience={experience}
+          locale={locale}
+          textos={textos}
         />
       ))}
     </ol>
