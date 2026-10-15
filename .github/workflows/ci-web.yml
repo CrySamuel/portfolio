@@ -70,6 +70,13 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Testes de unidade
+        # Vitest, desde o commit 52: a traducao de caminhos entre idiomas e os
+        # ramos do envio do contato. Nao precisa de API - as fronteiras (API,
+        # Cloudflare, cabecalhos) sao dubles dentro de cada teste, e o que se
+        # verifica e a decisao do codigo diante delas.
+        run: pnpm test
+
       # O `pnpm build` saiu daqui no commit 23, e a razao merece registro.
       #
       # Desde que a home passou a ser pre-renderizada (ISR), o `next build`

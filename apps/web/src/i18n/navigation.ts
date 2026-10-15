@@ -74,10 +74,10 @@ export function caminhoInterno(caminho: string): { locale: Idioma; href: string 
   const segmentos = prefixo === undefined ? [primeiro, ...resto] : resto;
 
   const [inicial = '', ...demais] = segmentos;
+  // O nome publico volta a ser o da pasta. O nome da pasta - a forma que o servidor ve - nao casa
+  // com nenhum nome traduzido e segue como esta, que ja e o certo.
   const interno =
-    Object.entries(SEGMENTOS).find(
-      ([pasta, nomes]) => inicial === pasta || inicial === nomes[locale],
-    )?.[0] ?? inicial;
+    Object.entries(SEGMENTOS).find(([, nomes]) => inicial === nomes[locale])?.[0] ?? inicial;
   const href = ['', interno, ...demais].join('/');
   return { locale, href: href === '' ? '/' : href };
 }

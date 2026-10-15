@@ -146,4 +146,17 @@ export default tseslint.config(
       ],
     },
   },
+
+  {
+    // Testes de unidade: rodam no Node e nunca chegam ao navegador.
+    files: ['src/**/*.test.ts'],
+    rules: {
+      // O pacote raiz do next-intl e proibido pelo bundle, que teste nao tem - e e o
+      // createTranslator dele que deixa conferir a frase traduzida de verdade, plural inclusive.
+      'no-restricted-imports': 'off',
+      // expect(api.metodo) e vi.mocked(api.metodo) so guardam a referencia do duble; ninguem a
+      // chama fora do objeto, que e o risco que a regra existe para pegar.
+      '@typescript-eslint/unbound-method': 'off',
+    },
+  },
 );
