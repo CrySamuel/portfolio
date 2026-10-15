@@ -107,3 +107,67 @@ ON CONFLICT (category_id, name) DO UPDATE SET
     proficiency         = EXCLUDED.proficiency,
     years_of_experience = EXCLUDED.years_of_experience,
     updated_at          = now();
+
+-- ---------------------------------------------------------------------------
+-- Traducao en-US (ADR-0013).
+--
+-- Mora neste arquivo, e nao num seed so de traducoes, por causa de como o
+-- Flyway roda repetiveis: so quando o proprio arquivo muda. Num arquivo
+-- separado, uma correcao aqui que recriasse uma linha apagaria a traducao dela
+-- em cascata, e o seed das traducoes - sem mudanca - nao rodaria de novo. Junto,
+-- quem muda o original reaplica a traducao no mesmo passo.
+--
+-- O mesmo padrao do resto do arquivo: a lista e a fonte de verdade nos dois
+-- sentidos, com upsert pela chave e DELETE do que saiu dela. A chave do
+-- original e a natural, e nao o id, que o seed nunca conhece.
+-- ---------------------------------------------------------------------------
+
+WITH traducoes (name, name_en) AS (
+    VALUES
+        ('Linguagens & Frameworks', 'Languages & Frameworks'),
+        ('Inteligência Artificial & Dados', 'Artificial Intelligence & Data'),
+        ('Bancos de Dados', 'Databases'),
+        ('Infraestrutura & Versionamento', 'Infrastructure & Version Control')
+),
+removidas AS (
+    DELETE FROM skill_category_translation t
+    WHERE t.locale = 'en-US'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM traducoes d
+        JOIN skill_category c ON c.name = d.name
+        WHERE c.id = t.category_id
+    )
+)
+INSERT INTO skill_category_translation (category_id, locale, name)
+SELECT c.id, 'en-US', d.name_en
+FROM traducoes d
+JOIN skill_category c ON c.name = d.name
+ON CONFLICT (category_id, locale) DO UPDATE SET
+    name = EXCLUDED.name;
+
+-- So as competencias cujo nome muda. Java, PostgreSQL e Docker se chamam assim
+-- em qualquer idioma, e uma linha de traducao repetindo o nome seria uma segunda
+-- copia esperando para divergir. A API cai para o original quando nao ha linha.
+WITH traducoes (categoria, name, name_en) AS (
+    VALUES
+        ('Inteligência Artificial & Dados', 'Integração com LLMs', 'LLM Integration')
+),
+removidas AS (
+    DELETE FROM skill_translation t
+    WHERE t.locale = 'en-US'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM traducoes d
+        JOIN skill_category c ON c.name = d.categoria
+        JOIN skill s ON s.category_id = c.id AND s.name = d.name
+        WHERE s.id = t.skill_id
+    )
+)
+INSERT INTO skill_translation (skill_id, locale, name)
+SELECT s.id, 'en-US', d.name_en
+FROM traducoes d
+JOIN skill_category c ON c.name = d.categoria
+JOIN skill s ON s.category_id = c.id AND s.name = d.name
+ON CONFLICT (skill_id, locale) DO UPDATE SET
+    name = EXCLUDED.name;

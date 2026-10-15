@@ -188,7 +188,7 @@ WITH desejadas (projeto, label, value, display_order) AS (
         ('finai',     'Investimento mensal',         'R$ 200+', 1::smallint),
 
         ('portfolio', 'Violações de acessibilidade', '0',       0::smallint),
-        ('portfolio', 'Decisões em ADR',             '12',      1::smallint)
+        ('portfolio', 'Decisões em ADR',             '13',      1::smallint)
 ),
 removidas AS (
     DELETE FROM project_metric pm
@@ -208,3 +208,87 @@ ON CONFLICT (project_id, label) DO UPDATE SET
     value         = EXCLUDED.value,
     display_order = EXCLUDED.display_order,
     updated_at    = now();
+
+-- ---------------------------------------------------------------------------
+-- Traducao en-US (ADR-0013).
+--
+-- Mora neste arquivo, e nao num seed so de traducoes, por causa de como o
+-- Flyway roda repetiveis: so quando o proprio arquivo muda. Num arquivo
+-- separado, uma correcao aqui que recriasse uma linha apagaria a traducao dela
+-- em cascata, e o seed das traducoes - sem mudanca - nao rodaria de novo. Junto,
+-- quem muda o original reaplica a traducao no mesmo passo.
+--
+-- O mesmo padrao do resto do arquivo: a lista e a fonte de verdade nos dois
+-- sentidos, com upsert pela chave e DELETE do que saiu dela. A chave do
+-- original e a natural, e nao o id, que o seed nunca conhece.
+-- ---------------------------------------------------------------------------
+
+-- O slug nao se traduz: e o endereco publico, o mesmo nos dois idiomas.
+WITH traducoes (slug, title, summary, problem, solution, outcome) AS (
+    VALUES
+        (
+            'finai',
+            'FinAI',
+            'A Telegram finance assistant that reads a message like "gastei 50 no iFood no crédito" (spent 50 on iFood, on credit) and returns the categorized transaction, warning you before the limit runs out.',
+            'Tracking finances in a spreadsheet doesn''t survive daily life: an expense not logged on the spot is never logged. The credit card slipped out of control and the year''s financial challenge never left paper — not for lack of discipline, but because logging cost more than the log was worth.',
+            'A Telegram bot that accepts the sentence the way it comes to mind. The free text goes to Llama 3 through the Groq API and comes back as structured JSON — amount, category, payment method. SQLAlchemy handles cards, limits and goals, and the system warns before the mistake: "you''ve already reached 80% of your leisure limit". It runs 24/7 on a Linux instance on Oracle Cloud.',
+            'Over R$ 800 saved in one month, plus a recurring monthly investment that didn''t exist before. The gain didn''t come from logging better — it came from the preventive warning, the backend changing behavior before the expense instead of reporting after it.'
+        ),
+        (
+            'portfolio',
+            'This portfolio',
+            'The site you are reading: a full-stack monorepo with a Java API in production, hexagonal architecture verified by tests, and the commit history as part of the deliverable.',
+            'A PDF résumé is a low-bandwidth format: it shows what a person claims to have done, not how they think. And a GitHub profile is noisy — forks, course exercises and abandoned projects mixed with no hierarchy. The bottleneck for a backend job seeker isn''t the skill, it''s demonstrating it before the technical interview.',
+            'A portfolio that doesn''t claim competence — it exercises it. The Next.js site consumes a Java 21 API with Spring Boot 4 in production, with PostgreSQL, Flyway and hexagonal architecture. The OpenAPI contract generates the TypeScript client, so a mismatch between the two ends breaks the build instead of showing up in production. The dependency rules aren''t a README promise: they''re ArchUnit tests that fail the build, and each one was validated by breaking it on purpose.',
+            'Zero accessibility violations measured with axe-core across all four theme and width combinations, the initial bundle within the 130 KB budget, and every decision recorded in an ADR with the discarded alternative and the consequence.'
+        )
+),
+removidas AS (
+    DELETE FROM project_translation t
+    WHERE t.locale = 'en-US'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM traducoes d
+        JOIN project p ON p.slug = d.slug
+        WHERE p.id = t.project_id
+    )
+)
+INSERT INTO project_translation (project_id, locale, title, summary, problem, solution, outcome)
+SELECT p.id, 'en-US', d.title, d.summary, d.problem, d.solution, d.outcome
+FROM traducoes d
+JOIN project p ON p.slug = d.slug
+ON CONFLICT (project_id, locale) DO UPDATE SET
+    title    = EXCLUDED.title,
+    summary  = EXCLUDED.summary,
+    problem  = EXCLUDED.problem,
+    solution = EXCLUDED.solution,
+    outcome  = EXCLUDED.outcome;
+
+-- Valor traduzido junto do rotulo, mesmo quando e igual: "R$ 800+" continua em
+-- reais na versao em ingles, porque o dinheiro economizado foi em reais.
+WITH traducoes (projeto, label, label_en, value_en) AS (
+    VALUES
+        ('finai', 'Economia em um mês', 'Savings in one month', 'R$ 800+'),
+        ('finai', 'Investimento mensal', 'Monthly investment', 'R$ 200+'),
+        ('portfolio', 'Violações de acessibilidade', 'Accessibility violations', '0'),
+        ('portfolio', 'Decisões em ADR', 'Decisions in ADRs', '13')
+),
+removidas AS (
+    DELETE FROM project_metric_translation t
+    WHERE t.locale = 'en-US'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM traducoes d
+        JOIN project p ON p.slug = d.projeto
+        JOIN project_metric m ON m.project_id = p.id AND m.label = d.label
+        WHERE m.id = t.metric_id
+    )
+)
+INSERT INTO project_metric_translation (metric_id, locale, label, value)
+SELECT m.id, 'en-US', d.label_en, d.value_en
+FROM traducoes d
+JOIN project p ON p.slug = d.projeto
+JOIN project_metric m ON m.project_id = p.id AND m.label = d.label
+ON CONFLICT (metric_id, locale) DO UPDATE SET
+    label = EXCLUDED.label,
+    value = EXCLUDED.value;

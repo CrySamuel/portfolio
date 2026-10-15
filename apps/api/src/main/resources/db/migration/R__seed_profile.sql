@@ -94,3 +94,28 @@ ON CONFLICT (profile_id, platform) DO UPDATE SET
     url           = EXCLUDED.url,
     display_order = EXCLUDED.display_order,
     updated_at    = now();
+
+-- ---------------------------------------------------------------------------
+-- Traducao en-US (ADR-0013).
+--
+-- Mora neste arquivo, e nao num seed so de traducoes, por causa de como o
+-- Flyway roda repetiveis: so quando o proprio arquivo muda. Num arquivo
+-- separado, uma correcao aqui que recriasse uma linha apagaria a traducao dela
+-- em cascata, e o seed das traducoes - sem mudanca - nao rodaria de novo. Junto,
+-- quem muda o original reaplica a traducao no mesmo passo.
+--
+-- O mesmo padrao do resto do arquivo: a lista e a fonte de verdade nos dois
+-- sentidos, com upsert pela chave e DELETE do que saiu dela. A chave do
+-- original e a natural, e nao o id, que o seed nunca conhece.
+-- ---------------------------------------------------------------------------
+
+INSERT INTO profile_translation (profile_id, locale, headline, bio, location)
+SELECT id, 'en-US',
+    'Backend Developer — Java & Spring Boot',
+    'Backend developer focused on Java and Spring Boot. I work with hexagonal architecture, versioned migrations, integration tests with Testcontainers and REST APIs documented with OpenAPI. This portfolio is the demonstration itself: the content of this page comes from a Java API backed by PostgreSQL, and the code is public on GitHub.',
+    'Remote · Brazil'
+FROM profile
+ON CONFLICT (profile_id, locale) DO UPDATE SET
+    headline = EXCLUDED.headline,
+    bio      = EXCLUDED.bio,
+    location = EXCLUDED.location;

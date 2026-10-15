@@ -93,3 +93,57 @@ ON CONFLICT (company, role, start_date) DO UPDATE SET
 -- Nao ha ORDER BY aqui, e a ausencia e proposital: a ordem de insercao nao
 -- significa nada para a leitura. Quem ordena a timeline e o Timeline do dominio,
 -- e semear em ordem daria a impressao falsa de que este arquivo participa disso.
+
+-- ---------------------------------------------------------------------------
+-- Traducao en-US (ADR-0013).
+--
+-- Mora neste arquivo, e nao num seed so de traducoes, por causa de como o
+-- Flyway roda repetiveis: so quando o proprio arquivo muda. Num arquivo
+-- separado, uma correcao aqui que recriasse uma linha apagaria a traducao dela
+-- em cascata, e o seed das traducoes - sem mudanca - nao rodaria de novo. Junto,
+-- quem muda o original reaplica a traducao no mesmo passo.
+--
+-- O mesmo padrao do resto do arquivo: a lista e a fonte de verdade nos dois
+-- sentidos, com upsert pela chave e DELETE do que saiu dela. A chave do
+-- original e a natural, e nao o id, que o seed nunca conhece.
+-- ---------------------------------------------------------------------------
+
+WITH traducoes (company, role, start_date, role_en, description, highlights) AS (
+    VALUES
+        (
+            'DXC Technology (FEMSA Coca-Cola)',
+            'Técnico de Suporte Júnior',
+            DATE '2026-01-01',
+            'Junior Support Technician',
+            'Supporting a mission-critical corporate Data Center environment, focused on diagnosing complex incidents, SLA compliance and standardizing the team''s technical knowledge.',
+            '["Diagnosed and resolved high-complexity Data Center incidents, keeping services continuously available", "Monitored SLA compliance, cutting response times through technical analysis and root cause identification", "Built and maintained the knowledge base, standardizing how infrastructure failures are resolved across the team"]'::jsonb
+        ),
+        (
+            'Stefanini (Vivo)',
+            'Técnico de Suporte N1',
+            DATE '2025-03-01',
+            'Tier 1 Support Technician',
+            'Tier 1 technical support for Vivo''s corporate environment: hardware maintenance, software installation and access management on workstations. The Python automations were my own initiative, to shorten my own ticket handling time.',
+            '["Automated my own support routines in Python, on my own initiative: four-hour tickets came down to two", "Hardware maintenance and software installation on workstations, focused on environment stability and user experience", "Identity, access and security policy administration through Active Directory"]'::jsonb
+        )
+),
+removidas AS (
+    DELETE FROM experience_translation t
+    WHERE t.locale = 'en-US'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM traducoes d
+        JOIN experience e
+          ON e.company = d.company AND e.role = d.role AND e.start_date = d.start_date
+        WHERE e.id = t.experience_id
+    )
+)
+INSERT INTO experience_translation (experience_id, locale, role, description, highlights)
+SELECT e.id, 'en-US', d.role_en, d.description, d.highlights
+FROM traducoes d
+JOIN experience e
+  ON e.company = d.company AND e.role = d.role AND e.start_date = d.start_date
+ON CONFLICT (experience_id, locale) DO UPDATE SET
+    role        = EXCLUDED.role,
+    description = EXCLUDED.description,
+    highlights  = EXCLUDED.highlights;
