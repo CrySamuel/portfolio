@@ -20,8 +20,38 @@ const DO_TURNSTILE = /^(blob:)?https:\/\/challenges\.cloudflare\.com\//;
  * tira do axe; e se o widget falhar de um jeito que nos afete - sem token -, o teste do envio
  * reprova por conta propria.
  */
-export const test = base.extend<{ errosTolerados: readonly RegExp[]; console: string[] }>({
+export const test = base.extend<{
+  errosTolerados: readonly RegExp[];
+  console: string[];
+  semCacheHttp: undefined;
+}>({
   errosTolerados: [[], { option: true }],
+
+  /**
+   * Sem cache HTTP no navegador, para as requisicoes ao proprio site - e a razao e uma medicao.
+   *
+   * <p>O {@code next start} responde as paginas com {@code s-maxage} e sem {@code max-age}. Ao voltar
+   * a um documento ja visitado, o Firefox busca a pagina e, 6 ms depois, antes de qualquer script,
+   * revalida o mesmo documento ({@code max-age=0} -> 304) sem criar documento novo. O Playwright
+   * conta essa revalidacao como navegacao pendente que nunca termina, e o proximo
+   * {@code expect(locator)} espera por ela ate estourar o prazo. Medido no commit 52, num branch de
+   * diagnostico: o teste do seletor de idioma falhou 4 em 5 assim; esperar a rede assentar nao
+   * resolveu (3 em 5); com o roteamento ligado - que, pela documentacao do Playwright, desliga o
+   * cache HTTP -, passou 5 em 5. Em producao, na Vercel, o Firefox nao revalida: nao e defeito do
+   * site, e o teste nao depende de cache.
+   *
+   * <p>So {@code localhost}: o widget do Turnstile fica fora do roteamento, como no teste de contato.
+   */
+  semCacheHttp: [
+    async ({ page }, use) => {
+      await page.route(
+        (url) => url.hostname === 'localhost',
+        (rota) => rota.continue(),
+      );
+      await use(undefined);
+    },
+    { auto: true },
+  ],
 
   console: [
     async ({ page, errosTolerados }, use) => {
