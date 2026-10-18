@@ -135,6 +135,7 @@ jobs:
         run: pnpm exec playwright test
 
       - name: Lighthouse
+        id: lighthouse
         # Os limites de "falha o CI" da secao 10.1 (LCP, CLS, TBT, TTFB, CSS,
         # fontes, peso e requisicoes) e nota minima nas categorias - ver
         # lighthouserc.json. Sobe o proprio `next start`, depois que o do
@@ -143,13 +144,18 @@ jobs:
         run: pnpm lighthouse
 
       - name: Publicar relatorio do Lighthouse
-        if: ${{ !cancelled() }}
+        # Sempre que o Lighthouse rodou, passando ou reprovando - e ai o
+        # relatorio tem de existir, ou o passo falha. A pasta e oculta, e o
+        # upload-artifact ignora arquivos ocultos por padrao: sem a opcao
+        # abaixo, ele nao achava nada e, com `ignore`, ninguem via.
+        if: ${{ !cancelled() && steps.lighthouse.outcome != 'skipped' }}
         uses: actions/upload-artifact@v7
         with:
           name: lighthouse
           path: apps/web/.lighthouseci/
+          include-hidden-files: true
           retention-days: 7
-          if-no-files-found: ignore
+          if-no-files-found: error
 
       - name: Publicar relatorio do Playwright
         if: ${{ !cancelled() }}
