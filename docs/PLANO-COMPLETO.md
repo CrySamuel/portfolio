@@ -389,6 +389,8 @@ Atributos de qualidade competem entre si. Estas são as trocas conscientes:
 13. Resposta       → 202 Accepted (o usuário não espera o e-mail sair)
 ```
 
+> **Como foi construído:** os passos 2 a 5 rodam numa Server Action, e não num Route Handler — ver a [revisão do ADR-0005](#revisão-no-commit-49--só-a-server-action). O resto do fluxo é o descrito.
+
 **Ponto arquitetural:** o envio de e-mail é desacoplado por evento e ocorre **após o commit**. Se o Resend estiver fora do ar, a mensagem não se perde — ela está no banco. Um `@Scheduled` reprocessa mensagens com `emailStatus = FAILED`. É o padrão *transactional outbox* em sua forma mais simples e defensável.
 
 #### Fluxo C — Estatísticas do GitHub (integração externa instável)
@@ -2713,7 +2715,7 @@ Validado por commitlint no hook `commit-msg`. Commit fora do padrão **não entr
 
 ### ADR-0005: BFF em Route Handlers do Next.js
 
-**Status:** Aceito
+**Status:** Aceito quanto ao papel do BFF; **a forma foi revista no commit 49** — só a Server Action, sem Route Handler (ver [a revisão](#revisão-no-commit-49--só-a-server-action), ao fim deste ADR).
 
 **Contexto.** O navegador precisa enviar o formulário de contato para a API Java. Restrições: domínios diferentes (CORS); a chave da API não pode ir para o cliente; a verificação do Turnstile precisa acontecer no servidor; o IP real é necessário para o rate limit.
 
@@ -2728,6 +2730,28 @@ Validado por commitlint no hook `commit-msg`. Commit fora do padrão **não entr
 **Consequências positivas.** Nenhum segredo no cliente; **CORS deixa de existir como problema**; a origem da API não é exposta; Turnstile verificado onde é confiável; validação em camadas; erros normalizados; ponto natural para rate limiting na edge.
 
 **Consequências negativas (aceitas).** Um salto de rede a mais (~20–50ms) — irrelevante para uma operação que já envolve envio de e-mail; duplicação de schemas entre BFF (Zod) e API (Bean Validation) — **defesa em profundidade, não violação de DRY**: o BFF valida forma, a API valida regra de negócio; mais um lugar para depurar — mitigado pelo `correlationId` propagado do BFF ao banco.
+
+#### Revisão no commit 49 — só a Server Action
+
+O commit 49 entregou o formulário com a Server Action e **sem** o Route Handler. A decisão híbrida
+acima abria duas portas para a mesma sala: a Server Action já cumpre inteiramente o papel que este
+ADR atribui ao handler — roda no servidor, valida com Zod, verifica o Turnstile, extrai o IP real,
+guarda a chave de serviço, normaliza o erro, e o navegador nunca fala com a API Java.
+
+O handler acrescentaria uma diferença só, e ela é negativa: um `POST` público e sem identificação,
+que qualquer robô alcança direto. O endpoint de uma Server Action exige o identificador que o Next
+gera a cada build.
+
+Os dois argumentos que sustentavam o handler foram respondidos de outro jeito:
+
+- **"Dificulta testes de integração"** — a ação tem 12 casos de teste de unidade (validação,
+  idioma, token ausente e recusado, Cloudflare fora, 429, 400, sucesso, id de correlação) e o envio
+  com token passa no E2E, contra a API de verdade.
+- **"Esconde o fluxo"** — o fluxo inteiro mora num arquivo, `features/contact/actions/submit-contact.ts`.
+
+O *progressive enhancement* continua: o formulário envia sem JavaScript, pelo comportamento nativo
+de `<form action>`. O resto deste ADR — nenhum segredo no cliente, CORS fora de cena, validação em
+camadas — vale como está.
 
 ### ADR-0006: Hospedagem em Vercel e Render
 

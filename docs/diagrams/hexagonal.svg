@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600" role="img" aria-labelledby="titulo descricao">
+  <title id="titulo">API — arquitetura hexagonal de cada módulo</title>
+  <desc id="descricao">Cada módulo da API tem o domínio no centro, com modelo, eventos e portas, sem Spring nem JPA. A aplicação implementa as portas de entrada. Os adaptadores de entrada, como controladores REST, agendadores e o ouvinte de evento, chamam as portas de entrada. Os adaptadores de saída, de persistência, GitHub e e-mail, implementam as portas de saída. Todas as dependências apontam para dentro, e o ArchUnit reprova o build se alguma apontar para fora.</desc>
+  <style>
+    .fundo { fill: #ffffff; stroke: #d0d7de; }
+    .caixa { fill: #f6f8fa; stroke: #d0d7de; }
+    .aplicacao { fill: #eef6ee; stroke: #1a7f37; }
+    .dominio { fill: #dcefdc; stroke: #1a7f37; stroke-width: 1.5; }
+    .entrada { stroke: #0969da; }
+    .saida { stroke: #8250df; }
+    .faixa-entrada { fill: #0969da; }
+    .faixa-saida { fill: #8250df; }
+    text { font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .titulo { font-size: 20px; font-weight: 600; }
+    .nome { font-size: 16px; font-weight: 600; }
+    .linha { font-size: 14px; }
+    .mudo { font-size: 13px; fill: #59636e; }
+    .rotulo { font-size: 13px; fill: #59636e; font-style: italic; }
+    .seta { stroke: #59636e; stroke-width: 1.5; fill: none; }
+    .ponta { fill: #59636e; }
+    @media (prefers-color-scheme: dark) {
+      .fundo { fill: #0d1117; stroke: #30363d; }
+      .caixa { fill: #161b22; stroke: #30363d; }
+      .aplicacao { fill: #12261a; stroke: #3fb950; }
+      .dominio { fill: #1a3a24; stroke: #3fb950; }
+      .entrada { stroke: #4493f8; }
+      .saida { stroke: #ab7df8; }
+      .faixa-entrada { fill: #4493f8; }
+      .faixa-saida { fill: #ab7df8; }
+      text { fill: #e6edf3; }
+      .mudo, .rotulo { fill: #9198a1; }
+      .seta { stroke: #9198a1; }
+      .ponta { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path class="ponta" d="M0,0 L10,5 L0,10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="fundo" x="0.5" y="0.5" width="999" height="599" rx="12"/>
+  <text class="titulo" x="40" y="44">API — a forma de cada módulo</text>
+  <text class="mudo" x="40" y="66">Portas e adaptadores · as setas são dependências de código, e todas apontam para dentro</text>
+
+  <!-- Adaptadores de entrada -->
+  <rect class="caixa entrada" x="40" y="100" width="250" height="330" rx="8"/>
+  <rect class="faixa-entrada" x="40" y="100" width="6" height="330" rx="3"/>
+  <text class="nome" x="62" y="130">Adaptadores de entrada</text>
+  <text class="mudo" x="62" y="150">adapter/in</text>
+  <text class="linha" x="62" y="190">Controladores REST + DTOs</text>
+  <text class="mudo" x="62" y="210">Bean Validation, OpenAPI</text>
+  <text class="linha" x="62" y="250">Agendadores</text>
+  <text class="mudo" x="62" y="270">reenvio de e-mail, cache do GitHub</text>
+  <text class="linha" x="62" y="310">Ouvinte de evento</text>
+  <text class="mudo" x="62" y="330">depois do commit, assíncrono</text>
+  <text class="linha" x="62" y="370">Health indicator</text>
+  <text class="mudo" x="62" y="390">estado do circuito do GitHub</text>
+
+  <!-- Aplicacao e dominio -->
+  <rect class="aplicacao" x="350" y="100" width="300" height="330" rx="10"/>
+  <text class="nome" x="372" y="130">Aplicação</text>
+  <text class="mudo" x="372" y="150">application · casos de uso, transação</text>
+
+  <rect class="dominio" x="380" y="170" width="240" height="236" rx="8"/>
+  <text class="nome" x="400" y="198">Domínio</text>
+  <text class="mudo" x="400" y="218">domain · Java puro</text>
+  <text class="linha" x="400" y="252">Modelo: records</text>
+  <text class="linha" x="400" y="274">com invariantes</text>
+  <text class="linha" x="400" y="304">Eventos</text>
+  <text class="linha" x="400" y="334">Portas de entrada</text>
+  <text class="linha" x="400" y="356">e de saída (interfaces)</text>
+  <text class="mudo" x="400" y="388">sem Spring, sem JPA</text>
+
+  <!-- Adaptadores de saida -->
+  <rect class="caixa saida" x="730" y="100" width="230" height="330" rx="8"/>
+  <rect class="faixa-saida" x="730" y="100" width="6" height="330" rx="3"/>
+  <text class="nome" x="752" y="130">Adaptadores de saída</text>
+  <text class="mudo" x="752" y="150">adapter/out</text>
+  <text class="linha" x="752" y="190">Persistência</text>
+  <text class="mudo" x="752" y="210">JPA, MapStruct, cache de 10 min</text>
+  <text class="linha" x="752" y="250">GitHub</text>
+  <text class="mudo" x="752" y="270">RestClient, Resilience4j,</text>
+  <text class="mudo" x="752" y="288">cache Caffeine de 6 h</text>
+  <text class="linha" x="752" y="328">E-mail</text>
+  <text class="mudo" x="752" y="348">Resend, depois do commit</text>
+
+  <!-- Setas -->
+  <path class="seta" d="M290,250 L378,250" marker-end="url(#ponta)"/>
+  <text class="rotulo" x="300" y="240">chama a</text>
+  <text class="rotulo" x="300" y="270">porta in</text>
+
+  <path class="seta" d="M730,250 L622,250" marker-end="url(#ponta)"/>
+  <text class="rotulo" x="656" y="240">implementa</text>
+  <text class="rotulo" x="656" y="270">porta out</text>
+
+  <!-- Modulos -->
+  <rect class="caixa" x="40" y="460" width="920" height="96" rx="8"/>
+  <text class="nome" x="62" y="490">Quatro módulos com essa forma, mais um transversal</text>
+  <text class="linha" x="62" y="516">profile · projects · github · contact — e shared: erros, correlação, chave de serviço, idioma</text>
+  <text class="mudo" x="62" y="540">ArchUnit reprova o build se o domínio importar framework, se a aplicação conhecer um adaptador ou se um módulo conhecer outro.</text>
+</svg>

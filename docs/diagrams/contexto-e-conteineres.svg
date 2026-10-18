@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 680" width="1000" height="680" role="img" aria-labelledby="titulo descricao">
+  <title id="titulo">Portfólio — contexto e contêineres (C4, níveis 1 e 2)</title>
+  <desc id="descricao">O visitante recebe o HTML pré-renderizado da CDN da Vercel. O web, em Next.js, lê a API Spring Boot no Render só no build, na revalidação e no envio do contato, com a chave de serviço. A API usa o Postgres no Neon, a API do GitHub e o Resend. O Turnstile da Cloudflare protege o formulário.</desc>
+  <style>
+    .fundo { fill: #ffffff; stroke: #d0d7de; }
+    .caixa { fill: #f6f8fa; stroke: #d0d7de; }
+    .fronteira { fill: none; stroke: #8c959f; stroke-dasharray: 6 5; }
+    .web { stroke: #0969da; }
+    .api { stroke: #1a7f37; }
+    .externo { stroke: #8250df; }
+    .faixa-web { fill: #0969da; }
+    .faixa-api { fill: #1a7f37; }
+    .faixa-externo { fill: #8250df; }
+    .faixa-pessoa { fill: #59636e; }
+    text { font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; fill: #1f2328; }
+    .titulo { font-size: 20px; font-weight: 600; }
+    .nome { font-size: 16px; font-weight: 600; }
+    .linha { font-size: 14px; }
+    .mudo { font-size: 13px; fill: #59636e; }
+    .rotulo { font-size: 13px; fill: #59636e; font-style: italic; }
+    .seta { stroke: #59636e; stroke-width: 1.5; fill: none; }
+    .ponta { fill: #59636e; }
+    @media (prefers-color-scheme: dark) {
+      .fundo { fill: #0d1117; stroke: #30363d; }
+      .caixa { fill: #161b22; stroke: #30363d; }
+      .fronteira { stroke: #6e7681; }
+      .web { stroke: #4493f8; }
+      .api { stroke: #3fb950; }
+      .externo { stroke: #ab7df8; }
+      .faixa-web { fill: #4493f8; }
+      .faixa-api { fill: #3fb950; }
+      .faixa-externo { fill: #ab7df8; }
+      .faixa-pessoa { fill: #9198a1; }
+      text { fill: #e6edf3; }
+      .mudo, .rotulo { fill: #9198a1; }
+      .seta { stroke: #9198a1; }
+      .ponta { fill: #9198a1; }
+    }
+  </style>
+  <defs>
+    <marker id="ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path class="ponta" d="M0,0 L10,5 L0,10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="fundo" x="0.5" y="0.5" width="999" height="679" rx="12"/>
+  <text class="titulo" x="40" y="44">Portfólio — contexto e contêineres</text>
+  <text class="mudo" x="40" y="66">C4, níveis 1 e 2 · as setas apontam para quem é chamado</text>
+
+  <!-- Visitante -->
+  <rect class="caixa" x="400" y="90" width="200" height="62" rx="8"/>
+  <rect class="faixa-pessoa" x="400" y="90" width="6" height="62" rx="3"/>
+  <text class="nome" x="420" y="116">Visitante</text>
+  <text class="mudo" x="420" y="138">recrutador, tech lead, dev</text>
+
+  <!-- Vercel -->
+  <rect class="fronteira" x="40" y="196" width="410" height="250" rx="10"/>
+  <text class="mudo" x="56" y="218">Vercel · CDN global</text>
+  <rect class="caixa web" x="60" y="230" width="370" height="196" rx="8"/>
+  <rect class="faixa-web" x="60" y="230" width="6" height="196" rx="3"/>
+  <text class="nome" x="82" y="258">Web — Next.js 15 · React 19</text>
+  <text class="linha" x="82" y="288">HTML pré-renderizado na CDN (SSG + ISR)</text>
+  <text class="linha" x="82" y="312">Server Components leem a API no build</text>
+  <text class="linha" x="82" y="334">e na revalidação, com tag por recurso</text>
+  <text class="linha" x="82" y="358">Server Action do contato: Zod + Turnstile</text>
+  <text class="linha" x="82" y="382">pt-BR e en-US · CSP travada por hash</text>
+  <text class="mudo" x="82" y="408">o navegador nunca fala com a API</text>
+
+  <!-- Render -->
+  <rect class="fronteira" x="550" y="196" width="410" height="250" rx="10"/>
+  <text class="mudo" x="566" y="218">Render · contêiner Docker · Ohio</text>
+  <rect class="caixa api" x="570" y="230" width="370" height="196" rx="8"/>
+  <rect class="faixa-api" x="570" y="230" width="6" height="196" rx="3"/>
+  <text class="nome" x="592" y="258">API — Spring Boot 4.1 · Java 21</text>
+  <text class="linha" x="592" y="288">Hexagonal: profile, projects, github, contact</text>
+  <text class="linha" x="592" y="312">Caffeine · Resilience4j · Bucket4j</text>
+  <text class="linha" x="592" y="336">Problem Details com id de correlação</text>
+  <text class="linha" x="592" y="360">OpenAPI e Swagger públicos;</text>
+  <text class="linha" x="592" y="382">os dados, só com a chave de serviço</text>
+  <text class="mudo" x="592" y="408">ArchUnit reprova o build se a regra cair</text>
+
+  <!-- Externos -->
+  <rect class="caixa externo" x="40" y="530" width="205" height="84" rx="8"/>
+  <rect class="faixa-externo" x="40" y="530" width="6" height="84" rx="3"/>
+  <text class="nome" x="60" y="558">Turnstile</text>
+  <text class="mudo" x="60" y="580">Cloudflare · antispam,</text>
+  <text class="mudo" x="60" y="600">só perto do formulário</text>
+
+  <rect class="caixa externo" x="283" y="530" width="205" height="84" rx="8"/>
+  <rect class="faixa-externo" x="283" y="530" width="6" height="84" rx="3"/>
+  <text class="nome" x="303" y="558">PostgreSQL 16</text>
+  <text class="mudo" x="303" y="580">Neon · Flyway · fonte</text>
+  <text class="mudo" x="303" y="600">de verdade do conteúdo</text>
+
+  <rect class="caixa externo" x="526" y="530" width="205" height="84" rx="8"/>
+  <rect class="faixa-externo" x="526" y="530" width="6" height="84" rx="3"/>
+  <text class="nome" x="546" y="558">API do GitHub</text>
+  <text class="mudo" x="546" y="580">retry, circuit breaker</text>
+  <text class="mudo" x="546" y="600">e cache de 6 h</text>
+
+  <rect class="caixa externo" x="769" y="530" width="191" height="84" rx="8"/>
+  <rect class="faixa-externo" x="769" y="530" width="6" height="84" rx="3"/>
+  <text class="nome" x="789" y="558">Resend</text>
+  <text class="mudo" x="789" y="580">e-mail do contato,</text>
+  <text class="mudo" x="789" y="600">depois do commit</text>
+
+  <!-- Setas -->
+  <path class="seta" d="M470,152 L300,228" marker-end="url(#ponta)"/>
+  <text class="rotulo" x="236" y="182">HTTPS · HTML da CDN</text>
+
+  <path class="seta" d="M430,318 L568,318" marker-end="url(#ponta)"/>
+  <text class="rotulo" x="482" y="306">HTTP</text>
+  <text class="rotulo" x="459" y="338">X-Service-Key</text>
+
+  <path class="seta" d="M190,426 L150,528" marker-end="url(#ponta)"/>
+  <text class="rotulo" x="176" y="490">valida o token</text>
+
+  <path class="seta" d="M680,426 L420,528" marker-end="url(#ponta)"/>
+  <path class="seta" d="M750,426 L640,528" marker-end="url(#ponta)"/>
+  <path class="seta" d="M820,426 L862,528" marker-end="url(#ponta)"/>
+
+  <text class="mudo" x="40" y="652">O pico de tráfego termina na CDN: a API só é chamada no build, na revalidação e no envio do contato.</text>
+</svg>
