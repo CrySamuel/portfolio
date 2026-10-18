@@ -95,6 +95,10 @@ export async function generateMetadata({ params }: ParametrosDoIdioma): Promise<
       follow: true,
       googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1 },
     },
+    // A prova de propriedade do Search Console (secao 11.6 do plano). Nao e
+    // segredo - o Google so confere que a meta esta publicada no endereco - e
+    // apaga-la desfaz a verificacao na proxima vez que ele olhar.
+    verification: { google: 't3MWNMmohZZbDX6VzPp6pwDV2ZzX2DZ-qisO8bQ0aE4' },
   };
 }
 
