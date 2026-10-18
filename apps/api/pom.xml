@@ -40,6 +40,7 @@
     <resilience4j.version>2.4.0</resilience4j.version>
     <wiremock.version>3.13.2</wiremock.version>
     <bucket4j.version>8.20.0</bucket4j.version>
+    <jacoco.version>0.8.15</jacoco.version>
   </properties>
 
   <!--
@@ -453,6 +454,63 @@
             <goals>
               <goal>check</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!--
+        Cobertura de testes (secao 17.2 do plano): pelo menos 80% das linhas de
+        cada pacote de domain e de application. E onde mora a regra de negocio,
+        e onde um teste faltando custa caro. Os adaptadores ficam de fora do
+        piso - sao cobertos pelos testes de integracao, que contam no relatorio
+        mas nao pedem um numero.
+
+        O agente entra na fase de teste, entao o pre-push (mvnw test) mede sem
+        julgar; quem reprova e o verify, no CI. Relatorio em
+        target/site/jacoco/index.html.
+      -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <executions>
+          <execution>
+            <id>agente</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>relatorio</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>piso-de-cobertura</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <rule>
+                  <element>PACKAGE</element>
+                  <includes>
+                    <include>dev.crystofer.portfolio.*.domain*</include>
+                    <include>dev.crystofer.portfolio.*.application</include>
+                  </includes>
+                  <limits>
+                    <limit>
+                      <counter>LINE</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>0.80</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+              </rules>
+            </configuration>
           </execution>
         </executions>
       </plugin>

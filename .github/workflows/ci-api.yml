@@ -39,10 +39,25 @@ jobs:
           cache: maven
 
       - name: Verify
-        # verify cobre as tres coisas: spotless:check esta ligado a fase
-        # validate, os testes rodam em test, e o jar e empacotado em package.
-        # Formatacao errada reprova antes mesmo de compilar.
+        # verify cobre as quatro coisas: spotless:check esta ligado a fase
+        # validate, os testes rodam em test, o jar e empacotado em package, e o
+        # piso de cobertura do JaCoCo julga em verify. Formatacao errada reprova
+        # antes mesmo de compilar.
         run: ./mvnw -B --no-transfer-progress verify
+
+      - name: Publicar relatorio de cobertura
+        # O relatorio e gerado antes do piso julgar, entao existe tambem quando
+        # a cobertura reprova - que e quando ele mais serve. So falta quando um
+        # teste quebra antes; ai o aviso e o certo, e nao o silencio do ignore -
+        # foi o ignore que escondeu, por um commit, o relatorio do Lighthouse
+        # que nao subia.
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: cobertura
+          path: apps/api/target/site/jacoco/
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Publicar relatorio de testes
         if: always()
