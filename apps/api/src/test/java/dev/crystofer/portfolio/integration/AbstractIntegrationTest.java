@@ -1,10 +1,14 @@
 package dev.crystofer.portfolio.integration;
 
+import java.util.Objects;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -120,4 +124,25 @@ public abstract class AbstractIntegrationTest {
    * errado e passaria.
    */
   @Autowired protected JdbcTemplate jdbcTemplate;
+
+  @Autowired private CacheManager cacheManager;
+
+  /**
+   * Todo teste comeca com os caches vazios.
+   *
+   * <p>Em producao o conteudo so muda por migracao, na subida da aplicacao - que comeca com o cache
+   * vazio. Aqui o contexto e um so para a suite inteira e os testes gravam no banco com a aplicacao
+   * de pe, entao, sem a limpeza, um teste leria o que o anterior deixou cacheado e passaria ou
+   * falharia conforme a ordem de execucao.
+   *
+   * <p>Tambem e chamado no meio de um teste, logo depois de mudar o conteudo: e o equivalente ao
+   * deploy, que em producao reinicia a aplicacao. Sem isso, as guardas de N+1 - que medem as
+   * consultas com N itens e depois com mais - mediriam o cache na segunda vez, e nao o banco.
+   */
+  @BeforeEach
+  protected void esvaziarCaches() {
+    for (var nome : cacheManager.getCacheNames()) {
+      Objects.requireNonNull(cacheManager.getCache(nome)).clear();
+    }
+  }
 }

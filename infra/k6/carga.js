@@ -68,9 +68,13 @@ export function handleSummary(dados) {
   for (const [nome, metrica] of Object.entries(dados.metrics)) {
     if (!nome.startsWith('http_req_duration')) continue;
     const v = metrica.values;
-    const passou = Object.values(metrica.thresholds ?? {}).every((t) => t.ok);
+    // Metrica sem limite nao foi julgada, entao nao leva "ok" - na primeira execucao, a
+    // {expected_response:true} saiu marcada como aprovada ao lado de seis reprovadas.
+    const limites = Object.values(metrica.thresholds ?? {});
+    const veredito =
+      limites.length === 0 ? '     ' : limites.every((t) => t.ok) ? 'ok   ' : 'ACIMA';
     linhas.push(
-      `${passou ? 'ok   ' : 'ACIMA'} ${nome.padEnd(52)} p95 ${ms(v['p(95)'])}  med ${ms(v.med)}  max ${ms(v.max)}`,
+      `${veredito} ${nome.padEnd(52)} p95 ${ms(v['p(95)'])}  med ${ms(v.med)}  max ${ms(v.max)}`,
     );
   }
   const pedidos = dados.metrics.http_reqs.values;

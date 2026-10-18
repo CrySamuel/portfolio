@@ -3,6 +3,7 @@ package dev.crystofer.portfolio.projects.adapter.out.persistence;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,6 +11,7 @@ import dev.crystofer.portfolio.projects.adapter.out.persistence.mapper.ProjectPe
 import dev.crystofer.portfolio.projects.adapter.out.persistence.repository.ProjectJpaRepository;
 import dev.crystofer.portfolio.projects.domain.model.Project;
 import dev.crystofer.portfolio.projects.domain.port.out.LoadProjectPort;
+import dev.crystofer.portfolio.shared.config.CacheConfig;
 import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 import dev.crystofer.portfolio.shared.domain.Slug;
 
@@ -41,6 +43,7 @@ public class ProjectPersistenceAdapter implements LoadProjectPort {
    * LazyInitializationException}.
    */
   @Override
+  @Cacheable(CacheConfig.PROJECTS)
   @Transactional(readOnly = true)
   public List<Project> loadProjects(ContentLanguage idioma) {
     return repository.findAllByOrderByDisplayOrderAsc().stream()
@@ -49,6 +52,7 @@ public class ProjectPersistenceAdapter implements LoadProjectPort {
   }
 
   @Override
+  @Cacheable(cacheNames = CacheConfig.PROJECT, unless = "#result == null")
   @Transactional(readOnly = true)
   public Optional<Project> loadProjectBySlug(Slug slug, ContentLanguage idioma) {
     return repository

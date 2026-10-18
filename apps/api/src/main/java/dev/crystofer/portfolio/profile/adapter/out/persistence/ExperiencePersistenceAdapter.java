@@ -2,6 +2,7 @@ package dev.crystofer.portfolio.profile.adapter.out.persistence;
 
 import java.util.List;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,6 +10,7 @@ import dev.crystofer.portfolio.profile.adapter.out.persistence.mapper.Experience
 import dev.crystofer.portfolio.profile.adapter.out.persistence.repository.ExperienceJpaRepository;
 import dev.crystofer.portfolio.profile.domain.model.Experience;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadExperiencePort;
+import dev.crystofer.portfolio.shared.config.CacheConfig;
 import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
@@ -38,6 +40,7 @@ public class ExperiencePersistenceAdapter implements LoadExperiencePort {
    * dirty checking das entidades e permitindo ao driver marcar a transacao como somente leitura.
    */
   @Override
+  @Cacheable(CacheConfig.EXPERIENCES)
   @Transactional(readOnly = true)
   public List<Experience> loadExperiences(ContentLanguage idioma) {
     return repository.findAllByOrderByStartDateDesc().stream()

@@ -2,6 +2,7 @@ package dev.crystofer.portfolio.profile.adapter.out.persistence;
 
 import java.util.Optional;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,6 +10,7 @@ import dev.crystofer.portfolio.profile.adapter.out.persistence.mapper.ProfilePer
 import dev.crystofer.portfolio.profile.adapter.out.persistence.repository.ProfileJpaRepository;
 import dev.crystofer.portfolio.profile.domain.model.Profile;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadProfilePort;
+import dev.crystofer.portfolio.shared.config.CacheConfig;
 import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
@@ -39,6 +41,7 @@ public class ProfilePersistenceAdapter implements LoadProfilePort {
    * transacao como somente leitura.
    */
   @Override
+  @Cacheable(cacheNames = CacheConfig.PROFILE, unless = "#result == null")
   @Transactional(readOnly = true)
   public Optional<Profile> loadProfile(ContentLanguage idioma) {
     return repository

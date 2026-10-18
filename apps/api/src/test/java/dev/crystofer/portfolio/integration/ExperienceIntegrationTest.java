@@ -365,6 +365,7 @@ class ExperienceIntegrationTest extends AbstractIntegrationTest {
 
     traduzir(inserirComId("Empresa B", "Cargo B", "2021-01-01", "2021-12-31"), "Role B", "[]");
     traduzir(inserirComId("Empresa C", "Cargo C", "2022-01-01", null), "Role C", "[]");
+    esvaziarCaches();
 
     // when
     statistics.clear();

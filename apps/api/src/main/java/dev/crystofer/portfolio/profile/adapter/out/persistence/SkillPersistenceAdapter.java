@@ -2,6 +2,7 @@ package dev.crystofer.portfolio.profile.adapter.out.persistence;
 
 import java.util.List;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,6 +10,7 @@ import dev.crystofer.portfolio.profile.adapter.out.persistence.mapper.SkillPersi
 import dev.crystofer.portfolio.profile.adapter.out.persistence.repository.SkillCategoryJpaRepository;
 import dev.crystofer.portfolio.profile.domain.model.SkillCategory;
 import dev.crystofer.portfolio.profile.domain.port.out.LoadSkillPort;
+import dev.crystofer.portfolio.shared.config.CacheConfig;
 import dev.crystofer.portfolio.shared.domain.ContentLanguage;
 
 /**
@@ -34,6 +36,7 @@ public class SkillPersistenceAdapter implements LoadSkillPort {
    * driver marcar a transacao como somente leitura.
    */
   @Override
+  @Cacheable(CacheConfig.SKILLS)
   @Transactional(readOnly = true)
   public List<SkillCategory> loadSkillCategories(ContentLanguage idioma) {
     return repository.findAllByOrderByDisplayOrderAsc().stream()

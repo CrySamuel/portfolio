@@ -367,6 +367,7 @@ class SkillIntegrationTest extends AbstractIntegrationTest {
       traduzirSkill(inserirSkillComId(categoria, "Skill " + i + "a"), "Skill " + i + "a en");
       traduzirSkill(inserirSkillComId(categoria, "Skill " + i + "b"), "Skill " + i + "b en");
     }
+    esvaziarCaches();
 
     // when
     statistics.clear();

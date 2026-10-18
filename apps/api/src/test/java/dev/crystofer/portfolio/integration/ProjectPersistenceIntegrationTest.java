@@ -253,6 +253,7 @@ class ProjectPersistenceIntegrationTest extends AbstractIntegrationTest {
       ProjectFixtures.translateProject(jdbcTemplate, slug, slug + " (en)");
       ProjectFixtures.translateMetrics(jdbcTemplate, slug);
     }
+    esvaziarCaches();
 
     // when
     statistics.clear();

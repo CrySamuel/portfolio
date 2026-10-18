@@ -108,6 +108,7 @@ class ProjectIntegrationTest extends AbstractIntegrationTest {
 
     // when
     ProjectFixtures.insertProject(jdbcTemplate, "portfolio", "Portfolio", true, 1, 1, 1);
+    esvaziarCaches();
     var response = getComEtag("/api/v1/projects", etagAntigo);
 
     // then
@@ -191,6 +192,7 @@ class ProjectIntegrationTest extends AbstractIntegrationTest {
 
     ProjectFixtures.insertProject(jdbcTemplate, "dois", "Dois", true, 1, 3, 2);
     ProjectFixtures.insertProject(jdbcTemplate, "tres", "Tres", false, 2, 1, 1);
+    esvaziarCaches();
     estatisticas.clear();
 
     // when
