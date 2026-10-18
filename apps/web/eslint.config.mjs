@@ -148,6 +148,14 @@ export default tseslint.config(
   },
 
   {
+    // Scripts de build, rodados pelo Node depois do `next build` (o orcamento de JS): tem o
+    // `process` do Node, e escrever no console e a saida deles.
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
+    rules: { 'no-console': 'off' },
+  },
+
+  {
     // Testes de unidade: rodam no Node e nunca chegam ao navegador.
     files: ['src/**/*.test.ts'],
     rules: {

@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "orcamento:js": "node scripts/orcamento-js.mjs",
+    "lighthouse": "lhci autorun"
   },
   "dependencies": {
     "@portfolio/api-client": "workspace:*",
@@ -23,6 +25,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.64.1",
     "@portfolio/eslint-config": "workspace:*",
     "@portfolio/typescript-config": "workspace:*",

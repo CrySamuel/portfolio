@@ -1,6 +1,7 @@
 name: E2E · web
 
-# Ponta a ponta e acessibilidade, contra o site construido e a API de verdade.
+# Ponta a ponta, acessibilidade e orcamento de performance, contra o site construido e a
+# API de verdade.
 #
 # Os dois lados entram no gatilho: uma mudanca no contrato da API quebra a
 # pagina tanto quanto uma mudanca na pagina.
@@ -48,7 +49,7 @@ env:
 
 jobs:
   e2e:
-    name: playwright · axe
+    name: playwright · axe · lighthouse
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -122,9 +123,33 @@ jobs:
         # Pelo turbo, que constroi antes os pacotes de que o web depende.
         run: pnpm turbo run build --filter=@portfolio/web
 
+      - name: Orcamento de JS
+        # O JavaScript de cada pagina, comprimido, contra o limite de 130 KB da
+        # secao 10.1 do plano. Medido no build, e nao pelo Lighthouse: o tamanho
+        # transferido depende da compressao do servidor, e o orcamento e do codigo.
+        working-directory: apps/web
+        run: pnpm orcamento:js
+
       - name: Playwright
         working-directory: apps/web
         run: pnpm exec playwright test
+
+      - name: Lighthouse
+        # Os limites de "falha o CI" da secao 10.1 (LCP, CLS, TBT, TTFB, CSS,
+        # fontes, peso e requisicoes) e nota minima nas categorias - ver
+        # lighthouserc.json. Sobe o proprio `next start`, depois que o do
+        # Playwright ja saiu.
+        working-directory: apps/web
+        run: pnpm lighthouse
+
+      - name: Publicar relatorio do Lighthouse
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse
+          path: apps/web/.lighthouseci/
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Publicar relatorio do Playwright
         if: ${{ !cancelled() }}

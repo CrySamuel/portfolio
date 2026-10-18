@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, cn } from '@portfolio/ui';
-import { useActionState, useEffect, useId, useRef, type ReactNode } from 'react';
+import { useActionState, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import { submitContact } from '@/features/contact/actions/submit-contact';
 import {
@@ -70,6 +70,26 @@ const SCRIPT_DO_TURNSTILE = 'https://challenges.cloudflare.com/turnstile/v0/api.
 
 /** De quanto em quanto tempo se olha se o script já chegou. */
 const INTERVALO_DE_ESPERA_MS = 100;
+
+/**
+ * Quanto antes de o formulário entrar na tela o script do Turnstile começa a
+ * carregar: uma tela inteira.
+ *
+ * <p><strong>O script só carrega perto do formulário, e a razão é medida.</strong>
+ * Com a chave de produção, o widget baixa cerca de **740 KB** da Cloudflare — o
+ * `api.js`, um documento de 113 KB e um desafio de ~590 KB —, e na versão que
+ * carregava junto com a página o pedido saía aos 100 ms, disputando rede e CPU
+ * com a primeira pintura da home: no Lighthouse em modo celular, a página passava
+ * de 900 KB e o LCP encostava no limite de 2,5 s do orçamento (commit 53). O
+ * formulário mora no fim da home, e quem nunca chega a ele não tem por que pagar
+ * o desafio.
+ *
+ * <p>Uma tela de antecedência dá ao desafio o tempo de rolar até o formulário e
+ * começar a digitar, que é bem mais do que ele leva para emitir o token. Para
+ * quem chega pelo teclado ou por um link direto ao formulário, o foco num campo
+ * também dispara a carga.
+ */
+const ANTECEDENCIA_DO_TURNSTILE = '100% 0px';
 
 /**
  * Quais campos são área de texto. O rótulo de cada um chega traduzido, por props; a forma não muda
@@ -143,6 +163,37 @@ export function ContactForm({
   const caixaDoWidget = useRef<HTMLDivElement>(null);
   const idDoWidget = useRef<string | undefined>(undefined);
   const enviado = estado.estado === 'enviado';
+  const [carregarTurnstile, setCarregarTurnstile] = useState(false);
+
+  /*
+    O gatilho da carga do Turnstile - ver ANTECEDENCIA_DO_TURNSTILE. Começa
+    falso no servidor e no cliente, então a hidratação compara o mesmo HTML; o
+    <script> só entra depois, quando o formulário se aproxima ou recebe foco.
+  */
+  useEffect(() => {
+    if (carregarTurnstile || enviado) return;
+
+    const alvo = formulario.current;
+    if (alvo === null) return;
+
+    const carregar = (): void => {
+      setCarregarTurnstile(true);
+    };
+
+    alvo.addEventListener('focusin', carregar, { once: true });
+    const observador = new IntersectionObserver(
+      ([entrada]) => {
+        if (entrada?.isIntersecting === true) carregar();
+      },
+      { rootMargin: ANTECEDENCIA_DO_TURNSTILE },
+    );
+    observador.observe(alvo);
+
+    return () => {
+      alvo.removeEventListener('focusin', carregar);
+      observador.disconnect();
+    };
+  }, [carregarTurnstile, enviado]);
 
   /*
     Monta o widget depois da hidratação — ver SCRIPT_DO_TURNSTILE para o defeito
@@ -161,7 +212,7 @@ export function ContactForm({
     console, a cada verificação dele, que não o encontra.
   */
   useEffect(() => {
-    if (enviado) return;
+    if (enviado || !carregarTurnstile) return;
 
     const alvo = caixaDoWidget.current;
     if (alvo === null) return;
@@ -201,7 +252,7 @@ export function ContactForm({
       if (idDoWidget.current !== undefined) window.turnstile?.remove(idDoWidget.current);
       idDoWidget.current = undefined;
     };
-  }, [turnstileSiteKey, idiomaDoWidget, enviado]);
+  }, [turnstileSiteKey, idiomaDoWidget, enviado, carregarTurnstile]);
 
   /*
     Duas coisas depois de uma recusa, e as duas só existem com script.
@@ -305,9 +356,10 @@ export function ContactForm({
             que dispensa o next/script e o peso dele. `async` porque nada nesta
             página espera por ele: sem o script o formulário continua desenhado,
             e o que falta é o token — caso que a ação trata com uma frase
-            própria.
+            própria. Só aparece perto do formulário — ver
+            ANTECEDENCIA_DO_TURNSTILE.
           */}
-          <script src={SCRIPT_DO_TURNSTILE} async />
+          {carregarTurnstile ? <script src={SCRIPT_DO_TURNSTILE} async /> : null}
 
           {/*
             O marcador que só existe sem script — ver `passouNoTurnstile`.
