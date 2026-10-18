@@ -98,7 +98,7 @@ export async function generateMetadata({ params }: ParametrosDoIdioma): Promise<
     // A prova de propriedade do Search Console (secao 11.6 do plano). Nao e
     // segredo - o Google so confere que a meta esta publicada no endereco - e
     // apaga-la desfaz a verificacao na proxima vez que ele olhar.
-    verification: { google: 't3MWNMmohZZbDX6VzPp6pwDV2ZzX2DZ-qisO8bQ0aE4' },
+    verification: { google: 'ouS1l00CUkq-XrLhOQLRG7QGQtlBJLTANvLYljM_YaU' },
   };
 }
 
