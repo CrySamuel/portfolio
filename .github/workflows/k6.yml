@@ -1,0 +1,67 @@
+name: Carga · api
+
+# Teste de carga pontual da API de producao (secao 2.1 do plano), com o script
+# de infra/k6/carga.js: 100 usuarios virtuais por 2 minutos.
+#
+# So roda pelo botao "Run workflow", nunca no push. E carga de verdade contra o
+# Render, e o numero vale por release, e nao por commit - o plano deixa o teste
+# de carga automatico para a v1.1.
+#
+# Precisa de duas coisas cadastradas em Settings > Secrets and variables >
+# Actions: a variavel API_BASE_URL (a mesma do keep-alive) e o segredo
+# SERVICE_API_KEY, a chave que o BFF manda para a API. A chave so existe nos
+# paineis; o k6 a recebe pelo ambiente e nao a grava no resumo.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: k6
+  cancel-in-progress: false
+
+jobs:
+  carga:
+    name: k6 · 100 usuarios · 2 min
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      API_URL: ${{ vars.API_BASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Instalar o k6
+        uses: grafana/setup-k6-action@v1.2.2
+        with:
+          k6-version: '2.3.0'
+
+      - name: Acordar a API
+        # O plano gratuito do Render dorme sem trafego, e a partida a frio leva
+        # quase um minuto. Nao e o que este teste mede: ele mede a API de pe.
+        run: |
+          for _ in $(seq 1 30); do
+            curl -sf "$API_URL/actuator/health/liveness" > /dev/null && exit 0
+            sleep 5
+          done
+          echo "a API nao acordou em 150 s"
+          exit 1
+
+      - name: Carga
+        id: carga
+        env:
+          SERVICE_API_KEY: ${{ secrets.SERVICE_API_KEY }}
+        run: k6 run infra/k6/carga.js
+
+      - name: Publicar o resumo
+        # Sempre que a carga rodou, passando ou reprovando: o resumo tem de
+        # existir, e o numero ruim tambem e resultado.
+        if: ${{ !cancelled() && steps.carga.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: k6
+          path: k6-resumo.json
+          retention-days: 30
+          if-no-files-found: error
