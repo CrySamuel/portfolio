@@ -34,13 +34,13 @@
 
     <!-- Nao gerenciadas pelo spring-boot-dependencies; as versoes sao nossas. -->
     <mapstruct.version>1.6.3</mapstruct.version>
-    <springdoc.version>3.1.1</springdoc.version>
+    <springdoc.version>3.2.0</springdoc.version>
     <archunit.version>1.5.1</archunit.version>
     <testcontainers.version>2.0.5</testcontainers.version>
     <resilience4j.version>2.4.0</resilience4j.version>
     <wiremock.version>3.13.2</wiremock.version>
     <bucket4j.version>8.21.0</bucket4j.version>
-    <jacoco.version>0.8.15</jacoco.version>
+    <jacoco.version>0.8.16</jacoco.version>
   </properties>
 
   <!--
